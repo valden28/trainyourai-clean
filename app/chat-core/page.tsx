@@ -1,44 +1,44 @@
-'use client'
+// app/chat-core/page.tsx
+import { getSession } from '@/lib/auth0'
+import { supabase } from '@/lib/supabase'
 
-import { useEffect, useState } from 'react'
+export default async function ChatCore() {
+  const session = await getSession()
 
-export default function ChatCore() {
-  const [vault, setVault] = useState<any>(null)
-  const [error, setError] = useState<string | null>(null)
+  if (!session?.user) {
+    return (
+      <div style={{ padding: '2rem', color: 'red' }}>
+        <h1>TrainYourAI Chat</h1>
+        <p>Error: User not authenticated.</p>
+      </div>
+    )
+  }
 
-  useEffect(() => {
-    fetch('/api/vault')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.vault) {
-          setVault(data.vault)
-        } else {
-          setError(data.error || 'Unknown error')
-        }
-      })
-      .catch((err) => {
-        setError('Fetch failed: ' + err.message)
-      })
-  }, [])
+  const userUid = session.user.sub
+
+  const { data: vault, error } = await supabase
+    .from('vaults_test')
+    .select('*')
+    .eq('user_uid', userUid)
+    .single()
+
+  if (error || !vault) {
+    return (
+      <div style={{ padding: '2rem', color: 'red' }}>
+        <h1>TrainYourAI Chat</h1>
+        <p>Error: Vault not found or Supabase error.</p>
+        <pre>{error?.message}</pre>
+      </div>
+    )
+  }
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>
-        Chat Core Route is ALIVE (With Supabase)
-      </h1>
-      <p>This is pulling data from your Supabase `vaults_test` table.</p>
-
-      {vault && (
-        <pre style={{ background: '#f0f0f0', padding: '1rem', marginTop: '1rem' }}>
-          {JSON.stringify(vault, null, 2)}
-        </pre>
-      )}
-
-      {error && (
-        <p style={{ color: 'red', marginTop: '1rem' }}>
-          Error: {error}
-        </p>
-      )}
+      <h1>TrainYourAI Chat</h1>
+      <p>Welcome back, {vault.full_name || 'user'}!</p>
+      <pre style={{ background: '#f1f1f1', padding: '1rem' }}>
+        {JSON.stringify(vault, null, 2)}
+      </pre>
     </div>
   )
 }
