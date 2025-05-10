@@ -1,4 +1,4 @@
-import { handleCallback } from '@auth0/nextjs-auth0'
+export const runtime = 'edge'
+import { handleAuth } from '@auth0/nextjs-auth0/edge'
 
-export const GET = handleCallback()
-export const POST = handleCallback()
+export const GET = handleAuth()
