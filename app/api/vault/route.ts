@@ -1,15 +1,15 @@
-import { NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { NextRequest, NextResponse } from 'next/server'
+import { supabase } from '@/lib/supabase'
+import { getSession } from '@auth0/nextjs-auth0'
 
-export async function GET() {
-  const supabase = createServerSupabaseClient()
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+export async function GET(req: NextRequest) {
+  const session = await getSession(req)
 
-  if (sessionError || !session?.user?.id) {
+  if (!session?.user) {
     return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
   }
 
-  const userUid = session.user.id
+  const userUid = session.user.sub
 
   const { data, error } = await supabase
     .from('vaults_test')
