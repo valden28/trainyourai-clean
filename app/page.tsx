@@ -3,7 +3,7 @@ import Link from 'next/link'
 export default function Home() {
   return (
     <main style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-      <h1>TrainYourAI is Online</h1>
+      <h1>TrainYourAI is Online (Live)</h1> {/* <-- changed this line */}
       <p style={{ marginTop: '1rem' }}>
         Ready to get started?
       </p>
