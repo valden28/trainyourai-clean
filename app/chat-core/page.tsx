@@ -33,7 +33,7 @@ export default function ChatCore() {
 
   return (
     <main style={{ padding: 40 }}>
-      <h1>Chat Core Route is LIVE</h1>
+      <h1>Chat Core Route is ALIVE and Connected</h1>
       {vault ? (
         <pre style={{ background: "#eee", padding: "1rem" }}>
           {JSON.stringify(vault, null, 2)}
