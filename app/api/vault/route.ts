@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'User not authenticated' }, { status: 401 })
   }
 
-  const userUid = session.user.sub
+  const userUid = session.user.sub // your Auth0 UUID
 
   const { data, error } = await supabase
     .from('vaults_test')
@@ -18,7 +18,6 @@ export async function GET(req: NextRequest) {
     .single()
 
   if (error) {
-    console.error('[VaultFetchError]', error.message)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
