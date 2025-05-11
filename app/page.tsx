@@ -1,23 +1,18 @@
+// /app/page.tsx
+
 import Link from 'next/link'
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <main style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-      <h1>TrainYourAI is Online (Live)</h1> {/* <-- changed this line */}
-      <p style={{ marginTop: '1rem' }}>
-        Ready to get started?
-      </p>
-      <div style={{ marginTop: '2rem' }}>
-        <Link href="/chat-core" style={{
-          padding: '0.5rem 1rem',
-          background: '#000',
-          color: '#fff',
-          textDecoration: 'none',
-          borderRadius: '4px'
-        }}>
-          Go to Chat
-        </Link>
-      </div>
+    <main className="min-h-screen flex flex-col items-center justify-center text-center p-6">
+      <h1 className="text-4xl font-bold mb-4">TrainYourAI is Online</h1>
+      <p className="text-lg mb-6">Welcome to your personalized AI assistant. Let’s get started.</p>
+      <Link
+        href="/chat-core"
+        className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 transition"
+      >
+        Go to Chat
+      </Link>
     </main>
   )
 }
