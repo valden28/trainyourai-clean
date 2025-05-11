@@ -1,44 +1,44 @@
 // app/chat-core/page.tsx
-import { getSession } from '@/lib/auth0'
-import { supabase } from '@/lib/supabase'
+'use client'
 
-export default async function ChatCore() {
-  const session = await getSession()
+import { useEffect, useState } from 'react'
 
-  if (!session?.user) {
-    return (
-      <div style={{ padding: '2rem', color: 'red' }}>
-        <h1>TrainYourAI Chat</h1>
-        <p>Error: User not authenticated.</p>
-      </div>
-    )
-  }
+export default function ChatCore() {
+  const [vault, setVault] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const userUid = session.user.sub
+  useEffect(() => {
+    const fetchVault = async () => {
+      try {
+        const res = await fetch('/api/vault')
+        const json = await res.json()
 
-  const { data: vault, error } = await supabase
-    .from('vaults_test')
-    .select('*')
-    .eq('user_uid', userUid)
-    .single()
+        if (!res.ok) {
+          setError(json.error || 'Unknown error')
+        } else {
+          setVault(json.vault)
+        }
+      } catch (err: any) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
 
-  if (error || !vault) {
-    return (
-      <div style={{ padding: '2rem', color: 'red' }}>
-        <h1>TrainYourAI Chat</h1>
-        <p>Error: Vault not found or Supabase error.</p>
-        <pre>{error?.message}</pre>
-      </div>
-    )
-  }
+    fetchVault()
+  }, [])
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h1>TrainYourAI Chat</h1>
-      <p>Welcome back, {vault.full_name || 'user'}!</p>
-      <pre style={{ background: '#f1f1f1', padding: '1rem' }}>
-        {JSON.stringify(vault, null, 2)}
-      </pre>
+    <div className="p-6">
+      <h1 className="text-3xl font-bold mb-4">TrainYourAI Chat</h1>
+      {loading && <p>Loading vault...</p>}
+      {error && <p className="text-red-500">Error: {error}</p>}
+      {vault && (
+        <pre className="bg-gray-100 p-4 rounded">
+          {JSON.stringify(vault, null, 2)}
+        </pre>
+      )}
     </div>
   )
 }
