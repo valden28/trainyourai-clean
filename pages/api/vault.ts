@@ -15,12 +15,18 @@ export default async function handler(
     const session = await getSession(req, res);
 
     if (!session || !session.user) {
+      console.error('No session or user found.');
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
     const user_uid = session.user.sub;
 
-    console.log('Authenticated UID:', user_uid);
+    if (!user_uid) {
+      console.error('Missing Auth0 UID.');
+      return res.status(400).json({ error: 'Missing user UID from session.' });
+    }
+
+    console.log('User UID:', user_uid);
 
     // Try to fetch existing vault
     const { data, error } = await supabase
@@ -34,26 +40,37 @@ export default async function handler(
       return res.status(500).json({ error: 'Vault fetch failed', detail: error.message });
     }
 
-    // If no vault found, create one
-    if (!data) {
-      const { data: newVault, error: insertError } = await supabase
-        .from('vaults_test')
-        .insert({ user_uid })
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('Vault insert error:', insertError);
-        return res.status(500).json({ error: 'Vault creation failed', detail: insertError.message });
-      }
-
-      return res.status(200).json(newVault);
+    if (data) {
+      return res.status(200).json(data);
     }
 
-    // Vault found, return it
-    return res.status(200).json(data);
-  } catch (err) {
-    console.error('Unexpected error in /api/vault:', err);
-    return res.status(500).json({ error: 'Unexpected server error', detail: (err as any).message });
+    // No existing vault — create new
+    const { data: newVault, error: insertError } = await supabase
+      .from('vaults_test')
+      .insert({ user_uid })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Vault insert failed:', {
+        message: insertError.message,
+        hint: insertError.hint,
+        code: insertError.code,
+        details: insertError.details,
+      });
+
+      return res.status(500).json({
+        error: 'Vault creation failed',
+        detail: insertError.message,
+        hint: insertError.hint,
+        code: insertError.code,
+        full: insertError,
+      });
+    }
+
+    return res.status(200).json(newVault);
+  } catch (err: any) {
+    console.error('Unexpected vault error:', err);
+    return res.status(500).json({ error: 'Unexpected server error', detail: err.message });
   }
 }
