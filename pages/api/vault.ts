@@ -11,38 +11,49 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const session = await getSession(req, res);
+  try {
+    const session = await getSession(req, res);
 
-  if (!session || !session.user) {
-    return res.status(401).json({ error: 'User not authenticated' });
-  }
-
-  const user = session.user;
-  const user_uid = user.sub;
-
-  const { data, error } = await supabase
-    .from('vaults_test')
-    .select('*')
-    .eq('user_uid', user_uid)
-    .single();
-
-  if (error && error.code !== 'PGRST116') {
-    return res.status(500).json({ error: 'Vault fetch failed', detail: error.message });
-  }
-
-  if (!data) {
-    const { data: newVault, error: insertError } = await supabase
-      .from('vaults_test')
-      .insert({ user_uid })
-      .select()
-      .single();
-
-    if (insertError) {
-      return res.status(500).json({ error: 'Vault creation failed', detail: insertError.message });
+    if (!session || !session.user) {
+      return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    return res.status(200).json(newVault);
-  }
+    const user_uid = session.user.sub;
 
-  return res.status(200).json(data);
+    console.log('Authenticated UID:', user_uid);
+
+    // Try to fetch existing vault
+    const { data, error } = await supabase
+      .from('vaults_test')
+      .select('*')
+      .eq('user_uid', user_uid)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Supabase fetch error:', error);
+      return res.status(500).json({ error: 'Vault fetch failed', detail: error.message });
+    }
+
+    // If no vault found, create one
+    if (!data) {
+      const { data: newVault, error: insertError } = await supabase
+        .from('vaults_test')
+        .insert({ user_uid })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Vault insert error:', insertError);
+        return res.status(500).json({ error: 'Vault creation failed', detail: insertError.message });
+      }
+
+      return res.status(200).json(newVault);
+    }
+
+    // Vault found, return it
+    return res.status(200).json(data);
+  } catch (err) {
+    console.error('Unexpected error in /api/vault:', err);
+    return res.status(500).json({ error: 'Unexpected server error', detail: (err as any).message });
+  }
 }
