@@ -1,4 +1,4 @@
-// pages/api/vault.ts
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { getSession } from '@auth0/nextjs-auth0';
 import { createClient } from '@supabase/supabase-js';
 
@@ -7,7 +7,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(req, res) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const session = await getSession(req, res);
 
   if (!session || !session.user) {
@@ -15,9 +18,8 @@ export default async function handler(req, res) {
   }
 
   const user = session.user;
-  const user_uid = user.sub; // This is the Auth0 UID (ex: auth0|123abc)
+  const user_uid = user.sub;
 
-  // Check for existing vault
   const { data, error } = await supabase
     .from('vaults_test')
     .select('*')
@@ -25,11 +27,9 @@ export default async function handler(req, res) {
     .single();
 
   if (error && error.code !== 'PGRST116') {
-    console.error('Supabase error:', error.message);
-    return res.status(500).json({ error: 'Vault fetch failed' });
+    return res.status(500).json({ error: 'Vault fetch failed', detail: error.message });
   }
 
-  // If no vault exists, create one
   if (!data) {
     const { data: newVault, error: insertError } = await supabase
       .from('vaults_test')
@@ -38,13 +38,11 @@ export default async function handler(req, res) {
       .single();
 
     if (insertError) {
-      console.error('Vault insert error:', insertError.message);
-      return res.status(500).json({ error: 'Vault creation failed' });
+      return res.status(500).json({ error: 'Vault creation failed', detail: insertError.message });
     }
 
     return res.status(200).json(newVault);
   }
 
-  // Return existing vault
   return res.status(200).json(data);
 }
