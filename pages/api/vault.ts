@@ -19,5 +19,6 @@ if (insertError) {
     hint: insertError.hint,
     code: insertError.code,
     details: insertError.details,
+  // DEBUG: Confirming live vault.ts update - Den
   });
 }
