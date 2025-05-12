@@ -1,23 +1,20 @@
-// Create new vault
-const { data: newVault, error: insertError } = await supabase
-  .from('vaults_test')
-  .insert([{ user_uid }])
-  .select()
-  .single();
-
-  if (insertError) {
-    console.error('Vault insert failed:', {
-      message: insertError.message,
-      hint: insertError.hint,
-      code: insertError.code,
-      details: insertError.details,
-    });
-  
-    return res.status(500).json({
-      error: 'Vault creation failed',
-      message: insertError.message,
-      hint: insertError.hint,
-      code: insertError.code,
-      details: insertError.details,
-    });
-  }
+,-[/vercel/path0/pages/api/vault.ts:16:1]
+13 |           details: insertError.details,
+14 |         });
+15 |       
+16 | ,->     return res.status(500).json({
+17 | |         error: 'Vault creation failed',
+18 | |         message: insertError.message,
+19 | |         hint: insertError.hint,
+20 | |         code: insertError.code,
+21 | |         details: insertError.details,
+22 | `->     });
+23 |       }
+   `----
+Caused by:
+   Syntax Error
+Import trace for requested module:
+./pages/api/vault.ts
+> Build failed because of webpack errors
+Error: Command "npm run build" exited with 1
+Exiting build container
