@@ -1,17 +1,20 @@
 // /app/layout.tsx
+import './globals.css';
+import { UserProvider } from '@auth0/nextjs-auth0/client';
 
-import './globals.css'
-import type { Metadata } from 'next'
-
-export const metadata: Metadata = {
+export const metadata = {
   title: 'TrainYourAI',
-  description: 'Custom AI that thinks like you.',
-}
+  description: 'Personal AI powered by your vault',
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <UserProvider>
+          {children}
+        </UserProvider>
+      </body>
     </html>
-  )
+  );
 }
