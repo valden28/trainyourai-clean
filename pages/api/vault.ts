@@ -5,20 +5,19 @@ const { data: newVault, error: insertError } = await supabase
   .select()
   .single();
 
-if (insertError) {
-  console.error('Vault insert failed:', {
-    message: insertError.message,
-    hint: insertError.hint,
-    code: insertError.code,
-    details: insertError.details,
-  });
-
-  return res.status(500).json({
-    error: 'Vault creation failed',
-    message: insertError.message,
-    hint: insertError.hint,
-    code: insertError.code,
-    details: insertError.details,
-  // DEBUG: Confirming live vault.ts update - Den
-  });
-}
+  if (insertError) {
+    console.error('Vault insert failed:', {
+      message: insertError.message,
+      hint: insertError.hint,
+      code: insertError.code,
+      details: insertError.details,
+    });
+  
+    return res.status(500).json({
+      error: 'Vault creation failed',
+      message: insertError.message,
+      hint: insertError.hint,
+      code: insertError.code,
+      details: insertError.details,
+    });
+  }
