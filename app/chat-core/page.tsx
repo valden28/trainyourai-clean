@@ -85,7 +85,7 @@ export default function ChatCore() {
         )}
       </div>
 
-      {/* Vault Debug */}
+      {/* Vault JSON Debug (temporary) */}
       {user && vault && (
         <div className="bg-white text-black p-4 rounded shadow mb-4 text-sm">
           <p className="font-semibold mb-2">Your vault is active:</p>
@@ -113,7 +113,7 @@ export default function ChatCore() {
           <input
             type="text"
             placeholder="Type your message..."
-            className="flex-grow p-2 rounded text-black"
+            className="flex-grow p-2 rounded bg-white text-black"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={sending}
