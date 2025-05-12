@@ -17,7 +17,7 @@ export default function ChatCore() {
         if (!res.ok) {
           setError(json.error || 'Unknown error')
         } else {
-          setVault(json.vault)
+          setVault(json)
         }
       } catch (err: any) {
         setError(err.message)
