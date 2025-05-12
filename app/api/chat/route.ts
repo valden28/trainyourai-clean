@@ -3,8 +3,9 @@ import OpenAI from 'openai';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  project: process.env.OPENAI_PROJECT_ID,
 });
-console.log('Using OpenAI key:', process.env.OPENAI_API_KEY);
+
 export async function POST(req: Request) {
   try {
     const { messages, vault } = await req.json();
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
       reply: response.choices[0].message.content,
     });
   } catch (error: any) {
-    console.error('[CHAT ERROR]', error);
+    console.error('[CHAT ERROR]', error?.error || error?.message || error);
     return NextResponse.json(
       { error: 'Failed to generate response' },
       { status: 500 }
