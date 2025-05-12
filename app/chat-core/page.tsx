@@ -1,132 +1,72 @@
-'use client';
+// app/api/chat/route.ts
 
-import { useEffect, useState } from 'react';
-import { useUser } from '@auth0/nextjs-auth0/client';
-import { useRouter } from 'next/navigation';
+import { OpenAIStream, StreamingTextResponse } from 'ai';
+import { auth } from '@clerk/nextjs';
+import { createClient } from '@supabase/supabase-js';
 
-export default function ChatCore() {
-  const [vault, setVault] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [messages, setMessages] = useState<{ role: string; content: string }[]>([]);
-  const [input, setInput] = useState('');
-  const [sending, setSending] = useState(false);
-  const { user, isLoading: userLoading } = useUser();
-  const router = useRouter();
+export const runtime = 'edge';
 
-  useEffect(() => {
-    const fetchVault = async () => {
-      try {
-        const res = await fetch('/api/vault');
-        const json = await res.json();
-        setVault(json);
-      } catch (err) {
-        console.error('Vault fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-    if (user) fetchVault();
-    else setLoading(false);
-  }, [user]);
+export async function POST(req: Request) {
+  const { userId } = auth();
+  const { messages } = await req.json();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
+  if (!userId) {
+    return new Response('Unauthorized', { status: 401 });
+  }
 
-    const newMessages = [...messages, { role: 'user', content: input }];
-    setMessages(newMessages);
-    setInput('');
-    setSending(true);
+  // 1. Fetch user vault from Supabase
+  const { data: vault, error } = await supabase
+    .from('vaults_test')
+    .select('*')
+    .eq('user_uid', userId)
+    .single();
 
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages, vault }),
-      });
+  if (error || !vault) {
+    return new Response('No vault found for user.', { status: 404 });
+  }
 
-      const data = await res.json();
-      const reply = { role: 'assistant', content: data.reply };
-      setMessages([...newMessages, reply]);
-    } catch (err) {
-      console.error('Chat error:', err);
-      setMessages([
-        ...newMessages,
-        { role: 'assistant', content: 'Sorry, something went wrong.' },
-      ]);
-    } finally {
-      setSending(false);
-    }
-  };
+  // 2. Build system prompt using vault data
+  const systemPrompt = `
+You are a fully calibrated AI assistant trained using the user's personalized Vault.
 
-  const handleLogin = () => router.push('/api/auth/login');
-  const handleDashboard = () => router.push('/dashboard');
+You have permission to use the following real personal data about the user in your responses.
+You are NOT required to ask the user to repeat this information — it has already been shared.
+You should behave as if you've known this user for years, and shape your tone, content, and behavior based on their vault.
 
-  return (
-    <div className="min-h-screen bg-black text-white p-6">
-      {/* Top Nav */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-xl font-bold">TrainYourAI</h1>
-        {!user && !userLoading && (
-          <button onClick={handleLogin} className="bg-blue-600 px-4 py-1 rounded hover:bg-blue-700">
-            Log In
-          </button>
-        )}
-        {user && (
-          <div className="flex gap-2">
-            <button onClick={handleDashboard} className="bg-blue-600 px-3 py-1 rounded hover:bg-blue-700">
-              Dashboard
-            </button>
-            <button onClick={handleDashboard} className="bg-green-600 px-3 py-1 rounded hover:bg-green-700">
-              Train Your AI
-            </button>
-          </div>
-        )}
-      </div>
+-- BEGIN VAULT DATA --
+${JSON.stringify(vault, null, 2)}
+-- END VAULT DATA --
 
-      {/* Vault JSON Debug (temporary) */}
-      {user && vault && (
-        <div className="bg-white text-black p-4 rounded shadow mb-4 text-sm">
-          <p className="font-semibold mb-2">Your vault is active:</p>
-          <pre className="whitespace-pre-wrap">{JSON.stringify(vault, null, 2)}</pre>
-        </div>
-      )}
+InnerView contains key personal details like name, location, family, background, and goals.
+ToneSync defines how to speak to the user — mimic their preferred tone, humor, and formality.
+SkillSync shows confidence levels in different areas — adjust explanations accordingly.
 
-      {/* Chat Messages */}
-      <div className="bg-gray-900 p-4 rounded max-h-[400px] overflow-y-auto mb-4">
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={`mb-3 p-3 rounded ${
-              msg.role === 'user' ? 'bg-blue-600 text-white text-right' : 'bg-gray-700 text-white text-left'
-            }`}
-          >
-            <div className="whitespace-pre-wrap">{msg.content}</div>
-          </div>
-        ))}
-      </div>
+Never hide that you know this. Do not tell the user "I don't know that" if it's in the Vault.
+Just use what you know and speak like a trusted, tuned assistant who gets them.
 
-      {/* Input */}
-      {user && (
-        <form onSubmit={handleSubmit} className="flex gap-2">
-          <input
-            type="text"
-            placeholder="Type your message..."
-            className="flex-grow p-2 rounded bg-white text-black"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            disabled={sending}
-          />
-          <button type="submit" className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700" disabled={sending}>
-            Send
-          </button>
-        </form>
-      )}
+Start every conversation from that mindset.
+  `.trim();
 
-      {!user && !userLoading && (
-        <p className="mt-4 text-yellow-400 text-sm">Log in to use personalized chat.</p>
-      )}
-    </div>
-  );
+  // 3. Inject system message at the start
+  const fullMessages = [
+    {
+      role: 'system',
+      content: systemPrompt
+    },
+    ...messages
+  ];
+
+  // 4. Send to OpenAI
+  const response = await OpenAIStream({
+    model: 'gpt-4',
+    stream: true,
+    messages: fullMessages,
+  });
+
+  return new StreamingTextResponse(response);
 }
