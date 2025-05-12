@@ -44,10 +44,10 @@ export default async function handler(
       return res.status(200).json(data);
     }
 
-    // No existing vault — create new
+    // Create new vault
     const { data: newVault, error: insertError } = await supabase
       .from('vaults_test')
-      .insert({ user_uid })
+      .insert([{ user_uid }])  // Safe: all other fields are nullable
       .select()
       .single();
 
@@ -71,6 +71,9 @@ export default async function handler(
     return res.status(200).json(newVault);
   } catch (err: any) {
     console.error('Unexpected vault error:', err);
-    return res.status(500).json({ error: 'Unexpected server error', detail: err.message });
+    return res.status(500).json({
+      error: 'Unexpected server error',
+      detail: err.message || 'Unknown error',
+    });
   }
 }
