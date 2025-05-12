@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 const sliderFields = [
@@ -20,48 +20,52 @@ const sliderFields = [
   { key: 'patience', label: 'Patience', left: 'Blunt', right: 'Exceptionally Patient' },
 ];
 
-export default function TonePage() {
+export default function ToneSyncPage() {
   const router = useRouter();
-  const [user_uid, setUserUid] = useState('');
   const [toneValues, setToneValues] = useState(
     Object.fromEntries(sliderFields.map(({ key }) => [key, 3]))
   );
   const [swearingComfort, setSwearingComfort] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSliderChange = (key: string, value: number) => {
-    setToneValues(prev => ({ ...prev, [key]: value }));
+    setToneValues((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/save-tone', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_uid, ...toneValues, swearing_comfort: swearingComfort }),
-    });
+    setLoading(true);
 
-    const data = await res.json();
-    if (data.success) {
-      router.push('/onboarding/next-step'); // Change this to your next step route
-    } else {
-      alert('Error saving tone preferences.');
+    try {
+      const body = {
+        tonesync: {
+          ...toneValues,
+          swearing_comfort: swearingComfort,
+        },
+      };
+
+      const res = await fetch('/api/vault', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) throw new Error('Vault patch failed');
+
+      router.push('/dashboard');
+    } catch (err) {
+      console.error('ToneSync error:', err);
+      alert('Something went wrong saving your tone settings.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">ToneSync Preferences</h1>
+    <div className="max-w-2xl mx-auto p-6 text-black bg-white min-h-screen">
+      <h1 className="text-3xl font-bold mb-6">ToneSync Preferences</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <input
-          type="text"
-          placeholder="User UID"
-          className="w-full p-2 border rounded"
-          value={user_uid}
-          onChange={(e) => setUserUid(e.target.value)}
-          required
-        />
-
         {sliderFields.map(({ key, label, left, right }) => (
           <div key={key}>
             <label className="block font-medium mb-1">
@@ -82,7 +86,7 @@ export default function TonePage() {
           </div>
         ))}
 
-        <div className="flex items-center justify-between border p-3 rounded">
+        <div className="flex items-center justify-between border p-3 rounded bg-gray-50">
           <span className="font-medium">Okay with Swearing?</span>
           <button
             type="button"
@@ -97,9 +101,9 @@ export default function TonePage() {
 
         <button
           type="submit"
-          className="w-full py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700"
+          className="w-full py-2 bg-purple-600 text-white font-bold rounded hover:bg-purple-700"
         >
-          Save and Continue
+          {loading ? 'Saving...' : 'Save and Continue'}
         </button>
       </form>
     </div>
