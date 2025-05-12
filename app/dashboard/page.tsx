@@ -19,11 +19,6 @@ export default function DashboardPage() {
           setError(json.error || 'Unknown error');
         } else {
           setVault(json);
-
-          // If innerview is missing, redirect to onboarding
-          if (!json.innerview) {
-            router.push('/onboarding'); // Update this route if needed
-          }
         }
       } catch (err: any) {
         setError(err.message);
@@ -33,38 +28,84 @@ export default function DashboardPage() {
     };
 
     fetchVault();
-  }, [router]);
+  }, []);
+
+  const missing = (field: string) => !vault?.[field];
+
+  const handleStart = () => router.push('/onboarding');
+  const handleTone = () => router.push('/onboarding/tone');
+
+  const isComplete =
+    vault &&
+    vault.innerview &&
+    vault.tonesync &&
+    vault.skillsync &&
+    vault.persona_mode;
 
   return (
-    <div className="p-6 bg-white text-black min-h-screen">
-      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+    <div className="min-h-screen bg-white text-black p-6">
+      <h1 className="text-3xl font-bold mb-6">Your Dashboard</h1>
 
-      {loading && <p>Loading vault data...</p>}
-      {error && (
-        <p className="text-red-600 font-medium">Error: {error}</p>
-      )}
+      {loading && <p>Loading vault...</p>}
+      {error && <p className="text-red-600">{error}</p>}
 
       {vault && (
         <>
-          <div className="bg-gray-100 p-4 rounded shadow mb-6">
-            <p className="font-semibold text-green-600 flex items-center">
-              <span className="w-3 h-3 rounded-full bg-green-500 mr-2" />
-              Vault Active
-            </p>
-            <pre className="mt-2 text-sm whitespace-pre-wrap overflow-x-auto">
-              {JSON.stringify(vault, null, 2)}
-            </pre>
+          <div className="mb-6 p-4 rounded shadow-md border-l-8 flex justify-between items-center"
+               style={{ borderColor: isComplete ? '#22c55e' : '#ef4444', backgroundColor: '#f9fafb' }}>
+            <div>
+              <p className="font-semibold text-lg">
+                Vault Status: {isComplete ? 'Complete' : 'Incomplete'}
+              </p>
+              {!isComplete && (
+                <p className="text-sm text-gray-600">
+                  {[
+                    missing('innerview') && 'InnerView',
+                    missing('tonesync') && 'ToneSync',
+                    missing('skillsync') && 'SkillSync',
+                    missing('persona_mode') && 'PersonaMode',
+                  ]
+                    .filter(Boolean)
+                    .join(', ')}{' '}
+                  need setup.
+                </p>
+              )}
+            </div>
+            {missing('innerview') && (
+              <button
+                onClick={handleStart}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              >
+                Start InnerView
+              </button>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-blue-100 p-4 rounded shadow">
-              <h2 className="font-bold mb-2">Expert Packs</h2>
-              <p className="text-sm text-gray-700">Coming soon…</p>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="bg-gray-100 p-4 rounded shadow">
+              <h2 className="font-semibold mb-2">InnerView</h2>
+              <p className="text-sm text-gray-700">
+                Your core identity and values. Essential for personalized AI.
+              </p>
+              <button
+                onClick={handleStart}
+                className="mt-2 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+              >
+                {missing('innerview') ? 'Start' : 'Edit'}
+              </button>
             </div>
 
-            <div className="bg-purple-100 p-4 rounded shadow">
-              <h2 className="font-bold mb-2">Personality Filters</h2>
-              <p className="text-sm text-gray-700">Coming soon…</p>
+            <div className="bg-gray-100 p-4 rounded shadow">
+              <h2 className="font-semibold mb-2">ToneSync</h2>
+              <p className="text-sm text-gray-700">
+                Calibrate your assistant’s voice and style.
+              </p>
+              <button
+                onClick={handleTone}
+                className="mt-2 bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700"
+              >
+                {missing('tonesync') ? 'Start' : 'Edit'}
+              </button>
             </div>
           </div>
         </>
