@@ -1,4 +1,3 @@
-import { Message } from 'vercel-ai';
 import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
@@ -33,7 +32,7 @@ export async function POST(req: Request) {
     const toneSummary = Object.entries(tone).map(([k, v]) => `${k}: ${v}`).join(', ');
     const skillSummary = Object.entries(skills).map(([k, v]) => `${k}: ${v}`).join(', ');
 
-    const systemMessage: Message = {
+    const systemMessage = {
       role: 'system',
       content: `
 You are a deeply personalized assistant for a user named ${iv.name ?? 'Unknown'}.
