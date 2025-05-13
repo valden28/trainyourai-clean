@@ -12,9 +12,9 @@ const supabase = createClient(
 export const runtime = 'edge';
 
 export async function POST(req: Request) {
-  try {
-    const { userId } = auth();
-    if (!userId) return new Response('Unauthorized', { status: 401 });
+    try {
+      const { userId } = await auth();
+      if (!userId) return new Response('Unauthorized', { status: 401 });
 
     const { messages } = await req.json();
 
