@@ -11,16 +11,17 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export const runtime = 'edge';
-
 export async function POST(req: Request) {
   try {
-    const session = await getSession(req, new Response());
-const user = session?.user;
+    const session = await getSession(req, { raw: true });
+    const user = session?.user;
 
-if (!user) return new Response('Unauthorized', { status: 401 });
+    if (!user) {
+      console.error('Auth failed — no user session');
+      return new Response('Unauthorized', { status: 401 });
+    }
 
-const userId = user.sub; // This is the Auth0 UID
+    const userId = user.sub; // Auth0 UID
 
     const { messages } = await req.json();
 
@@ -32,7 +33,7 @@ const userId = user.sub; // This is the Auth0 UID
 
     if (error || !vault) {
       console.error('Vault not found:', error);
-      return new Response('Vault not found or incomplete.', { status: 500 });
+      return new Response('Vault not found or incomplete.', { status: 404 });
     }
 
     const iv = vault.innerview || {};
@@ -73,6 +74,6 @@ If any data is missing, behave gracefully and continue.
     return new Response(reply);
   } catch (err: any) {
     console.error('[CHAT ERROR]', err);
-    return new Response(`[Server Error]: ${err.message}`, { status: 500 });
+    return new Response(`Server Error: ${err.message}`, { status: 500 });
   }
 }
