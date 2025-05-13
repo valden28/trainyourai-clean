@@ -1,27 +1,22 @@
 // middleware.ts
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
+import { NextRequest, NextResponse } from 'next/server';
 
-export default async function middleware(req: any) {
-  const res = new Response();
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next();
   const session = await getSession(req, res);
 
   if (!session?.user) {
-    return new Response('Unauthorized', { status: 401 });
+    return NextResponse.redirect(new URL('/api/unauthorized', req.url));
   }
 
   const userId = session.user.sub;
+  req.headers.set('x-user-id', userId); // attach to request
 
-  // Clone the request and add user ID to headers
-  const requestHeaders = new Headers(req.headers);
-  requestHeaders.set('x-user-id', userId);
-
-  return new Response(null, {
-    status: 200,
-    headers: requestHeaders,
-  });
+  return res;
 }
 
 export const config = {
-  matcher: ['/api/chat'], // Only apply to this route for now
+  matcher: ['/api/chat'], // only run this for /api/chat
 };
