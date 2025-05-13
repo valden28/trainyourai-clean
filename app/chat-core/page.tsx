@@ -21,8 +21,6 @@ export default function ChatCorePage() {
     setInput('');
     setLoading(true);
 
-    console.log('Sending to /api/chat', [...messages, userMessage]);
-
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',

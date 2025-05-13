@@ -13,8 +13,7 @@ export const runtime = 'edge';
 
 export async function POST(req: Request) {
   try {
-    const authData = await auth();
-    const userId = authData.userId;
+    const { userId } = auth();
     if (!userId) return new Response('Unauthorized', { status: 401 });
 
     const { messages } = await req.json();
@@ -25,16 +24,19 @@ export async function POST(req: Request) {
       .eq('user_uid', userId)
       .single();
 
-    const iv = vault?.innerview || {};
-    const tone = vault?.tonesync || {};
-    const skills = vault?.skillsync || {};
+    if (error || !vault) {
+      console.error('Vault not found:', error);
+      return new Response('Vault not found or incomplete.', { status: 500 });
+    }
+
+    const iv = vault.innerview || {};
+    const tone = vault.tonesync || {};
+    const skills = vault.skillsync || {};
 
     const toneSummary = Object.entries(tone).map(([k, v]) => `${k}: ${v}`).join(', ');
     const skillSummary = Object.entries(skills).map(([k, v]) => `${k}: ${v}`).join(', ');
 
-    const systemMessage = {
-      role: 'system',
-      content: `
+    const systemPrompt = `
 You are a deeply personalized assistant for a user named ${iv.name ?? 'Unknown'}.
 
 [Vault Summary]
@@ -51,15 +53,17 @@ ${skillSummary}
 
 Always align your tone and depth of response to the vault preferences.
 If any data is missing, behave gracefully and continue.
-`.trim(),
-    };
+    `.trim();
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
-      messages: [systemMessage, ...messages],
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages,
+      ],
     });
 
-    const reply = completion.choices[0]?.message?.content || 'No response generated.';
+    const reply = completion.choices[0]?.message?.content || 'No response.';
     return new Response(reply);
   } catch (err: any) {
     console.error('[CHAT ERROR]', err);
