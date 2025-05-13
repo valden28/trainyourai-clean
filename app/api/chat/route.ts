@@ -1,6 +1,6 @@
 // app/api/chat/route.ts
 
-import { NextResponse } from 'next/server';
+import { OpenAIStream, StreamingTextResponse } from 'ai';
 import OpenAI from 'openai';
 import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
@@ -16,30 +16,22 @@ const supabase = createClient(
 );
 
 export async function POST(req: Request) {
-    try {
-      const authData = await auth();
-      const userId = authData.userId;
-      if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  
-      const { messages } = await req.json();
-  
-      // ...rest of logic
+  try {
+    const authData = await auth();
+    const userId = authData.userId;
+    if (!userId) return new Response('Unauthorized', { status: 401 });
 
-    // 1. Get vault from Supabase using user UID
+    const { messages } = await req.json();
+
     const { data: vault, error } = await supabase
       .from('vaults_test')
       .select('*')
       .eq('user_uid', userId)
       .single();
 
-    if (error || !vault) {
-      console.error('Vault fetch error:', error);
-      return NextResponse.json({ error: 'Vault not found' }, { status: 404 });
-    }
-
-    const iv = vault.innerview || {};
-    const tone = vault.tonesync || {};
-    const skills = vault.skillsync || {};
+    const iv = vault?.innerview || {};
+    const tone = vault?.tonesync || {};
+    const skills = vault?.skillsync || {};
 
     const toneSummary = Object.entries(tone).map(([k, v]) => `${k}: ${v}`).join(', ');
     const skillSummary = Object.entries(skills).map(([k, v]) => `${k}: ${v}`).join(', ');
@@ -49,34 +41,33 @@ export async function POST(req: Request) {
       content: `
 You are a deeply personalized assistant for a user named ${iv.name ?? 'Unknown'}.
 
-You have access to their vault. Use it naturally in all replies. Do NOT tell the user you lack information if it's in the vault.
-
-[Identity]
+[Vault Summary]
 - Name: ${iv.name}
 - Role: ${iv.role}
 - Location: ${iv.location}
 - Bio: ${iv.bio}
 
-[Tone Preferences]
+[ToneSync]
 ${toneSummary}
 
-[Skill Confidence]
+[SkillSync]
 ${skillSummary}
 
-Always align your tone to ToneSync.
-Always adjust explanation depth to SkillSync.
-Behave as if you’ve known this user for years.
-      `.trim(),
+Always align your tone and depth of response to the vault preferences.
+If any data is missing, behave gracefully and continue.
+`.trim(),
     };
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4',
+      stream: true,
       messages: [systemMessage, ...messages],
     });
 
-    return NextResponse.json({ reply: response.choices[0].message.content });
+    const stream = OpenAIStream(response);
+    return new StreamingTextResponse(stream);
   } catch (err: any) {
-    console.error('[CHAT ERROR]', err);
-    return NextResponse.json({ error: 'Failed to generate response' }, { status: 500 });
+    console.error('[CHAT STREAM ERROR]', err);
+    return new Response('Error streaming response', { status: 500 });
   }
 }
