@@ -1,8 +1,9 @@
-// app/api/chat/route.ts
-
-import { OpenAIStream, StreamingTextResponse, Message } from 'vercel-ai';
+import { Message } from 'vercel-ai';
 import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
+import OpenAI from 'openai';
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
 
     const { messages } = await req.json();
 
-    const { data: vault } = await supabase
+    const { data: vault, error } = await supabase
       .from('vaults_test')
       .select('*')
       .eq('user_uid', userId)
@@ -54,19 +55,15 @@ If any data is missing, behave gracefully and continue.
 `.trim(),
     };
 
-    const stream = await OpenAIStream({
+    const completion = await openai.chat.completions.create({
       model: 'gpt-4',
-      messages: [systemMessage, ...messages] as Message[],
-      stream: true,
+      messages: [systemMessage, ...messages],
     });
 
-    const chunks: string[] = [];
-for await (const chunk of stream) {
-  chunks.push(chunk);
-}
-return new Response(chunks.join(''));
+    const reply = completion.choices[0]?.message?.content || 'No response generated.';
+    return new Response(reply);
   } catch (err: any) {
-    console.error('[CHAT STREAM ERROR]', err);
-    return new Response('Error streaming response', { status: 500 });
+    console.error('[CHAT ERROR]', err);
+    return new Response(`[Server Error]: ${err.message}`, { status: 500 });
   }
 }
