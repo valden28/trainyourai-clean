@@ -1,26 +1,46 @@
 'use client';
 
-import { useChat } from 'ai/react';
-import { useEffect, useRef } from 'react';
+import { useState } from 'react';
+
+type Message = {
+  role: 'user' | 'assistant';
+  content: string;
+};
 
 export default function ChatCorePage() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
-    api: '/api/chat'
-  });
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
 
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    const userMessage: Message = { role: 'user', content: input };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+    setLoading(true);
+
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({ messages: [...messages, userMessage] }),
+    });
+
+    const assistantReply = await res.text();
+
+    setMessages((prev) => [
+      ...prev,
+      { role: 'assistant', content: assistantReply },
+    ]);
+    setLoading(false);
+  };
 
   return (
-    <main className="flex flex-col h-screen bg-gray-100 text-black">
-      <div className="flex-grow overflow-y-auto p-4 space-y-4">
-        {messages.map((m) => (
+    <main className="flex flex-col h-screen p-4 bg-gray-100 text-black">
+      <div className="flex-grow overflow-y-auto space-y-4">
+        {messages.map((m, i) => (
           <div
-            key={m.id}
+            key={i}
             className={`p-3 rounded-xl max-w-2xl ${
               m.role === 'user' ? 'bg-blue-200 self-end' : 'bg-white self-start'
             }`}
@@ -28,23 +48,20 @@ export default function ChatCorePage() {
             <strong>{m.role === 'user' ? 'You' : 'Assistant'}:</strong> {m.content}
           </div>
         ))}
-        <div ref={bottomRef} />
+        {loading && <p className="italic">Assistant is replying...</p>}
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="flex p-4 border-t bg-white"
-      >
+      <form onSubmit={handleSend} className="flex border-t mt-4 bg-white p-2">
         <input
           value={input}
-          onChange={handleInputChange}
+          onChange={(e) => setInput(e.target.value)}
           placeholder="Type your message..."
-          className="flex-grow p-3 rounded-lg border border-gray-300 mr-2"
+          className="flex-grow p-2 rounded border border-gray-300 mr-2"
         />
         <button
           type="submit"
-          disabled={isLoading}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
+          disabled={loading}
+          className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
         >
           Send
         </button>

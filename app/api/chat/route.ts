@@ -1,19 +1,15 @@
 // app/api/chat/route.ts
 
-import { OpenAIStream, StreamingTextResponse } from 'ai';
-import OpenAI from 'openai';
+import { OpenAIStream, StreamingTextResponse, Message } from 'vercel-ai';
 import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-  project: process.env.OPENAI_PROJECT_ID,
-});
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+export const runtime = 'edge';
 
 export async function POST(req: Request) {
   try {
@@ -23,7 +19,7 @@ export async function POST(req: Request) {
 
     const { messages } = await req.json();
 
-    const { data: vault, error } = await supabase
+    const { data: vault } = await supabase
       .from('vaults_test')
       .select('*')
       .eq('user_uid', userId)
@@ -36,7 +32,7 @@ export async function POST(req: Request) {
     const toneSummary = Object.entries(tone).map(([k, v]) => `${k}: ${v}`).join(', ');
     const skillSummary = Object.entries(skills).map(([k, v]) => `${k}: ${v}`).join(', ');
 
-    const systemMessage = {
+    const systemMessage: Message = {
       role: 'system',
       content: `
 You are a deeply personalized assistant for a user named ${iv.name ?? 'Unknown'}.
@@ -58,14 +54,17 @@ If any data is missing, behave gracefully and continue.
 `.trim(),
     };
 
-    const response = await openai.chat.completions.create({
+    const stream = await OpenAIStream({
       model: 'gpt-4',
+      messages: [systemMessage, ...messages] as Message[],
       stream: true,
-      messages: [systemMessage, ...messages],
     });
 
-    const stream = OpenAIStream(response);
-    return new StreamingTextResponse(stream);
+    const chunks: string[] = [];
+for await (const chunk of stream) {
+  chunks.push(chunk);
+}
+return new Response(chunks.join(''));
   } catch (err: any) {
     console.error('[CHAT STREAM ERROR]', err);
     return new Response('Error streaming response', { status: 500 });
