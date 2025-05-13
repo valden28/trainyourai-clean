@@ -16,11 +16,14 @@ const supabase = createClient(
 );
 
 export async function POST(req: Request) {
-  try {
-    const { userId } = auth();
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const { messages } = await req.json();
+    try {
+      const authData = await auth();
+      const userId = authData.userId;
+      if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  
+      const { messages } = await req.json();
+  
+      // ...rest of logic
 
     // 1. Get vault from Supabase using user UID
     const { data: vault, error } = await supabase
