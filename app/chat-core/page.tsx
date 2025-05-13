@@ -1,72 +1,54 @@
-// app/api/chat/route.ts
+'use client';
 
-import { OpenAIStream, StreamingTextResponse } from 'ai';
-import { auth } from '@clerk/nextjs';
-import { createClient } from '@supabase/supabase-js';
+import { useChat } from 'ai/react';
+import { useEffect, useRef } from 'react';
 
-export const runtime = 'edge';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-export async function POST(req: Request) {
-  const { userId } = auth();
-  const { messages } = await req.json();
-
-  if (!userId) {
-    return new Response('Unauthorized', { status: 401 });
-  }
-
-  // 1. Fetch user vault from Supabase
-  const { data: vault, error } = await supabase
-    .from('vaults_test')
-    .select('*')
-    .eq('user_uid', userId)
-    .single();
-
-  if (error || !vault) {
-    return new Response('No vault found for user.', { status: 404 });
-  }
-
-  // 2. Build system prompt using vault data
-  const systemPrompt = `
-You are a fully calibrated AI assistant trained using the user's personalized Vault.
-
-You have permission to use the following real personal data about the user in your responses.
-You are NOT required to ask the user to repeat this information — it has already been shared.
-You should behave as if you've known this user for years, and shape your tone, content, and behavior based on their vault.
-
--- BEGIN VAULT DATA --
-${JSON.stringify(vault, null, 2)}
--- END VAULT DATA --
-
-InnerView contains key personal details like name, location, family, background, and goals.
-ToneSync defines how to speak to the user — mimic their preferred tone, humor, and formality.
-SkillSync shows confidence levels in different areas — adjust explanations accordingly.
-
-Never hide that you know this. Do not tell the user "I don't know that" if it's in the Vault.
-Just use what you know and speak like a trusted, tuned assistant who gets them.
-
-Start every conversation from that mindset.
-  `.trim();
-
-  // 3. Inject system message at the start
-  const fullMessages = [
-    {
-      role: 'system',
-      content: systemPrompt
-    },
-    ...messages
-  ];
-
-  // 4. Send to OpenAI
-  const response = await OpenAIStream({
-    model: 'gpt-4',
-    stream: true,
-    messages: fullMessages,
+export default function ChatCorePage() {
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+    api: '/api/chat'
   });
 
-  return new StreamingTextResponse(response);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  return (
+    <main className="flex flex-col h-screen bg-gray-100 text-black">
+      <div className="flex-grow overflow-y-auto p-4 space-y-4">
+        {messages.map((m) => (
+          <div
+            key={m.id}
+            className={`p-3 rounded-xl max-w-2xl ${
+              m.role === 'user' ? 'bg-blue-200 self-end' : 'bg-white self-start'
+            }`}
+          >
+            <strong>{m.role === 'user' ? 'You' : 'Assistant'}:</strong> {m.content}
+          </div>
+        ))}
+        <div ref={bottomRef} />
+      </div>
+
+      <form
+        onSubmit={handleSubmit}
+        className="flex p-4 border-t bg-white"
+      >
+        <input
+          value={input}
+          onChange={handleInputChange}
+          placeholder="Type your message..."
+          className="flex-grow p-3 rounded-lg border border-gray-300 mr-2"
+        />
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
+        >
+          Send
+        </button>
+      </form>
+    </main>
+  );
 }
