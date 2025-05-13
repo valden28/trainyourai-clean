@@ -15,12 +15,12 @@ export const runtime = 'edge';
 
 export async function POST(req: Request) {
   try {
-    const session = await getSession(req);
-    const user = session?.user;
+    const session = await getSession(req, new Response());
+const user = session?.user;
 
-    if (!user) return new Response('Unauthorized', { status: 401 });
+if (!user) return new Response('Unauthorized', { status: 401 });
 
-    const userId = user.sub; // This is the Auth0 UID
+const userId = user.sub; // This is the Auth0 UID
 
     const { messages } = await req.json();
 
