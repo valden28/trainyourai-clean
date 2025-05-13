@@ -1,4 +1,6 @@
-import { auth } from '@clerk/nextjs/server';
+// app/api/chat/route.ts
+
+import { getSession } from '@auth0/nextjs-auth0/edge';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
@@ -12,9 +14,13 @@ const supabase = createClient(
 export const runtime = 'edge';
 
 export async function POST(req: Request) {
-    try {
-      const { userId } = await auth();
-      if (!userId) return new Response('Unauthorized', { status: 401 });
+  try {
+    const session = await getSession(req);
+    const user = session?.user;
+
+    if (!user) return new Response('Unauthorized', { status: 401 });
+
+    const userId = user.sub; // This is the Auth0 UID
 
     const { messages } = await req.json();
 
