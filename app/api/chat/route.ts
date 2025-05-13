@@ -1,6 +1,4 @@
 // app/api/chat/route.ts
-
-import { getSession } from '@auth0/nextjs-auth0/edge';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
@@ -13,15 +11,12 @@ const supabase = createClient(
 
 export async function POST(req: Request) {
   try {
-    const session = await getSession(req, { raw: true });
-    const user = session?.user;
+    const userId = req.headers.get('x-user-id');
 
-    if (!user) {
-      console.error('Auth failed — no user session');
+    if (!userId) {
+      console.error('Missing user ID from middleware');
       return new Response('Unauthorized', { status: 401 });
     }
-
-    const userId = user.sub; // Auth0 UID
 
     const { messages } = await req.json();
 
