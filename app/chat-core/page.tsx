@@ -24,6 +24,7 @@ export default function ChatCorePage() {
     const res = await fetch('/api/chat', {
       method: 'POST',
       body: JSON.stringify({ messages: [...messages, userMessage] }),
+      console.log('Sending to /api/chat', [...messages, userMessage]);
     });
 
     const assistantReply = await res.text();
