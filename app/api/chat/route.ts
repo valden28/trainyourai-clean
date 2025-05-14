@@ -37,7 +37,10 @@ function formatVaultPrompt(vault: any): string {
   const interests = iv.interests?.length ? `\n[Interests]\n- ${iv.interests.join('\n- ')}` : '';
 
   const toneSummary = Object.entries(tone)
-    .map(([category, valueList]) => `- ${category}: ${valueList[valueList.length - 1]}`)
+    .map(([category, valueList]) => {
+      const values = valueList as string[];
+      return `- ${category}: ${values[values.length - 1]}`;
+    })
     .join('\n');
 
   return `
@@ -106,4 +109,3 @@ export async function POST(req: Request) {
     return new Response(`Server Error: ${err.message}`, { status: 500 });
   }
 }
-    
