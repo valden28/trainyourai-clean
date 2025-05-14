@@ -1,5 +1,3 @@
-// middleware.ts
-
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -11,12 +9,9 @@ export async function middleware(req: NextRequest) {
   }
 
   const userId = session.user.sub;
-
-  // Clone request headers
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set('x-user-id', userId);
 
-  // Pass headers into downstream API route
   return NextResponse.next({
     request: {
       headers: requestHeaders,
@@ -25,5 +20,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/chat'],
+  matcher: ['/api/chat', '/chat-core', '/dashboard'],
 };
