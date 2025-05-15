@@ -12,12 +12,14 @@ export default function ChatCorePage() {
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
+  // Redirect if not logged in
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/');
     }
   }, [user, isLoading, router]);
 
+  // Auto scroll to bottom
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -49,6 +51,16 @@ export default function ChatCorePage() {
 
   return (
     <main className="flex flex-col h-screen bg-white text-black">
+      <div className="flex justify-between items-center p-4 border-b bg-gray-50 shadow-sm">
+        <h1 className="text-xl font-bold">Your AI Assistant</h1>
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="text-sm text-blue-600 hover:underline"
+        >
+          Go to Dashboard
+        </button>
+      </div>
+
       <div className="flex-grow overflow-y-auto p-4 space-y-4">
         {messages.map((m, i) => (
           <div
