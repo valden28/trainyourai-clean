@@ -2,10 +2,11 @@ import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function middleware(req: NextRequest) {
-  const session = await getSession(req, NextResponse.next());
+  const res = NextResponse.next();
+  const session = await getSession(req, res);
 
   if (!session?.user) {
-    return NextResponse.redirect(new URL('/api/unauthorized', req.url));
+    return NextResponse.redirect(new URL('/', req.url));
   }
 
   const userId = session.user.sub;
@@ -20,5 +21,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/dashboard', '/onboarding', '/chat-core', '/api/save-vault']
-  };
+  matcher: ['/api/chat', '/dashboard', '/onboarding', '/chat-core'],
+};
