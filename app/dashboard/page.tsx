@@ -1,13 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
+  const { user, isLoading } = useUser();
+  const router = useRouter();
+
   const [vault, setVault] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push('/api/auth/login');
+    }
+  }, [user, isLoading, router]);
 
   useEffect(() => {
     const fetchVault = async () => {
@@ -27,8 +36,10 @@ export default function DashboardPage() {
       }
     };
 
-    fetchVault();
-  }, []);
+    if (user) {
+      fetchVault();
+    }
+  }, [user]);
 
   const missing = (field: string) => !vault?.[field];
 
