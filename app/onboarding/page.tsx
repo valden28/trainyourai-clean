@@ -1,7 +1,7 @@
 'use client';
 
 // Use this for the accordion
-import Accordion from './ui/accordion';
+
 import { AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
 
 import IdentitySection from './IdentitySection';
