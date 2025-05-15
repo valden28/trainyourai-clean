@@ -24,11 +24,11 @@ export default function HomePage() {
               Log In
             </a>
             <a
-              href="/api/auth/login"
-              className="bg-gray-100 text-blue-600 px-6 py-2 rounded hover:bg-gray-200"
-            >
-              Get Started
-            </a>
+             href="/dashboard"
+            className="bg-gray-100 text-blue-600 px-6 py-2 rounded hover:bg-gray-200"
+                >
+                Get Started
+                </a>
           </>
         )}
 
