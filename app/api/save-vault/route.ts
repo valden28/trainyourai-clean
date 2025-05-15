@@ -20,14 +20,21 @@ export async function POST(req: NextRequest) {
 
   const { vault } = await req.json();
 
+  const safeVault = {
+    innerview: vault.innerview || {},
+    tonesync: vault.tonesync || {},
+    skillsync: vault.skillsync || {},
+    ...vault
+  };
+
   const { error } = await supabase
     .from('vaults_test')
-    .upsert({ user_uid: userId, ...vault }, { onConflict: 'user_uid' });
+    .upsert({ user_uid: userId, ...safeVault }, { onConflict: 'user_uid' });
 
-  if (error) {
-    console.error('[VAULT SAVE ERROR]', error);
-    return new NextResponse('Failed to save vault', { status: 500 });
-  }
+    if (error) {
+      console.error('[VAULT SAVE ERROR]', JSON.stringify(error, null, 2));
+      return new NextResponse(`Failed to save vault: ${JSON.stringify(error)}`, { status: 500 });
+    }
 
   return new NextResponse('Vault saved', { status: 200 });
 }
