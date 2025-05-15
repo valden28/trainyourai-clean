@@ -41,14 +41,22 @@ export default function OnboardingPage() {
   };
 
   const handleSubmit = async () => {
+    console.log('Submit button clicked');
+    console.log('Vault data being sent:', formData);
+  
     const res = await fetch('/api/save-vault', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ vault: formData }),
     });
-
+  
+    const responseText = await res.text();
+    console.log('API response:', responseText);
+  
     if (res.ok) {
       router.push('/chat-core');
+    } else {
+      console.error('Vault save failed:', res.status, responseText);
     }
   };
 
