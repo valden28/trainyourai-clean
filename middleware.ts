@@ -22,5 +22,4 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
     matcher: ['/chat-core', '/api/chat', '/dashboard', '/onboarding']
-    
-},
+  };
