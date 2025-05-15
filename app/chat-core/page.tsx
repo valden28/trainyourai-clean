@@ -1,64 +1,66 @@
 'use client';
 
-import { useState } from 'react';
-
-type Message = {
-  role: 'user' | 'assistant';
-  content: string;
-};
+import { useUser } from '@auth0/nextjs-auth0/client';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState, useRef } from 'react';
 
 export default function ChatCorePage() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { user, isLoading } = useUser();
+  const router = useRouter();
+  const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push('/');
+    }
+  }, [user, isLoading, router]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    const userMessage: Message = { role: 'user', content: input };
-    setMessages((prev) => [...prev, userMessage]);
+    const newMessage = { role: 'user', content: input };
+    setMessages((prev) => [...prev, newMessage]);
     setInput('');
     setLoading(true);
 
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ messages: [...messages, userMessage] }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [...messages, newMessage] }),
       });
 
       const reply = await res.text();
       setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
     } catch (err) {
       console.error('Chat error:', err);
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: '[Server error]' },
-      ]);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
-    <main className="flex flex-col h-screen bg-gray-100 text-black">
+    <main className="flex flex-col h-screen bg-white text-black">
       <div className="flex-grow overflow-y-auto p-4 space-y-4">
         {messages.map((m, i) => (
           <div
             key={i}
             className={`p-3 rounded-xl max-w-2xl ${
-              m.role === 'user' ? 'bg-blue-200 self-end' : 'bg-white self-start'
+              m.role === 'user' ? 'bg-blue-200 self-end' : 'bg-gray-100 self-start'
             }`}
           >
             <strong>{m.role === 'user' ? 'You' : 'Assistant'}:</strong> {m.content}
           </div>
         ))}
-        {loading && (
-          <div className="italic text-gray-500">Assistant is thinking...</div>
-        )}
+        <div ref={bottomRef} />
       </div>
 
       <form onSubmit={handleSend} className="flex p-4 border-t bg-white">
