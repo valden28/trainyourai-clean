@@ -1,8 +1,10 @@
 'use client';
 
-import Accordion from '@/app/onboarding/ui/accordion';
-import { AccordionItem, AccordionTrigger, AccordionContent } from '@/app/onboarding/ui/accordion';
+// Use this for the accordion
+import Accordion from '@/components/ui/accordion';
+import { AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 
+// And this for sections now in /app/onboarding/
 import IdentitySection from '@/app/onboarding/IdentitySection';
 import PeopleSection from '@/app/onboarding/PeopleSection';
 import DateSection from '@/app/onboarding/DateSection';
