@@ -1,22 +1,20 @@
 'use client';
 
-import { useUser } from '@auth0/nextjs-auth0/client';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Accordion from './ui/accordion';
-import { AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
-import IdentitySection from './IdentitySection';
-import PeopleSection from './PeopleSection';
-import DateSection from './DateSection';
-import PreferencesSection from './PreferencesSection';
-import BeliefSection from './BeliefSection';
-import SkillSection from './SkillSection';
-import WorkSection from './WorkSection';
-import FoodSection from './FoodSection';
-import PhysicalSection from './PhysicalSection';
-import PopCultureSection from './PopCultureSection';
-import HealthSection from './HealthSection';
-import ToneSyncSection from './ToneSyncSection';
+import Accordion from '@/app/onboarding/ui/accordion';
+import { AccordionItem, AccordionTrigger, AccordionContent } from '@/app/onboarding/ui/accordion';
+
+import IdentitySection from '@/app/onboarding/IdentitySection';
+import PeopleSection from '@/app/onboarding/PeopleSection';
+import DateSection from '@/app/onboarding/DateSection';
+import PreferencesSection from '@/app/onboarding/PreferencesSection';
+import BeliefSection from '@/app/onboarding/BeliefSection';
+import SkillSection from '@/app/onboarding/SkillSection';
+import WorkSection from '@/app/onboarding/WorkSection';
+import FoodSection from '@/app/onboarding/FoodSection';
+import PhysicalSection from '@/app/onboarding/PhysicalSection';
+import PopCultureSection from '@/app/onboarding/PopCultureSection';
+import HealthSection from '@/app/onboarding/HealthSection';
+import ToneSyncSection from '@/app/onboarding/ToneSyncSection';
 
 export default function OnboardingPage() {
   const { user, isLoading } = useUser();
