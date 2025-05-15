@@ -1,8 +1,8 @@
-// /app/api/save-vault/route.ts
+// app/api/save-vault/route.ts
 
+import { getSession } from '@auth0/nextjs-auth0/edge';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { auth } from '@auth0/nextjs-auth0';
-import { NextRequest } from 'next/server';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,18 +10,24 @@ const supabase = createClient(
 );
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const session = await auth(req);
-  const userId = session?.user?.sub;
+  const session = await getSession(req, NextResponse.next());
+  const user = session?.user;
+  const userId = user?.sub;
 
-  if (!userId) return new Response('Unauthorized', { status: 401 });
+  if (!userId) {
+    return new NextResponse('Unauthorized', { status: 401 });
+  }
 
-  const { vault } = body;
+  const { vault } = await req.json();
 
   const { error } = await supabase
     .from('vaults_test')
     .upsert({ user_uid: userId, ...vault }, { onConflict: 'user_uid' });
 
-  if (error) return new Response('Error saving vault', { status: 500 });
-  return new Response('OK');
+  if (error) {
+    console.error('[VAULT SAVE ERROR]', error);
+    return new NextResponse('Failed to save vault', { status: 500 });
+  }
+
+  return new NextResponse('Vault saved', { status: 200 });
 }
