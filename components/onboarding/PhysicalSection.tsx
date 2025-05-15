@@ -25,7 +25,8 @@ export default function PhysicalSection({ onUpdate }: { onUpdate: (data: any) =>
       </p>
 
       <input
-        placeholder="Height (e.g. 5'10\" or 178cm)"
+        <input
+        placeholder={'Height (e.g. 5\'10" or 178cm)'}
         value={formState.height}
         onChange={(e) => updateField('height', e.target.value)}
         className="w-full p-2 border"
