@@ -21,5 +21,6 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/chat', '/dashboard', '/onboarding', '/chat-core'],
-};
+    matcher: ['/chat-core', '/api/chat', '/dashboard', '/onboarding']
+    
+},

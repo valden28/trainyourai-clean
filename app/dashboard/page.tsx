@@ -33,7 +33,7 @@ export default function DashboardPage() {
   const missing = (field: string) => !vault?.[field];
 
   const handleStart = () => router.push('/onboarding');
-  const handleTone = () => router.push('/onboarding/tone');
+  const handleTone = () => router.push('/onboarding');
   const handleChat = () => router.push('/chat-core');
 
   const isComplete =
