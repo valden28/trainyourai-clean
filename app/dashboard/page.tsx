@@ -34,13 +34,13 @@ export default function DashboardPage() {
 
   const handleStart = () => router.push('/onboarding');
   const handleTone = () => router.push('/onboarding/tone');
+  const handleChat = () => router.push('/chat-core');
 
   const isComplete =
     vault &&
     vault.innerview &&
     vault.tonesync &&
-    vault.skillsync &&
-    vault.persona_mode;
+    vault.skillsync;
 
   return (
     <div className="min-h-screen bg-white text-black p-6">
@@ -63,7 +63,6 @@ export default function DashboardPage() {
                     missing('innerview') && 'InnerView',
                     missing('tonesync') && 'ToneSync',
                     missing('skillsync') && 'SkillSync',
-                    missing('persona_mode') && 'PersonaMode',
                   ]
                     .filter(Boolean)
                     .join(', ')}{' '}
@@ -71,14 +70,22 @@ export default function DashboardPage() {
                 </p>
               )}
             </div>
-            {missing('innerview') && (
+            <div className="space-x-2">
+              {missing('innerview') && (
+                <button
+                  onClick={handleStart}
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                >
+                  Start InnerView
+                </button>
+              )}
               <button
-                onClick={handleStart}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                onClick={handleChat}
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
               >
-                Start InnerView
+                Go to Chat
               </button>
-            )}
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
