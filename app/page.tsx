@@ -15,19 +15,21 @@ export default function HomePage() {
       </p>
 
       <div className="space-x-4">
-  <a
-    href="/api/auth/login"
-    className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
-  >
-    Log In
-  </a>
-  <a
-    href="/api/auth/login"
-    className="bg-gray-100 text-blue-600 px-6 py-2 rounded hover:bg-gray-200"
-  >
-    Get Started
-  </a>
-</div>
+        {!isLoading && !user && (
+          <>
+            <a
+              href="/api/auth/login"
+              className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+            >
+              Log In
+            </a>
+            <a
+              href="/api/auth/login"
+              className="bg-gray-100 text-blue-600 px-6 py-2 rounded hover:bg-gray-200"
+            >
+              Get Started
+            </a>
+          </>
         )}
 
         {!isLoading && user && (
