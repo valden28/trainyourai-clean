@@ -6,7 +6,7 @@ export async function middleware(req: NextRequest) {
   const session = await getSession(req, res);
 
   if (!session?.user) {
-    return NextResponse.redirect(new URL('/', req.url));
+    return NextResponse.redirect(new URL('/api/auth/login', req.url)); // ✅ this triggers login
   }
 
   const userId = session.user.sub;
@@ -21,5 +21,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-    matcher: ['/chat-core', '/api/chat', '/dashboard', '/onboarding']
+    matcher: ['/api/chat', '/dashboard', '/onboarding', '/chat-core']
   };
