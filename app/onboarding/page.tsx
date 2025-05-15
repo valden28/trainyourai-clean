@@ -3,6 +3,7 @@
 // Use this for the accordion
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
 
 import IdentitySection from './IdentitySection';
