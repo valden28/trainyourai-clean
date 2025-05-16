@@ -2,7 +2,13 @@
 
 import { useState } from 'react';
 
-export default function PeopleSection() {
+interface PeopleSectionProps {
+  onComplete?: () => void;
+  collapsed?: boolean;
+  onToggle?: () => void;
+}
+
+export default function PeopleSection({ onComplete }: PeopleSectionProps) {
   const [formState, setFormState] = useState({
     spouse: '',
     children: '',
@@ -11,6 +17,8 @@ export default function PeopleSection() {
   });
 
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [collapsed, setCollapsed] = useState(false);
+  const [isEditing, setIsEditing] = useState(true);
 
   const handleSave = async () => {
     setStatus('saving');
@@ -22,6 +30,9 @@ export default function PeopleSection() {
 
     if (res.ok) {
       setStatus('saved');
+      setCollapsed(true);
+      setIsEditing(false);
+      if (onComplete) onComplete();
     } else {
       setStatus('error');
     }
@@ -31,6 +42,19 @@ export default function PeopleSection() {
     setFormState((prev) => ({ ...prev, [field]: value }));
     setStatus('idle');
   };
+
+  if (collapsed && !isEditing) {
+    return (
+      <div className="flex justify-end">
+        <button
+          onClick={() => setIsEditing(true)}
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+        >
+          Edit
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
