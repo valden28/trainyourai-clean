@@ -64,12 +64,12 @@ export default function OnboardingPage() {
     <main className="max-w-3xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">TrainYourAI: InnerView Onboarding</h1>
       <Accordion type="single" collapsible className="space-y-4">
-        <AccordionItem value="identity">
-          <AccordionTrigger>1. Identity & Background</AccordionTrigger>
-          <AccordionContent>
-            <IdentitySection onUpdate={(data) => updateSectionData('innerview', data)} />
-          </AccordionContent>
-        </AccordionItem>
+      <AccordionItem value="identity">
+       <AccordionTrigger>1. Identity & Background</AccordionTrigger>
+       <AccordionContent>
+          <IdentitySection />
+        </AccordionContent>
+      </AccordionItem>
 
         <AccordionItem value="people">
           <AccordionTrigger>2. People in Your Life</AccordionTrigger>
