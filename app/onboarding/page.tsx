@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
-import Accordion from './ui/accordion';
+import { Accordion } from './ui/accordion';
 import { AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
 import IdentitySection from './IdentitySection';
 import PeopleSection from './PeopleSection';
