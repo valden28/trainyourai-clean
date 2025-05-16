@@ -25,7 +25,7 @@ export default function ToneSyncSection({ existingData }: ToneSyncSectionProps) 
   useEffect(() => {
     if (existingData) {
       const formatted = Object.fromEntries(
-        Object.entries(existingData).map(([k, v]) => [k, toneLabels[k].indexOf(v)])
+        Object.entries(existingData).map(([k, v]) => [k, toneLabels[k].indexOf(v as string)])
       );
       setFormState(formatted);
       setIsEditing(false);
