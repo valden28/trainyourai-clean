@@ -1,83 +1,24 @@
 // app/api/chat/route.ts
 
-import { createClient } from '@supabase/supabase-js';
+import { OpenAIStream, StreamingTextResponse } from 'ai';
 import OpenAI from 'openai';
+import { auth } from '@auth0/nextjs-auth0';
+import { createClient } from '@supabase/supabase-js';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!,
+});
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-function formatVaultPrompt(vault: any): string {
-  const iv = vault?.innerview || {};
-  const tone = vault?.tonesync || {};
-
-  const fullName = iv.full_name || iv.name || 'Unknown';
-  const age = iv.age ? ` (age ${iv.age})` : '';
-  const location = iv.location || '';
-  const hometown = iv.hometown || '';
-  const profession = iv.profession || '';
-  const bio = iv.bio || '';
-  const personality = iv.personality || '';
-  const mentalHealth = iv.mental_health_insight || '';
-
-  const family = iv.family || {};
-  const spouse = family.spouse ? `Spouse: ${family.spouse}` : '';
-  const children = family.children?.map((c: string) => `Child: ${c}`) || [];
-  const grandchildren = family.grandchildren?.map((g: string) => `Grandchild: ${g}`) || [];
-  const dogs = family.dog_names?.map((d: string) => `Dog: ${d}`) || [];
-
-  const company = iv.company || {};
-  const companySection = company.name
-    ? `\n[Company]\n- Name: ${company.name}\n- Role: ${company.role}\n- Mission: ${company.mission}`
-    : '';
-
-  const interests = iv.interests?.length ? `\n[Interests]\n- ${iv.interests.join('\n- ')}` : '';
-
-  const toneSummary = Object.entries(tone)
-    .map(([category, valueList]) => {
-      const values = valueList as string[];
-      return `- ${category}: ${values[values.length - 1]}`;
-    })
-    .join('\n');
-
-  return `
-You are the personal assistant of ${fullName}${age}.
-
-[Identity]
-- Location: ${location}
-- Hometown: ${hometown}
-- Profession: ${profession}
-- Bio: ${bio}
-
-[Family]
-${[spouse, ...children, ...grandchildren, ...dogs].filter(Boolean).map(f => `- ${f}`).join('\n')}
-
-${companySection}
-${interests}
-
-[Personality]
-- ${personality}
-
-[Mental Health Insight]
-- ${mentalHealth}
-
-[Tone Preferences]
-${toneSummary}
-
-Always use this context to guide your tone, memory, and responses. You are here to support ${fullName} with context-aware conversation, deep personalization, and alignment with their values, personality, and priorities.
-`.trim();
-}
-
 export async function POST(req: Request) {
   try {
-    const userId = req.headers.get('x-user-id');
-
-    if (!userId) {
-      return new Response('Unauthorized', { status: 401 });
-    }
+    const { user } = await auth();
+    const userId = user?.sub;
+    if (!userId) return new Response('Unauthorized', { status: 401 });
 
     const { messages } = await req.json();
 
@@ -87,25 +28,89 @@ export async function POST(req: Request) {
       .eq('user_uid', userId)
       .single();
 
-    if (!vault || error) {
-      console.error('Vault fetch error:', error);
-      return new Response('Vault not found', { status: 404 });
+    if (error || !vault) {
+      console.error('[VAULT LOOKUP ERROR]', error);
+      return new Response('Vault not found or incomplete.', { status: 404 });
     }
 
-    const systemPrompt = formatVaultPrompt(vault);
+    const iv = vault.innerview || {};
+    const tone = vault.tonesync || {};
+    const skills = vault.skillsync || {};
+    const people = vault.people || {};
+    const dates = vault.dates || {};
+    const preferences = vault.preferences || {};
+    const beliefs = vault.beliefs || {};
+    const work = vault.work || {};
+    const food = vault.food || {};
+    const physical = vault.physical || {};
+    const popculture = vault.popculture || {};
+    const health = vault.health || {};
 
-    const completion = await openai.chat.completions.create({
+    const toneSummary = Object.entries(tone).map(([k, v]) => `${k}: ${v}`).join(', ');
+    const skillSummary = Object.entries(skills).map(([k, v]) => `${k}: ${v}`).join(', ');
+
+    const systemMessage = {
+      role: 'system',
+      content: `
+You are a personalized assistant for a user named ${iv.full_name ?? 'Unknown'}.
+
+[Identity]
+- Name: ${iv.full_name}
+- Bio: ${iv.bio}
+- Profession: ${iv.profession}
+- Location: ${iv.location}
+
+[People & Relationships]
+- Spouse: ${people.spouse || 'N/A'}
+- Children: ${people.children || 'N/A'}
+- Pets: ${people.pets || 'N/A'}
+- Others: ${people.others || 'N/A'}
+
+[Important Dates]
+${Object.entries(dates).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+
+[Preferences]
+${Object.entries(preferences).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+
+[Beliefs]
+${Object.entries(beliefs).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+
+[Work & Role]
+${Object.entries(work).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+
+[Food Preferences]
+${Object.entries(food).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+
+[Physical Attributes]
+${Object.entries(physical).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+
+[Pop Culture & Taste]
+${Object.entries(popculture).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+
+[Health & Fitness]
+${Object.entries(health).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+
+[ToneSync Preferences]
+${toneSummary}
+
+[SkillSync Confidence]
+${skillSummary}
+
+Always align your tone and depth of response to the user's vault. Speak in a way that fits their personality and preferences. If data is missing, respond gracefully and move forward.
+`.trim(),
+    };
+
+    //update prompt logic
+    const response = await openai.chat.completions.create({
       model: 'gpt-4',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...messages,
-      ],
+      stream: true,
+      messages: [systemMessage, ...messages],
     });
 
-    const reply = completion.choices[0]?.message?.content || 'No response.';
-    return new Response(reply);
+    const stream = OpenAIStream(response);
+    return new StreamingTextResponse(stream);
   } catch (err: any) {
-    console.error('[CHAT ERROR]', err);
-    return new Response(`Server Error: ${err.message}`, { status: 500 });
+    console.error('[CHAT STREAM ERROR]', err);
+    return new Response('Error streaming response', { status: 500 });
   }
 }
