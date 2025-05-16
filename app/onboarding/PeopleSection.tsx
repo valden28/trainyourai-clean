@@ -1,67 +1,91 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
-export default function PeopleInYourLifeSection({ onUpdate }: { onUpdate: (data: any) => void }) {
+export default function PeopleSection() {
   const [formState, setFormState] = useState({
     spouse: '',
     children: '',
-    parents: '',
-    siblings: '',
     pets: '',
-    contacts: '',
+    others: ''
   });
 
-  useEffect(() => {
-    onUpdate(formState);
-  }, [formState]);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  const updateField = (key: string, value: string) => {
-    setFormState((prev) => ({ ...prev, [key]: value }));
+  const handleSave = async () => {
+    setStatus('saving');
+    const res = await fetch('/api/save-section?field=people', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: formState })
+    });
+
+    if (res.ok) {
+      setStatus('saved');
+    } else {
+      setStatus('error');
+    }
+  };
+
+  const update = (field: string, value: string) => {
+    setFormState((prev) => ({ ...prev, [field]: value }));
+    setStatus('idle');
   };
 
   return (
     <div className="space-y-4">
-      <p className="text-gray-600 italic">
-        This section helps your assistant understand who matters in your life — your loved ones, your pets, even close contacts. This enables emotional tone, memory, and relevance in responses.
-      </p>
+      <div>
+        <label className="block font-medium">Spouse / Partner</label>
+        <input
+          value={formState.spouse}
+          onChange={(e) => update('spouse', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
 
-      <input
-        placeholder="Spouse / Partner"
-        value={formState.spouse}
-        onChange={(e) => updateField('spouse', e.target.value)}
-        className="w-full p-2 border"
-      />
-      <textarea
-        placeholder="Children (e.g. Bella, 17; Cece, 25, Irish dancer in Sarasota)"
-        value={formState.children}
-        onChange={(e) => updateField('children', e.target.value)}
-        className="w-full p-2 border"
-      />
-      <input
-        placeholder="Parents"
-        value={formState.parents}
-        onChange={(e) => updateField('parents', e.target.value)}
-        className="w-full p-2 border"
-      />
-      <input
-        placeholder="Siblings"
-        value={formState.siblings}
-        onChange={(e) => updateField('siblings', e.target.value)}
-        className="w-full p-2 border"
-      />
-      <textarea
-        placeholder="Pets (e.g. Maisel, 4yo red toy poodle, anxious)"
-        value={formState.pets}
-        onChange={(e) => updateField('pets', e.target.value)}
-        className="w-full p-2 border"
-      />
-      <textarea
-        placeholder="Friends / Contacts (names, notes, phone/email, city — anything helpful)"
-        value={formState.contacts}
-        onChange={(e) => updateField('contacts', e.target.value)}
-        className="w-full p-2 border"
-      />
+      <div>
+        <label className="block font-medium">Children</label>
+        <input
+          value={formState.children}
+          onChange={(e) => update('children', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label className="block font-medium">Pets</label>
+        <input
+          value={formState.pets}
+          onChange={(e) => update('pets', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div>
+        <label className="block font-medium">Other Important People</label>
+        <input
+          value={formState.others}
+          onChange={(e) => update('others', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          {status === 'saving'
+            ? 'Saving...'
+            : status === 'saved'
+            ? 'Saved!'
+            : 'Save'}
+        </button>
+      </div>
+
+      {status === 'error' && (
+        <p className="text-sm text-red-600 mt-2">Failed to save. Please try again.</p>
+      )}
     </div>
   );
 }
