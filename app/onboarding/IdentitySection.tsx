@@ -1,37 +1,99 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
-export default function IdentitySection({ onUpdate }: { onUpdate: (data: any) => void }) {
+export default function IdentitySection() {
   const [formState, setFormState] = useState({
     full_name: '',
     nickname: '',
+    age: '',
     gender: '',
-    location: '',
     hometown: '',
-    profession: '',
+    location: '',
     bio: '',
+    profession: ''
   });
 
-  useEffect(() => {
-    onUpdate(formState);
-  }, [formState]);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  const updateField = (key: string, value: string) => {
-    setFormState((prev) => ({ ...prev, [key]: value }));
+  const handleSave = async () => {
+    setStatus('saving');
+    const res = await fetch('/api/save-section?field=innerview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: formState })
+    });
+
+    if (res.ok) {
+      setStatus('saved');
+    } else {
+      setStatus('error');
+    }
+  };
+
+  const update = (field: string, value: string) => {
+    setFormState((prev) => ({ ...prev, [field]: value }));
+    setStatus('idle');
   };
 
   return (
     <div className="space-y-4">
-      <p className="text-gray-600 italic">This section helps your assistant understand who you are, your background, and how to speak in a way that feels natural and personal.</p>
+      <div>
+        <label className="block font-medium">Full Name</label>
+        <input value={formState.full_name} onChange={(e) => update('full_name', e.target.value)} className="w-full p-2 border rounded" />
+      </div>
 
-      <input placeholder="Full Name" value={formState.full_name} onChange={(e) => updateField('full_name', e.target.value)} className="w-full p-2 border" />
-      <input placeholder="Nickname" value={formState.nickname} onChange={(e) => updateField('nickname', e.target.value)} className="w-full p-2 border" />
-      <input placeholder="Gender" value={formState.gender} onChange={(e) => updateField('gender', e.target.value)} className="w-full p-2 border" />
-      <input placeholder="Location" value={formState.location} onChange={(e) => updateField('location', e.target.value)} className="w-full p-2 border" />
-      <input placeholder="Hometown" value={formState.hometown} onChange={(e) => updateField('hometown', e.target.value)} className="w-full p-2 border" />
-      <input placeholder="Profession" value={formState.profession} onChange={(e) => updateField('profession', e.target.value)} className="w-full p-2 border" />
-      <textarea placeholder="Short Bio" value={formState.bio} onChange={(e) => updateField('bio', e.target.value)} className="w-full p-2 border" />
+      <div>
+        <label className="block font-medium">Nickname</label>
+        <input value={formState.nickname} onChange={(e) => update('nickname', e.target.value)} className="w-full p-2 border rounded" />
+      </div>
+
+      <div>
+        <label className="block font-medium">Age</label>
+        <input value={formState.age} onChange={(e) => update('age', e.target.value)} className="w-full p-2 border rounded" />
+      </div>
+
+      <div>
+        <label className="block font-medium">Gender</label>
+        <input value={formState.gender} onChange={(e) => update('gender', e.target.value)} className="w-full p-2 border rounded" />
+      </div>
+
+      <div>
+        <label className="block font-medium">Hometown</label>
+        <input value={formState.hometown} onChange={(e) => update('hometown', e.target.value)} className="w-full p-2 border rounded" />
+      </div>
+
+      <div>
+        <label className="block font-medium">Current Location</label>
+        <input value={formState.location} onChange={(e) => update('location', e.target.value)} className="w-full p-2 border rounded" />
+      </div>
+
+      <div>
+        <label className="block font-medium">Short Bio</label>
+        <textarea value={formState.bio} onChange={(e) => update('bio', e.target.value)} className="w-full p-2 border rounded" />
+      </div>
+
+      <div>
+        <label className="block font-medium">Profession</label>
+        <input value={formState.profession} onChange={(e) => update('profession', e.target.value)} className="w-full p-2 border rounded" />
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          {status === 'saving'
+            ? 'Saving...'
+            : status === 'saved'
+            ? 'Saved!'
+            : 'Save'}
+        </button>
+      </div>
+
+      {status === 'error' && (
+        <p className="text-sm text-red-600 mt-2">Failed to save. Please try again.</p>
+      )}
     </div>
   );
 }
