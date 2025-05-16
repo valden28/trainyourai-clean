@@ -1,8 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-export default function IdentitySection() {
+interface IdentitySectionProps {
+  existingData?: any;
+}
+
+export default function IdentitySection({ existingData }: IdentitySectionProps) {
   const [formState, setFormState] = useState({
     full_name: '',
     nickname: '',
@@ -15,6 +19,17 @@ export default function IdentitySection() {
   });
 
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [collapsed, setCollapsed] = useState(false);
+  const [isEditing, setIsEditing] = useState(true);
+
+  useEffect(() => {
+    if (existingData) {
+      setFormState(existingData);
+      setIsEditing(false);
+      setCollapsed(true);
+      setStatus('saved');
+    }
+  }, [existingData]);
 
   const handleSave = async () => {
     setStatus('saving');
@@ -26,6 +41,8 @@ export default function IdentitySection() {
 
     if (res.ok) {
       setStatus('saved');
+      setCollapsed(true);
+      setIsEditing(false);
     } else {
       setStatus('error');
     }
@@ -35,6 +52,19 @@ export default function IdentitySection() {
     setFormState((prev) => ({ ...prev, [field]: value }));
     setStatus('idle');
   };
+
+  if (collapsed && !isEditing) {
+    return (
+      <div className="flex justify-end">
+        <button
+          onClick={() => setIsEditing(true)}
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+        >
+          Edit
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
