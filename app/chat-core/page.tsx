@@ -88,6 +88,12 @@ export default function ChatCorePage() {
           >
             Clear Chat
           </button>
+          <a
+            href="/api/auth/logout"
+            className="text-sm text-gray-600 hover:underline"
+          >
+            Log Out
+          </a>
         </div>
       </div>
 
