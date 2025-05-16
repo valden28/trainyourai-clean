@@ -1,6 +1,7 @@
 // app/api/chat/route.ts
+import { getSession } from '@auth0/nextjs-auth0/edge';
+import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { auth } from '@auth0/nextjs-auth0';
 import { createClient } from '@supabase/supabase-js';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
@@ -10,19 +11,11 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export const config = {
-  runtime: 'edge',
-};
-
-export default async function handler(req: Request): Promise<Response> {
-  if (req.method !== 'POST') {
-    return new Response('Method Not Allowed', { status: 405 });
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    const { user } = await auth();
-    const userId = user?.sub;
-    if (!userId) return new Response('Unauthorized', { status: 401 });
+    const session = await getSession(req, NextResponse.next());
+    const userId = session?.user?.sub;
+    if (!userId) return new NextResponse('Unauthorized', { status: 401 });
 
     const { messages } = await req.json();
 
@@ -34,7 +27,7 @@ export default async function handler(req: Request): Promise<Response> {
 
     if (error || !vault) {
       console.error('[VAULT LOOKUP ERROR]', error);
-      return new Response('Vault not found or incomplete.', { status: 404 });
+      return new NextResponse('Vault not found or incomplete.', { status: 404 });
     }
 
     const iv = vault.innerview || {};
@@ -101,28 +94,29 @@ ${skillSummary}
 Always align your tone and depth of response to the user's vault. Speak in a way that fits their personality and preferences. If data is missing, respond gracefully and move forward.
 `.trim();
 
-    const response = await openai.chat.completions.create({
+    const completion = await openai.chat.completions.create({
       model: 'gpt-4',
+      stream: true,
       messages: [
         { role: 'system', content: systemPrompt },
         ...messages
-      ],
-      stream: true,
+      ]
     });
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
-        for await (const chunk of response) {
-          controller.enqueue(encoder.encode(chunk.choices[0]?.delta?.content || ''));
+        for await (const part of completion) {
+          const text = part.choices[0]?.delta?.content || '';
+          controller.enqueue(encoder.encode(text));
         }
         controller.close();
-      },
+      }
     });
 
     return new Response(stream);
   } catch (err: any) {
     console.error('[CHAT STREAM ERROR]', err);
-    return new Response('Error streaming response', { status: 500 });
+    return new NextResponse('Error streaming response', { status: 500 });
   }
 }
