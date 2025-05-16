@@ -4,17 +4,17 @@ import { useUser } from '@auth0/nextjs-auth0/client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-const introBlurb = `Thanks for sitting down with me. The more I understand about you, the better I’ll be at supporting you.
-You’re not sharing this info — you’re just storing it privately for your future self to work with.
-This section helps me understand your background, identity, and what makes you… you.`;
+const introBlurb = `Thanks for sitting down with me.
+This is just a chance to get to know you better — not to share anything publicly, just to store what matters privately.
+Let’s start with a few basics that help me understand who you are and where you come from.`;
 
 const questions = [
-  { id: 'full_name', label: 'What’s your full name?', type: 'text' },
-  { id: 'nickname', label: 'Do people call you anything else? Nicknames, short versions, anything like that?', type: 'text', optional: true },
-  { id: 'dob', label: 'When’s your birthday?', type: 'date' },
+  { id: 'full_name', label: 'Can I get your full name?', type: 'text' },
+  { id: 'nickname', label: 'Do your friends or family ever call you something else?', type: 'text', optional: true },
+  { id: 'dob', label: 'When were you born?', type: 'date' },
   { id: 'location', label: 'Where do you live now?', type: 'text' },
   { id: 'hometown', label: 'Where did you grow up?', type: 'text' },
-  { id: 'ethnicity', label: 'Is there a cultural background or heritage that’s part of your story?', type: 'tags', options: ['Italian', 'Irish', 'Jewish', 'Cuban', 'Mexican', 'German', 'African American', 'Korean', 'Chinese', 'Indian', 'Puerto Rican', 'Other'] },
+  { id: 'ethnicity', label: 'Any cultural background or heritage that’s part of your story?', type: 'tags', options: ['Italian', 'Irish', 'Jewish', 'Cuban', 'Mexican', 'German', 'African American', 'Korean', 'Chinese', 'Indian', 'Puerto Rican', 'Other'] },
   { id: 'languages', label: 'What languages do you speak or understand?', type: 'tags', options: ['English', 'Spanish', 'French', 'German', 'Italian', 'Mandarin', 'Portuguese', 'Other'] },
 ];
 
@@ -29,29 +29,19 @@ export default function TypewriterIdentity() {
   const current = questions[step] || null;
 
   useEffect(() => {
-    if (step === -1) {
-      let i = 0;
-      setTyping('');
-      const delay = setTimeout(() => {
-        const interval = setInterval(() => {
-          setTyping((prev) => prev + introBlurb[i]);
-          i++;
-          if (i >= introBlurb.length) clearInterval(interval);
-        }, 40);
-      }, 500);
-      return () => clearTimeout(delay);
-    } else if (current?.label) {
-      let i = 0;
-      setTyping('');
-      const delay = setTimeout(() => {
-        const interval = setInterval(() => {
-          setTyping((prev) => prev + current.label[i]);
-          i++;
-          if (i >= current.label.length) clearInterval(interval);
-        }, 50);
-      }, 500);
-      return () => clearTimeout(delay);
-    }
+    let text = step === -1 ? introBlurb : current?.label || '';
+    let i = 0;
+    setTyping('');
+
+    const delay = setTimeout(() => {
+      const interval = setInterval(() => {
+        setTyping((prev) => prev + text[i]);
+        i++;
+        if (i >= text.length) clearInterval(interval);
+      }, 65);
+    }, 800);
+
+    return () => clearTimeout(delay);
   }, [step]);
 
   const handleChange = (e: any) => {
@@ -89,11 +79,11 @@ export default function TypewriterIdentity() {
   );
 
   return (
-    <main className="min-h-screen bg-white text-black p-6 max-w-xl mx-auto flex flex-col">
+    <main className="min-h-screen bg-white text-black p-6 max-w-xl mx-auto flex flex-col font-sans">
       <h1 className="text-2xl font-bold mb-6 text-blue-700">Let’s Start with the Basics</h1>
 
       <div className="min-h-[100px] mb-6">
-        <p className="text-lg font-medium whitespace-pre-line">{typing}</p>
+        <p className="text-lg font-medium whitespace-pre-line leading-relaxed">{typing}</p>
       </div>
 
       {step === -1 ? (
