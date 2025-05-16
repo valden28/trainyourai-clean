@@ -8,17 +8,19 @@ const supabase = createClient(
 );
 
 export async function POST(req: NextRequest) {
-  const { uid, innerview } = await req.json();
-
-  const { error } = await supabase
-    .from('vaults_test')
-    .update({ innerview })
-    .eq('user_uid', uid);
-
-  if (error) {
-    console.error('[INNERVIEW SAVE ERROR]', error);
-    return NextResponse.json({ success: false }, { status: 500 });
+    const { uid, innerview } = await req.json();
+  
+    console.log('[SAVE INNERVIEW]', { uid, innerview });
+  
+    const { error } = await supabase
+      .from('vaults_test')
+      .update({ innerview })
+      .eq('user_uid', uid);
+  
+    if (error) {
+      console.error('[INNERVIEW SAVE ERROR]', error);
+      return NextResponse.json({ success: false }, { status: 500 });
+    }
+  
+    return NextResponse.json({ success: true });
   }
-
-  return NextResponse.json({ success: true });
-}
