@@ -1,20 +1,24 @@
 // app/api/chat/route.ts
-
-import { OpenAIStream, StreamingTextResponse } from 'ai';
 import OpenAI from 'openai';
 import { auth } from '@auth0/nextjs-auth0';
 import { createClient } from '@supabase/supabase-js';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function POST(req: Request) {
+export const config = {
+  runtime: 'edge',
+};
+
+export default async function handler(req: Request): Promise<Response> {
+  if (req.method !== 'POST') {
+    return new Response('Method Not Allowed', { status: 405 });
+  }
+
   try {
     const { user } = await auth();
     const userId = user?.sub;
@@ -49,9 +53,7 @@ export async function POST(req: Request) {
     const toneSummary = Object.entries(tone).map(([k, v]) => `${k}: ${v}`).join(', ');
     const skillSummary = Object.entries(skills).map(([k, v]) => `${k}: ${v}`).join(', ');
 
-    const systemMessage = {
-      role: 'system',
-      content: `
+    const systemPrompt = `
 You are a personalized assistant for a user named ${iv.full_name ?? 'Unknown'}.
 
 [Identity]
@@ -97,18 +99,28 @@ ${toneSummary}
 ${skillSummary}
 
 Always align your tone and depth of response to the user's vault. Speak in a way that fits their personality and preferences. If data is missing, respond gracefully and move forward.
-`.trim(),
-    };
+`.trim();
 
-    //update prompt logic
     const response = await openai.chat.completions.create({
       model: 'gpt-4',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages
+      ],
       stream: true,
-      messages: [systemMessage, ...messages],
     });
 
-    const stream = OpenAIStream(response);
-    return new StreamingTextResponse(stream);
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        for await (const chunk of response) {
+          controller.enqueue(encoder.encode(chunk.choices[0]?.delta?.content || ''));
+        }
+        controller.close();
+      },
+    });
+
+    return new Response(stream);
   } catch (err: any) {
     console.error('[CHAT STREAM ERROR]', err);
     return new Response('Error streaming response', { status: 500 });
