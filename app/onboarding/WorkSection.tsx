@@ -1,64 +1,109 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
-export default function WorkSection({ onUpdate }: { onUpdate: (data: any) => void }) {
+interface WorkSectionProps {
+  existingData?: any;
+}
+
+export default function WorkSection({ existingData }: WorkSectionProps) {
   const [formState, setFormState] = useState({
-    job_title: '',
-    employer: '',
-    salary_range: '',
-    responsibilities: '',
-    current_projects: '',
+    title: '',
+    company: '',
+    focus: ''
   });
 
-  useEffect(() => {
-    onUpdate(formState);
-  }, [formState]);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [collapsed, setCollapsed] = useState(false);
+  const [isEditing, setIsEditing] = useState(true);
 
-  const updateField = (key: string, value: string) => {
-    setFormState((prev) => ({ ...prev, [key]: value }));
+  useEffect(() => {
+    if (existingData) {
+      setFormState(existingData);
+      setIsEditing(false);
+      setCollapsed(true);
+      setStatus('saved');
+    }
+  }, [existingData]);
+
+  const handleSave = async () => {
+    setStatus('saving');
+    const res = await fetch('/api/save-section?field=work', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: formState })
+    });
+
+    if (res.ok) {
+      setStatus('saved');
+      setCollapsed(true);
+      setIsEditing(false);
+    } else {
+      setStatus('error');
+    }
   };
+
+  const update = (field: string, value: string) => {
+    setFormState((prev) => ({ ...prev, [field]: value }));
+    setStatus('idle');
+  };
+
+  if (collapsed && !isEditing) {
+    return (
+      <div className="flex justify-end">
+        <button
+          onClick={() => setIsEditing(true)}
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+        >
+          Edit
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <p className="text-gray-600 italic">
-        Work is often a huge part of who you are. This section helps your assistant give relevant advice, understand your schedule, and talk to you in context.
-      </p>
+      <div>
+        <label className="block font-medium">Job Title</label>
+        <input
+          value={formState.title}
+          onChange={(e) => update('title', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+      <div>
+        <label className="block font-medium">Company</label>
+        <input
+          value={formState.company}
+          onChange={(e) => update('company', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+      <div>
+        <label className="block font-medium">Focus or Current Projects</label>
+        <textarea
+          value={formState.focus}
+          onChange={(e) => update('focus', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
 
-      <input
-        placeholder="Job Title"
-        value={formState.job_title}
-        onChange={(e) => updateField('job_title', e.target.value)}
-        className="w-full p-2 border"
-      />
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          {status === 'saving'
+            ? 'Saving...'
+            : status === 'saved'
+            ? 'Saved!'
+            : 'Save'}
+        </button>
+      </div>
 
-      <input
-        placeholder="Employer / Company"
-        value={formState.employer}
-        onChange={(e) => updateField('employer', e.target.value)}
-        className="w-full p-2 border"
-      />
-
-      <input
-        placeholder="Salary Range (optional)"
-        value={formState.salary_range}
-        onChange={(e) => updateField('salary_range', e.target.value)}
-        className="w-full p-2 border"
-      />
-
-      <textarea
-        placeholder="What are your main responsibilities?"
-        value={formState.responsibilities}
-        onChange={(e) => updateField('responsibilities', e.target.value)}
-        className="w-full p-2 border"
-      />
-
-      <textarea
-        placeholder="What are you currently working on or focused on?"
-        value={formState.current_projects}
-        onChange={(e) => updateField('current_projects', e.target.value)}
-        className="w-full p-2 border"
-      />
+      {status === 'error' && (
+        <p className="text-sm text-red-600 mt-2">Failed to save. Please try again.</p>
+      )}
     </div>
   );
 }

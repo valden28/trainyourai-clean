@@ -1,60 +1,103 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
-const predefinedSkills = [
-  'Cooking',
-  'Writing',
-  'Public Speaking',
-  'Sports & Fitness',
-  'Gardening',
-  'DIY / Home Projects',
-  'Technology',
-  'Leadership',
-  'Business Strategy',
-  'Parenting',
-  'Health & Wellness',
-  'Finance',
-  'Education & Teaching',
-  'Sales / Persuasion',
-  'Conflict Resolution',
-];
+interface SkillSectionProps {
+  existingData?: any;
+}
 
-const labels = ['Novice', 'Comfortable', 'Proficient', 'Advanced', 'Expert'];
+export default function SkillSection({ existingData }: SkillSectionProps) {
+  const [formState, setFormState] = useState({
+    writing: 0,
+    cooking: 0,
+    sports: 0,
+    tech: 0
+  });
 
-export default function SkillsSection({ onUpdate }: { onUpdate: (data: any) => void }) {
-  const [formState, setFormState] = useState<Record<string, number>>({});
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [collapsed, setCollapsed] = useState(false);
+  const [isEditing, setIsEditing] = useState(true);
 
   useEffect(() => {
-    onUpdate(formState);
-  }, [formState]);
+    if (existingData) {
+      setFormState(existingData);
+      setIsEditing(false);
+      setCollapsed(true);
+      setStatus('saved');
+    }
+  }, [existingData]);
 
-  const updateSkill = (skill: string, level: number) => {
-    setFormState((prev) => ({ ...prev, [skill]: level }));
+  const handleSave = async () => {
+    setStatus('saving');
+    const res = await fetch('/api/save-section?field=skillsync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: formState })
+    });
+
+    if (res.ok) {
+      setStatus('saved');
+      setCollapsed(true);
+      setIsEditing(false);
+    } else {
+      setStatus('error');
+    }
   };
+
+  const update = (field: string, value: number) => {
+    setFormState((prev) => ({ ...prev, [field]: value }));
+    setStatus('idle');
+  };
+
+  if (collapsed && !isEditing) {
+    return (
+      <div className="flex justify-end">
+        <button
+          onClick={() => setIsEditing(true)}
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+        >
+          Edit
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <p className="text-gray-600 italic">
-        Your assistant will use this info to gauge how deeply to explain things — or when to challenge or simplify — based on your self-assessed strengths.
-      </p>
-
-      {predefinedSkills.map((skill) => (
-        <div key={skill} className="space-y-2">
-          <label className="block font-medium">{skill}</label>
+      {['writing', 'cooking', 'sports', 'tech'].map((skill) => (
+        <div key={skill} className="space-y-1">
+          <label className="block font-medium capitalize">{skill}</label>
           <input
             type="range"
-            min={1}
-            max={5}
-            value={formState[skill] || 3}
-            onChange={(e) => updateSkill(skill, parseInt(e.target.value))}
+            min={0}
+            max={4}
+            step={1}
+            value={formState[skill as keyof typeof formState]}
+            onChange={(e) => update(skill, parseInt(e.target.value))}
             className="w-full"
           />
           <div className="text-sm text-gray-600">
-            {labels[(formState[skill] || 3) - 1]} ({formState[skill] || 3}/5)
+            Level: {(formState[skill as keyof typeof formState]) + 1}/5
           </div>
         </div>
       ))}
+
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          {status === 'saving'
+            ? 'Saving...'
+            : status === 'saved'
+            ? 'Saved!'
+            : 'Save'}
+        </button>
+      </div>
+
+      {status === 'error' && (
+        <p className="text-sm text-red-600 mt-2">Failed to save. Please try again.</p>
+      )}
     </div>
   );
 }

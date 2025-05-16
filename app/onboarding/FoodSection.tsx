@@ -1,80 +1,127 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
-export default function FoodSection({ onUpdate }: { onUpdate: (data: any) => void }) {
+interface FoodSectionProps {
+  existingData?: any;
+}
+
+export default function FoodSection({ existingData }: FoodSectionProps) {
   const [formState, setFormState] = useState({
-    favorite_foods: '',
-    favorite_drinks: '',
-    dietary_type: '',
+    favorites: '',
     allergies: '',
+    diet: '',
     caffeine: '',
-    alcohol: '',
-    meal_timing: '',
+    alcohol: ''
   });
 
-  useEffect(() => {
-    onUpdate(formState);
-  }, [formState]);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [collapsed, setCollapsed] = useState(false);
+  const [isEditing, setIsEditing] = useState(true);
 
-  const updateField = (key: string, value: string) => {
-    setFormState((prev) => ({ ...prev, [key]: value }));
+  useEffect(() => {
+    if (existingData) {
+      setFormState(existingData);
+      setIsEditing(false);
+      setCollapsed(true);
+      setStatus('saved');
+    }
+  }, [existingData]);
+
+  const handleSave = async () => {
+    setStatus('saving');
+    const res = await fetch('/api/save-section?field=food', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: formState })
+    });
+
+    if (res.ok) {
+      setStatus('saved');
+      setCollapsed(true);
+      setIsEditing(false);
+    } else {
+      setStatus('error');
+    }
   };
+
+  const update = (field: string, value: string) => {
+    setFormState((prev) => ({ ...prev, [field]: value }));
+    setStatus('idle');
+  };
+
+  if (collapsed && !isEditing) {
+    return (
+      <div className="flex justify-end">
+        <button
+          onClick={() => setIsEditing(true)}
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+        >
+          Edit
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <p className="text-gray-600 italic">
-        Your food preferences help your assistant understand your routines, recommend meals or drinks, and respect any health-related restrictions.
-      </p>
+      <div>
+        <label className="block font-medium">Favorite Foods or Meals</label>
+        <input
+          value={formState.favorites}
+          onChange={(e) => update('favorites', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+      <div>
+        <label className="block font-medium">Allergies</label>
+        <input
+          value={formState.allergies}
+          onChange={(e) => update('allergies', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+      <div>
+        <label className="block font-medium">Diet Type (e.g. Vegan, Keto, etc.)</label>
+        <input
+          value={formState.diet}
+          onChange={(e) => update('diet', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+      <div>
+        <label className="block font-medium">Caffeine Habits</label>
+        <input
+          value={formState.caffeine}
+          onChange={(e) => update('caffeine', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+      <div>
+        <label className="block font-medium">Alcohol Habits</label>
+        <input
+          value={formState.alcohol}
+          onChange={(e) => update('alcohol', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
 
-      <textarea
-        placeholder="Favorite foods"
-        value={formState.favorite_foods}
-        onChange={(e) => updateField('favorite_foods', e.target.value)}
-        className="w-full p-2 border"
-      />
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          {status === 'saving'
+            ? 'Saving...'
+            : status === 'saved'
+            ? 'Saved!'
+            : 'Save'}
+        </button>
+      </div>
 
-      <textarea
-        placeholder="Favorite drinks (e.g. wine, whiskey, matcha, Red Bull)"
-        value={formState.favorite_drinks}
-        onChange={(e) => updateField('favorite_drinks', e.target.value)}
-        className="w-full p-2 border"
-      />
-
-      <input
-        placeholder="Dietary type (e.g. vegetarian, keto, low-carb, no restriction)"
-        value={formState.dietary_type}
-        onChange={(e) => updateField('dietary_type', e.target.value)}
-        className="w-full p-2 border"
-      />
-
-      <textarea
-        placeholder="Allergies or sensitivities (e.g. gluten, nuts, dairy)"
-        value={formState.allergies}
-        onChange={(e) => updateField('allergies', e.target.value)}
-        className="w-full p-2 border"
-      />
-
-      <input
-        placeholder="Caffeine habits (e.g. none, coffee only in morning, heavy user)"
-        value={formState.caffeine}
-        onChange={(e) => updateField('caffeine', e.target.value)}
-        className="w-full p-2 border"
-      />
-
-      <input
-        placeholder="Alcohol habits (e.g. social drinker, none, whiskey on weekends)"
-        value={formState.alcohol}
-        onChange={(e) => updateField('alcohol', e.target.value)}
-        className="w-full p-2 border"
-      />
-
-      <input
-        placeholder="Meal timing or structure (e.g. intermittent fasting, big dinner)"
-        value={formState.meal_timing}
-        onChange={(e) => updateField('meal_timing', e.target.value)}
-        className="w-full p-2 border"
-      />
+      {status === 'error' && (
+        <p className="text-sm text-red-600 mt-2">Failed to save. Please try again.</p>
+      )}
     </div>
   );
 }

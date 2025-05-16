@@ -1,56 +1,118 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
-export default function PhysicalSection({ onUpdate }: { onUpdate: (data: any) => void }) {
+interface PhysicalSectionProps {
+  existingData?: any;
+}
+
+export default function PhysicalSection({ existingData }: PhysicalSectionProps) {
   const [formState, setFormState] = useState({
     height: '',
     weight: '',
-    clothing_sizes: '',
-    fit_preferences: '',
+    clothing: '',
+    fit: ''
   });
 
-  useEffect(() => {
-    onUpdate(formState);
-  }, [formState]);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [collapsed, setCollapsed] = useState(false);
+  const [isEditing, setIsEditing] = useState(true);
 
-  const updateField = (key: string, value: string) => {
-    setFormState((prev) => ({ ...prev, [key]: value }));
+  useEffect(() => {
+    if (existingData) {
+      setFormState(existingData);
+      setIsEditing(false);
+      setCollapsed(true);
+      setStatus('saved');
+    }
+  }, [existingData]);
+
+  const handleSave = async () => {
+    setStatus('saving');
+    const res = await fetch('/api/save-section?field=physical', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: formState })
+    });
+
+    if (res.ok) {
+      setStatus('saved');
+      setCollapsed(true);
+      setIsEditing(false);
+    } else {
+      setStatus('error');
+    }
   };
+
+  const update = (field: string, value: string) => {
+    setFormState((prev) => ({ ...prev, [field]: value }));
+    setStatus('idle');
+  };
+
+  if (collapsed && !isEditing) {
+    return (
+      <div className="flex justify-end">
+        <button
+          onClick={() => setIsEditing(true)}
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+        >
+          Edit
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <p className="text-gray-600 italic">
-        Basic physical info helps your assistant support gift recommendations, fitness insights, and personalized planning.
-      </p>
+      <div>
+        <label className="block font-medium">Height</label>
+        <input
+          value={formState.height}
+          onChange={(e) => update('height', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+      <div>
+        <label className="block font-medium">Weight</label>
+        <input
+          value={formState.weight}
+          onChange={(e) => update('weight', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+      <div>
+        <label className="block font-medium">Clothing Sizes</label>
+        <input
+          value={formState.clothing}
+          onChange={(e) => update('clothing', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+      <div>
+        <label className="block font-medium">Fit Preferences</label>
+        <input
+          value={formState.fit}
+          onChange={(e) => update('fit', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
 
-      <input
-  placeholder={'Height (e.g. 5\'10" or 178cm)'}
-  value={formState.height}
-  onChange={(e) => updateField('height', e.target.value)}
-  className="w-full p-2 border"
-/>
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          {status === 'saving'
+            ? 'Saving...'
+            : status === 'saved'
+            ? 'Saved!'
+            : 'Save'}
+        </button>
+      </div>
 
-      <input
-        placeholder="Weight (optional)"
-        value={formState.weight}
-        onChange={(e) => updateField('weight', e.target.value)}
-        className="w-full p-2 border"
-      />
-
-      <input
-        placeholder="Clothing sizes (e.g. L shirt, 34x32 pants, 10.5 shoes)"
-        value={formState.clothing_sizes}
-        onChange={(e) => updateField('clothing_sizes', e.target.value)}
-        className="w-full p-2 border"
-      />
-
-      <textarea
-        placeholder="Fit preferences (e.g. loose t-shirts, slim pants, hate tight collars)"
-        value={formState.fit_preferences}
-        onChange={(e) => updateField('fit_preferences', e.target.value)}
-        className="w-full p-2 border"
-      />
+      {status === 'error' && (
+        <p className="text-sm text-red-600 mt-2">Failed to save. Please try again.</p>
+      )}
     </div>
   );
 }

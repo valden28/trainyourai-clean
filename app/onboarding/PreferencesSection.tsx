@@ -1,68 +1,109 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
-export default function PreferencesSection({ onUpdate }: { onUpdate: (data: any) => void }) {
+interface PreferencesSectionProps {
+  existingData?: any;
+}
+
+export default function PreferencesSection({ existingData }: PreferencesSectionProps) {
   const [formState, setFormState] = useState({
-    communication_style: '',
-    tone_preference: '',
-    uses_humor: false,
-    uses_swearing: false,
-    disliked_phrases: '',
+    communication: '',
+    tone: '',
+    dislikes: ''
   });
 
-  useEffect(() => {
-    onUpdate(formState);
-  }, [formState]);
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [collapsed, setCollapsed] = useState(false);
+  const [isEditing, setIsEditing] = useState(true);
 
-  const updateField = (key: string, value: any) => {
-    setFormState((prev) => ({ ...prev, [key]: value }));
+  useEffect(() => {
+    if (existingData) {
+      setFormState(existingData);
+      setIsEditing(false);
+      setCollapsed(true);
+      setStatus('saved');
+    }
+  }, [existingData]);
+
+  const handleSave = async () => {
+    setStatus('saving');
+    const res = await fetch('/api/save-section?field=preferences', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: formState })
+    });
+
+    if (res.ok) {
+      setStatus('saved');
+      setCollapsed(true);
+      setIsEditing(false);
+    } else {
+      setStatus('error');
+    }
   };
+
+  const update = (field: string, value: string) => {
+    setFormState((prev) => ({ ...prev, [field]: value }));
+    setStatus('idle');
+  };
+
+  if (collapsed && !isEditing) {
+    return (
+      <div className="flex justify-end">
+        <button
+          onClick={() => setIsEditing(true)}
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+        >
+          Edit
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <p className="text-gray-600 italic">
-        These answers help shape the way your assistant talks — including tone, word choice, and what to avoid.
-      </p>
-
-      <input
-        placeholder="How do you prefer to communicate? (e.g. direct and efficient)"
-        value={formState.communication_style}
-        onChange={(e) => updateField('communication_style', e.target.value)}
-        className="w-full p-2 border"
-      />
-
-      <input
-        placeholder="Preferred tone (e.g. playful, serious, motivational)"
-        value={formState.tone_preference}
-        onChange={(e) => updateField('tone_preference', e.target.value)}
-        className="w-full p-2 border"
-      />
-
-      <label className="flex items-center space-x-2">
+      <div>
+        <label className="block font-medium">Preferred Communication Style</label>
         <input
-          type="checkbox"
-          checked={formState.uses_humor}
-          onChange={(e) => updateField('uses_humor', e.target.checked)}
+          value={formState.communication}
+          onChange={(e) => update('communication', e.target.value)}
+          className="w-full p-2 border rounded"
         />
-        <span className="text-sm">I often use humor</span>
-      </label>
-
-      <label className="flex items-center space-x-2">
+      </div>
+      <div>
+        <label className="block font-medium">Tone Preference</label>
         <input
-          type="checkbox"
-          checked={formState.uses_swearing}
-          onChange={(e) => updateField('uses_swearing', e.target.checked)}
+          value={formState.tone}
+          onChange={(e) => update('tone', e.target.value)}
+          className="w-full p-2 border rounded"
         />
-        <span className="text-sm">I’m okay with swearing</span>
-      </label>
+      </div>
+      <div>
+        <label className="block font-medium">Phrases or Behaviors You Dislike</label>
+        <input
+          value={formState.dislikes}
+          onChange={(e) => update('dislikes', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
 
-      <textarea
-        placeholder="Any words, phrases, or tones you dislike? (e.g. 'buddy', over-apologizing)"
-        value={formState.disliked_phrases}
-        onChange={(e) => updateField('disliked_phrases', e.target.value)}
-        className="w-full p-2 border"
-      />
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          {status === 'saving'
+            ? 'Saving...'
+            : status === 'saved'
+            ? 'Saved!'
+            : 'Save'}
+        </button>
+      </div>
+
+      {status === 'error' && (
+        <p className="text-sm text-red-600 mt-2">Failed to save. Please try again.</p>
+      )}
     </div>
   );
 }

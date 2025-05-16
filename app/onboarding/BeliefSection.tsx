@@ -1,82 +1,118 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
-export default function BeliefsSection({ onUpdate }: { onUpdate: (data: any) => void }) {
+interface BeliefSectionProps {
+  existingData?: any;
+}
+
+export default function BeliefSection({ existingData }: BeliefSectionProps) {
   const [formState, setFormState] = useState({
-    core_values: [] as string[],
-    political_view: '',
+    core_values: '',
     religion: '',
     worldview: '',
-    boundaries: '',
+    boundaries: ''
   });
 
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [collapsed, setCollapsed] = useState(false);
+  const [isEditing, setIsEditing] = useState(true);
+
   useEffect(() => {
-    onUpdate(formState);
-  }, [formState]);
+    if (existingData) {
+      setFormState(existingData);
+      setIsEditing(false);
+      setCollapsed(true);
+      setStatus('saved');
+    }
+  }, [existingData]);
 
-  const toggleCoreValue = (value: string) => {
-    setFormState((prev) => {
-      const exists = prev.core_values.includes(value);
-      const updated = exists
-        ? prev.core_values.filter((v) => v !== value)
-        : [...prev.core_values, value];
-      return { ...prev, core_values: updated };
+  const handleSave = async () => {
+    setStatus('saving');
+    const res = await fetch('/api/save-section?field=beliefs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: formState })
     });
+
+    if (res.ok) {
+      setStatus('saved');
+      setCollapsed(true);
+      setIsEditing(false);
+    } else {
+      setStatus('error');
+    }
   };
 
-  const updateField = (key: string, value: string) => {
-    setFormState((prev) => ({ ...prev, [key]: value }));
+  const update = (field: string, value: string) => {
+    setFormState((prev) => ({ ...prev, [field]: value }));
+    setStatus('idle');
   };
 
-  const valuesList = ['Honesty', 'Freedom', 'Compassion', 'Discipline', 'Creativity', 'Justice', 'Faith', 'Growth'];
+  if (collapsed && !isEditing) {
+    return (
+      <div className="flex justify-end">
+        <button
+          onClick={() => setIsEditing(true)}
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+        >
+          Edit
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <p className="text-gray-600 italic">
-        These inputs help your assistant reflect your moral compass and respect your boundaries in sensitive situations.
-      </p>
-
       <div>
-        <label className="block font-medium mb-2">Core Values (select all that apply)</label>
-        <div className="grid grid-cols-2 gap-2">
-          {valuesList.map((val) => (
-            <label key={val} className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={formState.core_values.includes(val)}
-                onChange={() => toggleCoreValue(val)}
-              />
-              <span>{val}</span>
-            </label>
-          ))}
-        </div>
+        <label className="block font-medium">Core Values</label>
+        <input
+          value={formState.core_values}
+          onChange={(e) => update('core_values', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+      <div>
+        <label className="block font-medium">Religion / Spiritual Beliefs</label>
+        <input
+          value={formState.religion}
+          onChange={(e) => update('religion', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+      <div>
+        <label className="block font-medium">Worldview</label>
+        <input
+          value={formState.worldview}
+          onChange={(e) => update('worldview', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+      </div>
+      <div>
+        <label className="block font-medium">Boundaries</label>
+        <input
+          value={formState.boundaries}
+          onChange={(e) => update('boundaries', e.target.value)}
+          className="w-full p-2 border rounded"
+        />
       </div>
 
-      <input
-        placeholder="Political view (optional)"
-        value={formState.political_view}
-        onChange={(e) => updateField('political_view', e.target.value)}
-        className="w-full p-2 border"
-      />
-      <input
-        placeholder="Religious/spiritual belief (optional)"
-        value={formState.religion}
-        onChange={(e) => updateField('religion', e.target.value)}
-        className="w-full p-2 border"
-      />
-      <textarea
-        placeholder="How do you see the world? (worldview, guiding principles)"
-        value={formState.worldview}
-        onChange={(e) => updateField('worldview', e.target.value)}
-        className="w-full p-2 border"
-      />
-      <textarea
-        placeholder="Any personal or conversational boundaries you'd like your assistant to respect?"
-        value={formState.boundaries}
-        onChange={(e) => updateField('boundaries', e.target.value)}
-        className="w-full p-2 border"
-      />
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          {status === 'saving'
+            ? 'Saving...'
+            : status === 'saved'
+            ? 'Saved!'
+            : 'Save'}
+        </button>
+      </div>
+
+      {status === 'error' && (
+        <p className="text-sm text-red-600 mt-2">Failed to save. Please try again.</p>
+      )}
     </div>
   );
 }
