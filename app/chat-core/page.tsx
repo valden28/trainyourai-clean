@@ -12,6 +12,8 @@ export default function ChatCorePage() {
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
+  const chatKey = user ? `trainyourai_chat_${user.sub}` : null;
+
   // Redirect if not logged in
   useEffect(() => {
     if (!isLoading && !user) {
@@ -19,20 +21,24 @@ export default function ChatCorePage() {
     }
   }, [user, isLoading, router]);
 
+  // Load chat from localStorage when user is known
+  useEffect(() => {
+    if (chatKey) {
+      const saved = localStorage.getItem(chatKey);
+      if (saved) setMessages(JSON.parse(saved));
+    }
+  }, [chatKey]);
+
+  // Save chat to localStorage whenever messages update
+  useEffect(() => {
+    if (chatKey) {
+      localStorage.setItem(chatKey, JSON.stringify(messages));
+    }
+  }, [messages, chatKey]);
+
   // Scroll to bottom when messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Load chat from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('trainyourai_chat');
-    if (saved) setMessages(JSON.parse(saved));
-  }, []);
-
-  // Save chat to localStorage on update
-  useEffect(() => {
-    localStorage.setItem('trainyourai_chat', JSON.stringify(messages));
   }, [messages]);
 
   const handleSend = async (e: React.FormEvent) => {
@@ -61,8 +67,8 @@ export default function ChatCorePage() {
   };
 
   const clearChat = () => {
+    if (chatKey) localStorage.removeItem(chatKey);
     setMessages([]);
-    localStorage.removeItem('trainyourai_chat');
   };
 
   return (
