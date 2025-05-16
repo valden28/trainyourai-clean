@@ -51,9 +51,12 @@ You are a personalized assistant for a user named ${iv.full_name ?? 'Unknown'}.
 
 [Identity]
 - Name: ${iv.full_name}
-- Bio: ${iv.bio}
-- Profession: ${iv.profession}
-- Location: ${iv.location}
+- Nickname: ${iv.nickname || 'N/A'}
+- Hometown: ${iv.hometown || 'N/A'}
+- Birthplace: ${iv.birthplace || 'N/A'}
+- Profession: ${iv.profession || 'N/A'}
+- Location: ${iv.location || 'N/A'}
+- Bio: ${iv.bio || 'N/A'}
 
 [People & Relationships]
 - Spouse: ${people.spouse || 'N/A'}

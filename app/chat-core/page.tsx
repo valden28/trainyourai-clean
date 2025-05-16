@@ -19,9 +19,20 @@ export default function ChatCorePage() {
     }
   }, [user, isLoading, router]);
 
-  // Auto scroll to bottom
+  // Scroll to bottom when messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Load chat from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('trainyourai_chat');
+    if (saved) setMessages(JSON.parse(saved));
+  }, []);
+
+  // Save chat to localStorage on update
+  useEffect(() => {
+    localStorage.setItem('trainyourai_chat', JSON.stringify(messages));
   }, [messages]);
 
   const handleSend = async (e: React.FormEvent) => {
@@ -49,16 +60,29 @@ export default function ChatCorePage() {
     }
   };
 
+  const clearChat = () => {
+    setMessages([]);
+    localStorage.removeItem('trainyourai_chat');
+  };
+
   return (
     <main className="flex flex-col h-screen bg-white text-black">
       <div className="flex justify-between items-center p-4 border-b bg-gray-50 shadow-sm">
         <h1 className="text-xl font-bold">Your AI Assistant</h1>
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="text-sm text-blue-600 hover:underline"
-        >
-          Go to Dashboard
-        </button>
+        <div className="flex gap-4">
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="text-sm text-blue-600 hover:underline"
+          >
+            Go to Dashboard
+          </button>
+          <button
+            onClick={clearChat}
+            className="text-sm text-red-500 hover:underline"
+          >
+            Clear Chat
+          </button>
+        </div>
       </div>
 
       <div className="flex-grow overflow-y-auto p-4 space-y-4">
