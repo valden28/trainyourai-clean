@@ -1,14 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface PeopleSectionProps {
-  onComplete?: () => void;
-  collapsed?: boolean;
-  onToggle?: () => void;
+  existingData?: any;
 }
 
-export default function PeopleSection({ onComplete }: PeopleSectionProps) {
+export default function PeopleSection({ existingData }: PeopleSectionProps) {
   const [formState, setFormState] = useState({
     spouse: '',
     children: '',
@@ -19,6 +17,15 @@ export default function PeopleSection({ onComplete }: PeopleSectionProps) {
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [collapsed, setCollapsed] = useState(false);
   const [isEditing, setIsEditing] = useState(true);
+
+  useEffect(() => {
+    if (existingData) {
+      setFormState(existingData);
+      setIsEditing(false);
+      setCollapsed(true);
+      setStatus('saved');
+    }
+  }, [existingData]);
 
   const handleSave = async () => {
     setStatus('saving');
@@ -32,7 +39,6 @@ export default function PeopleSection({ onComplete }: PeopleSectionProps) {
       setStatus('saved');
       setCollapsed(true);
       setIsEditing(false);
-      if (onComplete) onComplete();
     } else {
       setStatus('error');
     }
