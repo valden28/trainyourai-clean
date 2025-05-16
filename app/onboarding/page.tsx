@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
-import { Accordion } from './ui/accordion';
-import { AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
 import IdentitySection from './IdentitySection';
 import PeopleSection from './PeopleSection';
 import DateSection from './DateSection';
@@ -126,6 +125,18 @@ export default function OnboardingPage() {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
+
+      <div className="mt-10">
+        <p className="text-sm text-gray-600 mb-2">You can return and edit these sections anytime.</p>
+        <div className="flex justify-end">
+          <button
+            onClick={() => router.push('/chat-core')}
+            className="px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            Launch Assistant
+          </button>
+        </div>
+      </div>
     </main>
   );
 }
