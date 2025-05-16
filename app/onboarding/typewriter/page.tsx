@@ -98,9 +98,20 @@ export default function TypewriterOnboarding() {
                 onChange={handleChange}
               >
                 <option value="">Select one</option>
-                {current.options.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
+                {current.type === 'dropdown' && (
+                  <select
+                    className="w-full border p-2 rounded mt-4"
+                    value={answers[current.id] || ''}
+                    onChange={handleChange}
+                   >
+                    <option value="">Select one</option>
+                    {(current.options ?? []).map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                    ))}
+                  </select>
+)}
                   </option>
                 ))}
               </select>
