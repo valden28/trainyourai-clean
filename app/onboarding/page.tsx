@@ -74,7 +74,7 @@ export default function OnboardingPage() {
         <AccordionItem value="people">
           <AccordionTrigger>2. People in Your Life</AccordionTrigger>
           <AccordionContent>
-            <PeopleSection onUpdate={(data) => updateSectionData('people', data)} />
+            <PeopleSection />
           </AccordionContent>
         </AccordionItem>
 
