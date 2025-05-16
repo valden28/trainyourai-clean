@@ -1,11 +1,10 @@
 'use client';
 
-// Use this for the accordion
+import { useEffect, useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
-
+import Accordion from './ui/accordion';
+import { AccordionItem, AccordionTrigger, AccordionContent } from './ui/accordion';
 import IdentitySection from './IdentitySection';
 import PeopleSection from './PeopleSection';
 import DateSection from './DateSection';
@@ -22,7 +21,7 @@ import ToneSyncSection from './ToneSyncSection';
 export default function OnboardingPage() {
   const { user, isLoading } = useUser();
   const router = useRouter();
-  const [formData, setFormData] = useState<any>({});
+  const [vault, setVault] = useState<any>(null);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -30,133 +29,103 @@ export default function OnboardingPage() {
     }
   }, [user, isLoading, router]);
 
-  const updateSectionData = (sectionKey: string, data: any) => {
-    setFormData((prev: any) => ({
-      ...prev,
-      [sectionKey]: {
-        ...(prev[sectionKey] || {}),
-        ...data,
-      },
-    }));
-  };
-
-  const handleSubmit = async () => {
-    console.log('Submit button clicked');
-    console.log('Vault data being sent:', formData);
-  
-    const res = await fetch('/api/save-vault', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vault: formData }),
-    });
-  
-    const responseText = await res.text();
-    console.log('API response:', responseText);
-  
-    if (res.ok) {
-      router.push('/chat-core');
-    } else {
-      console.error('Vault save failed:', res.status, responseText);
-    }
-  };
+  useEffect(() => {
+    const fetchVault = async () => {
+      const res = await fetch('/api/vault');
+      const data = await res.json();
+      setVault(data);
+    };
+    fetchVault();
+  }, []);
 
   return (
     <main className="max-w-3xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">TrainYourAI: InnerView Onboarding</h1>
       <Accordion type="single" collapsible className="space-y-4">
-      <AccordionItem value="identity">
-       <AccordionTrigger>1. Identity & Background</AccordionTrigger>
-       <AccordionContent>
-          <IdentitySection />
-        </AccordionContent>
-      </AccordionItem>
+        <AccordionItem value="identity">
+          <AccordionTrigger>1. Identity & Background</AccordionTrigger>
+          <AccordionContent>
+            <IdentitySection existingData={vault?.innerview} />
+          </AccordionContent>
+        </AccordionItem>
 
         <AccordionItem value="people">
           <AccordionTrigger>2. People in Your Life</AccordionTrigger>
           <AccordionContent>
-            <PeopleSection />
+            <PeopleSection existingData={vault?.people} />
           </AccordionContent>
         </AccordionItem>
 
         <AccordionItem value="dates">
           <AccordionTrigger>3. Important Dates</AccordionTrigger>
           <AccordionContent>
-            <DateSection onUpdate={(data) => updateSectionData('dates', data)} />
+            <DateSection existingData={vault?.dates} />
           </AccordionContent>
         </AccordionItem>
 
         <AccordionItem value="preferences">
           <AccordionTrigger>4. Personality & Preferences</AccordionTrigger>
           <AccordionContent>
-            <PreferencesSection onUpdate={(data) => updateSectionData('preferences', data)} />
+            <PreferencesSection existingData={vault?.preferences} />
           </AccordionContent>
         </AccordionItem>
 
         <AccordionItem value="beliefs">
           <AccordionTrigger>5. Beliefs, Values & Principles</AccordionTrigger>
           <AccordionContent>
-            <BeliefSection onUpdate={(data) => updateSectionData('beliefs', data)} />
+            <BeliefSection existingData={vault?.beliefs} />
           </AccordionContent>
         </AccordionItem>
 
         <AccordionItem value="skills">
           <AccordionTrigger>6. Skills & Confidence</AccordionTrigger>
           <AccordionContent>
-            <SkillSection onUpdate={(data) => updateSectionData('skillsync', data)} />
+            <SkillSection existingData={vault?.skillsync} />
           </AccordionContent>
         </AccordionItem>
 
         <AccordionItem value="work">
           <AccordionTrigger>7. Work & Role</AccordionTrigger>
           <AccordionContent>
-            <WorkSection onUpdate={(data) => updateSectionData('work', data)} />
+            <WorkSection existingData={vault?.work} />
           </AccordionContent>
         </AccordionItem>
 
         <AccordionItem value="food">
           <AccordionTrigger>8. Food & Dietary Preferences</AccordionTrigger>
           <AccordionContent>
-            <FoodSection onUpdate={(data) => updateSectionData('food', data)} />
+            <FoodSection existingData={vault?.food} />
           </AccordionContent>
         </AccordionItem>
 
         <AccordionItem value="physical">
           <AccordionTrigger>9. Physical Attributes</AccordionTrigger>
           <AccordionContent>
-            <PhysicalSection onUpdate={(data) => updateSectionData('physical', data)} />
+            <PhysicalSection existingData={vault?.physical} />
           </AccordionContent>
         </AccordionItem>
 
         <AccordionItem value="popculture">
           <AccordionTrigger>10. Pop Culture & Personal Taste</AccordionTrigger>
           <AccordionContent>
-            <PopCultureSection onUpdate={(data) => updateSectionData('popculture', data)} />
+            <PopCultureSection existingData={vault?.popculture} />
           </AccordionContent>
         </AccordionItem>
 
         <AccordionItem value="health">
           <AccordionTrigger>11. Medical & Health + Fitness</AccordionTrigger>
           <AccordionContent>
-            <HealthSection onUpdate={(data) => updateSectionData('health', data)} />
+            <HealthSection existingData={vault?.health} />
           </AccordionContent>
         </AccordionItem>
 
         <AccordionItem value="tone">
           <AccordionTrigger>12. ToneSync Preferences</AccordionTrigger>
           <AccordionContent>
-            <ToneSyncSection onUpdate={(data) => updateSectionData('tonesync', data)} />
+            <ToneSyncSection existingData={vault?.tonesync} />
           </AccordionContent>
         </AccordionItem>
       </Accordion>
-
-      <div className="flex justify-end mt-6">
-        <button
-          onClick={handleSubmit}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Save & Launch Assistant
-        </button>
-      </div>
     </main>
   );
 }
