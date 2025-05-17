@@ -3,6 +3,7 @@ import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
+import { updateFamiliarityScore } from '@/utils/familiarity';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
@@ -29,6 +30,8 @@ export async function POST(req: NextRequest) {
       console.error('[VAULT LOOKUP ERROR]', error);
       return new NextResponse('Vault not found or incomplete.', { status: 404 });
     }
+
+    await updateFamiliarityScore(userId);
 
     const iv = vault.innerview || {};
     const tone = vault.tonesync || {};
