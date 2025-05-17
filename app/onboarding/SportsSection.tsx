@@ -70,7 +70,7 @@ export default function SportsSection() {
   };
 
   const handleMultiSelect = (id: string, option: string) => {
-    const selected = answers[id] || [];
+    const selected = Array.isArray(answers[id]) ? answers[id] : [];
     const updated = selected.includes(option)
       ? selected.filter((item: string) => item !== option)
       : [...selected, option];
