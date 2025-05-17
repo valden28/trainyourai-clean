@@ -47,8 +47,10 @@ export default function TypewriterIdentity() {
   }, [step]);
 
   const handleChange = (e: any) => {
-    if (!current?.id) return;
-    setAnswers({ ...answers, [current.id]: e.target.value });
+    if (!current || !current.id) return;
+    const updatedAnswers = { ...answers };
+    updatedAnswers[current.id] = e.target.value;
+    setAnswers(updatedAnswers);
   };
 
   const handleSave = async () => {
@@ -70,7 +72,9 @@ export default function TypewriterIdentity() {
       value={answers[id] || []}
       onChange={(e) => {
         const selected = Array.from(e.target.selectedOptions, (o: any) => o.value);
-        setAnswers({ ...answers, [id]: selected });
+        const updatedAnswers = { ...answers };
+        updatedAnswers[id] = selected;
+        setAnswers(updatedAnswers);
       }}
     >
       {options.map((opt) => (
