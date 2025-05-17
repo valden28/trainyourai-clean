@@ -47,7 +47,8 @@ export default function TypewriterIdentity() {
   }, [step]);
 
   const handleChange = (e: any) => {
-    setAnswers({ ...answers, [current?.id]: e.target.value });
+    if (!current?.id) return;
+    setAnswers({ ...answers, [current.id]: e.target.value });
   };
 
   const handleSave = async () => {
