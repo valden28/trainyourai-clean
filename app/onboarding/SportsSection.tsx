@@ -118,15 +118,15 @@ export default function SportsSection() {
               onChange={handleChange}
             >
               <option value="">Select one</option>
-              {current.options.map((opt: string) => (
+              {current.options?.map((opt: string) => (
                 <option key={opt} value={opt}>{opt}</option>
               ))}
             </select>
           )}
 
-          {current.type === 'tags' && (
+          {current.type === 'tags' && current.options && (
             <div className="mb-6 flex flex-wrap gap-2">
-              {current.options?.map((opt: string) => (
+              {current.options.map((opt: string) => (
                 <button
                   key={opt}
                   onClick={() => handleMultiSelect(current.id, opt)}
