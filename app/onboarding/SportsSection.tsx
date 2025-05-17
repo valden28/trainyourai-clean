@@ -125,7 +125,11 @@ export default function SportsSection() {
                 <button
                   key={opt}
                   onClick={() => handleMultiSelect(current.id, opt)}
-                  className={`px-3 py-1 rounded-full text-sm border ${Array.isArray(answers[current.id]) && answers[current.id].includes(opt) ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'}`}
+                  className={`px-3 py-1 rounded-full text-sm border ${
+                    (Array.isArray(answers[current.id]) ? answers[current.id] : []).includes(opt)
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}
                 >
                   {opt}
                 </button>
