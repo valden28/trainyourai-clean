@@ -1,18 +1,15 @@
 // utils/vaultutils.ts
-import { supabase } from '@/utils/supabaseClient';
+import { getSupabaseClient } from '@/utils/supabaseClient';
 
 export async function getVaultByUID(uid: string) {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('vaults_test')
     .select('*')
     .eq('user_uid', uid)
     .single();
 
-  if (error) {
-    console.error('Vault fetch error:', error.message);
-    return null;
-  }
-
+  if (error) throw new Error(error.message);
   return data;
 }
 
