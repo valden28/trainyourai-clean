@@ -80,12 +80,17 @@ export default function SportsSection() {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
+
     await fetch('/api/save-section?field=sports', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ data: answers }),
     });
-    await updateFamiliarityScore(user.sub);
+
+    if (user?.sub) {
+      await updateFamiliarityScore(user.sub);
+    }
+
     router.push('/dashboard');
   };
 
