@@ -1,7 +1,7 @@
 'use client';
 
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const introBlurb = `Thanks for sitting down with me.
@@ -25,32 +25,38 @@ export default function TypewriterIdentity() {
   const router = useRouter();
   const [step, setStep] = useState(-1);
   const [typing, setTyping] = useState('');
+  const [textToType, setTextToType] = useState('');
   const [showDots, setShowDots] = useState(false);
   const [answers, setAnswers] = useState<any>({});
   const [saving, setSaving] = useState(false);
+  const indexRef = useRef(0);
 
   const current = step >= 0 && step < questions.length ? questions[step] : null;
   const isComplete = step >= questions.length;
   const percent = Math.min(100, Math.round(((step + 1) / questions.length) * 100));
 
   useEffect(() => {
-    let text = step === -1 ? introBlurb : isComplete ? closingBlurb : current?.label || '';
+    const text = step === -1 ? introBlurb : isComplete ? closingBlurb : current?.label || '';
     if (!text) return;
-    let i = 0;
-    setTyping('');
     setShowDots(true);
+    setTyping('');
+    setTextToType(text);
+    indexRef.current = 0;
 
-    const typingStart = setTimeout(() => {
+    const delay = setTimeout(() => {
       setShowDots(false);
       const interval = setInterval(() => {
-        setTyping((prev) => prev + text[i]);
-        i++;
-        if (i >= text.length) clearInterval(interval);
+        setTyping((prev) => {
+          const nextChar = textToType[indexRef.current] || '';
+          indexRef.current++;
+          if (indexRef.current >= textToType.length) clearInterval(interval);
+          return prev + nextChar;
+        });
       }, 65);
-    }, 1200);
+    }, 1000);
 
-    return () => clearTimeout(typingStart);
-  }, [step]);
+    return () => clearTimeout(delay);
+  }, [step, textToType]);
 
   const handleChange = (e: any) => {
     if (!current || !current.id) return;
@@ -71,30 +77,32 @@ export default function TypewriterIdentity() {
     else alert('Save failed');
   };
 
-  const TagSelector = ({ id, options }: { id: string; options: string[] }) => (
-    <select
-      multiple
-      className="w-full border p-3 rounded mt-4"
-      value={answers[id] || []}
-      onChange={(e) => {
-        const selected = Array.from(e.target.selectedOptions, (o: any) => o.value);
-        const updatedAnswers = { ...answers };
-        updatedAnswers[id] = selected;
-        setAnswers(updatedAnswers);
-      }}
-    >
-      {options.map((opt) => (
-        <option key={opt} value={opt}>{opt}</option>
-      ))}
-    </select>
-  );
+  const TagSelector = ({ id, options }: { id: string; options: string[] }) => {
+    const selected = answers[id] || [];
+    return (
+      <select
+        multiple
+        className="w-full border p-3 rounded mt-4"
+        value={selected}
+        onChange={(e) => {
+          const values = Array.from(e.target.selectedOptions, (o: any) => o.value);
+          const updatedAnswers = { ...answers, [id]: values };
+          setAnswers(updatedAnswers);
+        }}
+      >
+        {options.map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+    );
+  };
 
   return (
     <main className="min-h-screen bg-white text-black p-4 sm:p-6 max-w-xl mx-auto flex flex-col font-sans">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold text-blue-700">Identity</h1>
         {step >= 0 && step < questions.length && (
-          <span className="text-sm text-gray-500">{percent}% complete</span>
+          <span className="text-sm text-gray-500 transition-opacity duration-300">{percent}% complete</span>
         )}
       </div>
 
@@ -102,7 +110,7 @@ export default function TypewriterIdentity() {
         {showDots ? (
           <p className="text-base font-medium text-gray-400 animate-pulse">[ • • • ]</p>
         ) : (
-          <p className="text-base font-medium whitespace-pre-line leading-relaxed">{typing}</p>
+          <p className="text-base font-medium whitespace-pre-line leading-relaxed">{typing || ''}</p>
         )}
       </div>
 
