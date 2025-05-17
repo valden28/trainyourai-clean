@@ -126,7 +126,7 @@ export default function SportsSection() {
 
           {current.type === 'tags' && (
             <div className="mb-6 flex flex-wrap gap-2">
-              {current.options.map((opt: string) => (
+              {current.options?.map((opt: string) => (
                 <button
                   key={opt}
                   onClick={() => handleMultiSelect(current.id, opt)}
