@@ -1,6 +1,10 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@supabase/supabase-js';
 
-export function createServerSupabaseClient() {
-  return createServerComponentClient({ cookies })
+const supabaseUrl = process.env.SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !serviceRoleKey) {
+  throw new Error('Missing Supabase server env vars.');
 }
+
+export const supabaseServer = createClient(supabaseUrl, serviceRoleKey);

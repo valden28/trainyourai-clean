@@ -1,11 +1,10 @@
-// app/api/save-vault/route.ts
-
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { updateFamiliarityScore } from '@/utils/familiarity';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+import { supabaseServer as supabase } from '@/lib/supabaseServer';
+  process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
@@ -35,6 +34,8 @@ export async function POST(req: NextRequest) {
     console.error('[VAULT SAVE ERROR]', JSON.stringify(error, null, 2));
     return new NextResponse(`Failed to save vault: ${JSON.stringify(error)}`, { status: 500 });
   }
+
+  await updateFamiliarityScore(userId);
 
   return new NextResponse('Vault saved', { status: 200 });
 }

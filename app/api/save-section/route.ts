@@ -1,8 +1,9 @@
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { updateFamiliarityScore } from '@/utils/familiarity';
 
-const supabase = createClient(
+import { supabaseServer as supabase } from '@/lib/supabaseServer';
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
@@ -35,6 +36,8 @@ export async function POST(req: NextRequest) {
     console.error(`[VAULT SAVE ERROR - ${field}]`, error);
     return new NextResponse(`Failed to save ${field}: ${error.message}`, { status: 500 });
   }
+
+  await updateFamiliarityScore(userId);
 
   return new NextResponse(`Saved ${field}`, { status: 200 });
 }

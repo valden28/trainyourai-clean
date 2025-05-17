@@ -7,7 +7,7 @@ import { updateFamiliarityScore } from '@/utils/familiarity';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-const supabase = createClient(
+import { supabaseServer as supabase } from '@/lib/supabaseServer';
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );

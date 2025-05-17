@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { updateFamiliarityScore } from '@/utils/familiarity';
 
+interface SectionProps {
+  existingData?: any;
+}
+
 const sportsQuestions = [
   {
     id: 'leagues',
@@ -37,12 +41,12 @@ const sportsQuestions = [
   }
 ];
 
-export default function SportsSection() {
+export default function SportsSection({ existingData }: SectionProps) {
   const { user } = useUser();
   const router = useRouter();
   const [step, setStep] = useState(-1);
   const [typing, setTyping] = useState('');
-  const [answers, setAnswers] = useState<any>({});
+  const [answers, setAnswers] = useState<any>(existingData || {});
   const [saving, setSaving] = useState(false);
 
   const current = sportsQuestions[step];
