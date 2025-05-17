@@ -4,7 +4,7 @@ import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { updateFamiliarityScore } from '@/utils/familiarity';
-import { supabase } from '@/utils/supabaseClient';
+import { getSupabaseClient } from '@/utils/supabaseClient';
 
 interface SectionProps {
   existingData?: any;
@@ -86,6 +86,7 @@ export default function SportsSection({ existingData }: SectionProps) {
     if (!user?.sub) return;
     setSaving(true);
 
+    const supabase = getSupabaseClient();
     await supabase
       .from('vaults_test')
       .upsert(
