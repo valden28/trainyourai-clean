@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { updateFamiliarityScore } from '@/utils/familiarity';
 
+interface SectionProps {
+  existingData?: any;
+}
+
 const travelQuestions = [
   {
     id: 'frequency',
@@ -56,12 +60,12 @@ const travelQuestions = [
   }
 ];
 
-export default function TravelSection() {
+export default function TravelSection({ existingData }: SectionProps) {
   const { user } = useUser();
   const router = useRouter();
   const [step, setStep] = useState(-1);
   const [typing, setTyping] = useState('');
-  const [answers, setAnswers] = useState<any>({});
+  const [answers, setAnswers] = useState<any>(existingData || {});
   const [saving, setSaving] = useState(false);
 
   const current = travelQuestions[step];
