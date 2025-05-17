@@ -26,7 +26,7 @@ export default function PeopleSection({ existingData = [] }: SectionProps) {
   const router = useRouter();
   const supabase = getSupabaseClient();
 
-  const [people, setPeople] = useState<Person[]>(existingData);
+  const [people, setPeople] = useState<Person[]>(() => [...existingData]);
   const [step, setStep] = useState(-1);
   const [typing, setTyping] = useState('');
   const [saving, setSaving] = useState(false);
