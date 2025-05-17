@@ -89,7 +89,7 @@ export default function TravelSection() {
   };
 
   const handleMultiSelect = (id: string, option: string) => {
-    const selected = answers[id] || [];
+    const selected = Array.isArray(answers[id]) ? answers[id] : [];
     const updated = selected.includes(option)
       ? selected.filter((item: string) => item !== option)
       : [...selected, option];
@@ -104,7 +104,9 @@ export default function TravelSection() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ data: answers }),
     });
-    await updateFamiliarityScore(user.sub);
+    if (user?.sub) {
+      await updateFamiliarityScore(user.sub);
+    }
     router.push('/dashboard');
   };
 
@@ -132,19 +134,23 @@ export default function TravelSection() {
               onChange={handleChange}
             >
               <option value="">Select one</option>
-              {current.options.map((opt: string) => (
+              {current.options?.map((opt: string) => (
                 <option key={opt} value={opt}>{opt}</option>
               ))}
             </select>
           )}
 
-          {current.type === 'tags' && (
+          {current.type === 'tags' && current.options && (
             <div className="mb-6 flex flex-wrap gap-2">
               {current.options.map((opt: string) => (
                 <button
                   key={opt}
                   onClick={() => handleMultiSelect(current.id, opt)}
-                  className={`px-3 py-1 rounded-full text-sm border ${answers[current.id]?.includes(opt) ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'}`}
+                  className={`px-3 py-1 rounded-full text-sm border ${
+                    ((answers[current.id] as string[] | undefined) ?? []).includes(opt)
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}
                 >
                   {opt}
                 </button>
