@@ -4,6 +4,7 @@ import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { updateFamiliarityScore } from '@/utils/familiarity';
+import { supabase } from '@/utils/supabaseClient';
 
 interface SectionProps {
   existingData?: any;
@@ -101,16 +102,17 @@ export default function TravelSection({ existingData }: SectionProps) {
   };
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user?.sub) return;
     setSaving(true);
-    await fetch('/api/save-section?field=travel', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: answers }),
-    });
-    if (user?.sub) {
-      await updateFamiliarityScore(user.sub);
-    }
+
+    await supabase
+      .from('vaults_test')
+      .upsert(
+        { user_uid: user.sub, travel: answers },
+        { onConflict: 'user_uid' }
+      );
+
+    await updateFamiliarityScore(user.sub);
     router.push('/dashboard');
   };
 

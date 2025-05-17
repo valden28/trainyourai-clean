@@ -4,6 +4,7 @@ import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { updateFamiliarityScore } from '@/utils/familiarity';
+import { supabase } from '@/utils/supabaseClient';
 
 interface SectionProps {
   existingData?: any;
@@ -82,19 +83,17 @@ export default function SportsSection({ existingData }: SectionProps) {
   };
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user?.sub) return;
     setSaving(true);
 
-    await fetch('/api/save-section?field=sports', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: answers }),
-    });
+    await supabase
+      .from('vaults_test')
+      .upsert(
+        { user_uid: user.sub, sports: answers },
+        { onConflict: 'user_uid' }
+      );
 
-    if (user?.sub) {
-      await updateFamiliarityScore(user.sub);
-    }
-
+    await updateFamiliarityScore(user.sub);
     router.push('/dashboard');
   };
 
