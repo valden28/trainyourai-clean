@@ -1,68 +1,43 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-const introBlurb = `Thanks for sitting down with me.
-You're not sharing this info — you're just storing it for your future self.
-This section helps me learn the basics: who you are, where you're from, and how to show up for you better.`;
-
-const closingBlurb = `That’s it for the basics. When you're ready, we can move on to the next section or come back later.`;
-
-const questions = [
-  { id: 'full_name', label: 'Can I get your full name?', type: 'text' },
-  { id: 'nickname', label: 'Do your friends or family call you anything else?', type: 'text' },
-  { id: 'dob', label: 'When were you born?', type: 'date' },
-  { id: 'location', label: 'Where do you live now?', type: 'text' },
-  { id: 'hometown', label: 'Where did you grow up?', type: 'text' },
-  { id: 'ethnicity', label: 'Any cultural background or heritage you identify with?', type: 'tags', options: ['Italian', 'Irish', 'Jewish', 'Cuban', 'Mexican', 'German', 'African American', 'Korean', 'Chinese', 'Indian', 'Puerto Rican', 'Other'] },
-  { id: 'languages', label: 'What languages do you speak or understand?', type: 'tags', options: ['English', 'Spanish', 'French', 'German', 'Italian', 'Mandarin', 'Portuguese', 'Other'] },
-];
-
-export default function TypewriterIdentity() {
+export default function TypewriterPage() {
   const { user } = useUser();
   const router = useRouter();
-  const [step, setStep] = useState(-1);
-  const [typing, setTyping] = useState('');
-  const [textToType, setTextToType] = useState('');
-  const [showDots, setShowDots] = useState(false);
-  const [answers, setAnswers] = useState<any>({});
-  const [saving, setSaving] = useState(false);
-  const indexRef = useRef(0);
 
-  const current = step >= 0 && step < questions.length ? questions[step] : null;
-  const isComplete = step >= questions.length;
-  const percent = Math.min(100, Math.round(((step + 1) / questions.length) * 100));
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState<any>({});
+  const [typing, setTyping] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const questions = [
+    { id: 'nickname', label: 'Do you have a nickname?', type: 'text' },
+    { id: 'hometown', label: 'Where did you grow up?', type: 'text' },
+    { id: 'birthplace', label: 'Where were you born?', type: 'dropdown', options: ['Tampa', 'Port Charlotte', 'Sarasota', 'Other'] },
+    { id: 'bio', label: 'How would you describe your background in a few sentences?', type: 'textarea' },
+  ];
+
+  const current = questions[step];
+  const isLast = step === questions.length - 1;
 
   useEffect(() => {
-    const text = step === -1 ? introBlurb : isComplete ? closingBlurb : current?.label || '';
-    if (!text) return;
-    setShowDots(true);
+    let timeout: NodeJS.Timeout;
+    if (!current?.label) return;
+    let i = 0;
     setTyping('');
-    setTextToType(text);
-    indexRef.current = 0;
-
-    const delay = setTimeout(() => {
-      setShowDots(false);
-      const interval = setInterval(() => {
-        setTyping((prev) => {
-          const nextChar = textToType[indexRef.current] || '';
-          indexRef.current++;
-          if (indexRef.current >= textToType.length) clearInterval(interval);
-          return prev + nextChar;
-        });
-      }, 65);
-    }, 1000);
-
-    return () => clearTimeout(delay);
-  }, [step, textToType]);
+    timeout = setInterval(() => {
+      setTyping((prev) => prev + current.label[i]);
+      i++;
+      if (i >= current.label.length) clearInterval(timeout);
+    }, 45);
+    return () => clearInterval(timeout);
+  }, [step]);
 
   const handleChange = (e: any) => {
-    if (!current || !current.id) return;
-    const updatedAnswers = { ...answers };
-    updatedAnswers[current.id] = e.target.value;
-    setAnswers(updatedAnswers);
+    setAnswers({ ...answers, [current.id]: e.target.value });
   };
 
   const handleSave = async () => {
@@ -77,108 +52,69 @@ export default function TypewriterIdentity() {
     else alert('Save failed');
   };
 
-  const TagSelector = ({ id, options }: { id: string; options: string[] }) => {
-    const selected = answers[id] || [];
-    return (
-      <select
-        multiple
-        className="w-full border p-3 rounded mt-4"
-        value={selected}
-        onChange={(e) => {
-          const values = Array.from(e.target.selectedOptions, (o: any) => o.value);
-          const updatedAnswers = { ...answers, [id]: values };
-          setAnswers(updatedAnswers);
-        }}
-      >
-        {options.map((opt) => (
-          <option key={opt} value={opt}>{opt}</option>
-        ))}
-      </select>
-    );
-  };
-
   return (
-    <main className="min-h-screen bg-white text-black p-4 sm:p-6 max-w-xl mx-auto flex flex-col font-sans">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold text-blue-700">Identity</h1>
-        {step >= 0 && step < questions.length && (
-          <span className="text-sm text-gray-500 transition-opacity duration-300">{percent}% complete</span>
+    <main className="min-h-screen bg-white text-black p-6 max-w-xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6 text-blue-700">Getting to Know You</h1>
+
+      <div className="mb-4 h-24">
+        <p className="text-lg font-medium min-h-[48px]">{typing}</p>
+
+        {current?.type === 'text' && (
+          <input
+            className="w-full border p-2 rounded mt-4"
+            value={answers[current.id] || ''}
+            onChange={handleChange}
+          />
+        )}
+        {current?.type === 'textarea' && (
+          <textarea
+            className="w-full border p-2 rounded mt-4"
+            rows={4}
+            value={answers[current.id] || ''}
+            onChange={handleChange}
+          />
+        )}
+        {current?.type === 'dropdown' && (
+          <select
+            className="w-full border p-2 rounded mt-4"
+            value={answers[current.id] || ''}
+            onChange={handleChange}
+          >
+            <option value="">Select one</option>
+            {(current.options ?? []).map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
         )}
       </div>
 
-      <div className="min-h-[100px] mb-6">
-        {showDots ? (
-          <p className="text-base font-medium text-gray-400 animate-pulse">[ • • • ]</p>
-        ) : (
-          <p className="text-base font-medium whitespace-pre-line leading-relaxed">{typing || ''}</p>
-        )}
-      </div>
-
-      {step === -1 && (
+      <div className="flex justify-between mt-6">
         <button
-          onClick={() => setStep(0)}
-          className="px-4 py-2 bg-blue-600 text-white rounded self-start"
+          onClick={() => setStep((s) => Math.max(s - 1, 0))}
+          disabled={step === 0}
+          className="px-4 py-2 bg-gray-300 text-black rounded disabled:opacity-50"
         >
-          Start
+          Back
         </button>
-      )}
-
-      {current && (
-        <>
-          {current.type === 'text' && (
-            <input
-              className="w-full border p-3 rounded mb-6"
-              value={answers[current.id] || ''}
-              onChange={handleChange}
-              placeholder="Type your answer..."
-            />
-          )}
-          {current.type === 'date' && (
-            <input
-              type="date"
-              className="w-full border p-3 rounded mb-6"
-              value={answers[current.id] || ''}
-              onChange={handleChange}
-            />
-          )}
-          {current.type === 'tags' && (
-            <TagSelector id={current.id} options={current.options || []} />
-          )}
-          <div className="flex justify-between mt-6">
-            <button
-              onClick={() => setStep((s) => Math.max(s - 1, 0))}
-              disabled={step === 0}
-              className="px-4 py-2 bg-gray-300 text-black rounded disabled:opacity-50"
-            >
-              Back
-            </button>
-            <button
-              onClick={() => setStep((s) => s + 1)}
-              className="px-4 py-2 bg-blue-600 text-white rounded"
-            >
-              Next
-            </button>
-          </div>
-        </>
-      )}
-
-      {isComplete && (
-        <div className="flex flex-col gap-4 mt-4">
+        {!isLast ? (
+          <button
+            onClick={() => setStep((s) => s + 1)}
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+          >
+            Next
+          </button>
+        ) : (
           <button
             onClick={handleSave}
+            className="px-6 py-2 bg-green-600 text-white rounded disabled:opacity-50"
             disabled={saving}
-            className="px-4 py-2 bg-green-600 text-white rounded"
           >
-            {saving ? 'Saving...' : 'Save and Continue'}
+            {saving ? 'Saving...' : 'Finish & Save'}
           </button>
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="text-sm text-blue-600 underline"
-          >
-            Or return to dashboard
-          </button>
-        </div>
-      )}
+        )}
+      </div>
     </main>
   );
 }
