@@ -18,15 +18,3 @@ export async function createVaultIfMissing(uid: string) {
 
   return data;
 }
-
-export async function createVaultIfMissing(uid: string) {
-  const { data, error } = await supabase
-    .from('vaults_test')
-    .select('user_uid')
-    .eq('user_uid', uid)
-    .single();
-
-  if (!data && !error) {
-    await supabase.from('vaults_test').insert([{ user_uid: uid }]);
-  }
-}
