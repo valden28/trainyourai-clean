@@ -1,15 +1,21 @@
 // utils/vaultutils.ts
 import { getSupabaseClient } from '@/utils/supabaseClient';
 
-export async function getVaultByUID(uid: string) {
+export async function createVaultIfMissing(uid: string) {
   const supabase = getSupabaseClient();
+
+  // Check if vault exists
   const { data, error } = await supabase
     .from('vaults_test')
-    .select('*')
+    .select('user_uid')
     .eq('user_uid', uid)
     .single();
 
-  if (error) throw new Error(error.message);
+  // If not found and no error, create it
+  if (!data && !error) {
+    await supabase.from('vaults_test').insert([{ user_uid: uid }]);
+  }
+
   return data;
 }
 
