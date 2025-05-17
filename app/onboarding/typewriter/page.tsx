@@ -23,8 +23,9 @@ const questions = [
 export default function TypewriterIdentity() {
   const { user } = useUser();
   const router = useRouter();
-  const [step, setStep] = useState(-1); // -1 = intro, questions 0+, final = questions.length
+  const [step, setStep] = useState(-1);
   const [typing, setTyping] = useState('');
+  const [showDots, setShowDots] = useState(false);
   const [answers, setAnswers] = useState<any>({});
   const [saving, setSaving] = useState(false);
 
@@ -34,16 +35,21 @@ export default function TypewriterIdentity() {
 
   useEffect(() => {
     let text = step === -1 ? introBlurb : isComplete ? closingBlurb : current?.label || '';
+    if (!text) return;
     let i = 0;
     setTyping('');
-    const delay = setTimeout(() => {
+    setShowDots(true);
+
+    const typingStart = setTimeout(() => {
+      setShowDots(false);
       const interval = setInterval(() => {
         setTyping((prev) => prev + text[i]);
         i++;
         if (i >= text.length) clearInterval(interval);
       }, 65);
-    }, 800);
-    return () => clearTimeout(delay);
+    }, 1200);
+
+    return () => clearTimeout(typingStart);
   }, [step]);
 
   const handleChange = (e: any) => {
@@ -93,7 +99,11 @@ export default function TypewriterIdentity() {
       </div>
 
       <div className="min-h-[100px] mb-6">
-        <p className="text-base font-medium whitespace-pre-line leading-relaxed">{typing}</p>
+        {showDots ? (
+          <p className="text-base font-medium text-gray-400 animate-pulse">[ • • • ]</p>
+        ) : (
+          <p className="text-base font-medium whitespace-pre-line leading-relaxed">{typing}</p>
+        )}
       </div>
 
       {step === -1 && (
