@@ -99,6 +99,39 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          <div className="mb-8 p-4 rounded shadow bg-white border border-gray-200 max-w-sm mx-auto">
+            <p className="text-sm text-gray-600 text-center mb-2">Familiarity Index</p>
+            <div className="relative w-24 h-24 mx-auto">
+              <svg className="transform -rotate-90" viewBox="0 0 36 36">
+                <path
+                  className="text-gray-300"
+                  strokeWidth="3"
+                  stroke="currentColor"
+                  fill="none"
+                  d="M18 2.0845
+                     a 15.9155 15.9155 0 0 1 0 31.831
+                     a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+                <path
+                  className="text-blue-600 transition-all duration-500"
+                  strokeWidth="3"
+                  stroke="currentColor"
+                  fill="none"
+                  strokeDasharray={`${vault?.familiarity_score || 0}, 100`}
+                  d="M18 2.0845
+                     a 15.9155 15.9155 0 0 1 0 31.831
+                     a 15.9155 15.9155 0 0 1 0 -31.831"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center text-lg font-semibold text-blue-700">
+                {vault?.familiarity_score || 0}%
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-gray-500 text-center px-2">
+              The more you train your AI, the more it becomes yours.
+            </p>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             <div className="bg-gray-100 p-4 rounded shadow">
               <h2 className="font-semibold mb-2">InnerView</h2>
