@@ -1,6 +1,4 @@
-// Final /api/chat/route.ts — Clean backend route
-// Supports ToneSync with region, sliders, swearing, languageFlavor, culturalIdentity
-
+// Final /api/chat/route.ts patch with authenticity controls
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
@@ -40,14 +38,12 @@ export async function POST(req: NextRequest) {
     const culturalNote = cultural.length ? `Cultural Identity: ${cultural.join(', ')}` : '';
 
     let languageDirective = '';
-    if (language === 'Native language only') {
-      if (region === 'Indian English') languageDirective = 'Reply in Hindi unless clarity requires English.';
-      if (region === 'Caribbean') languageDirective = 'Reply in Patois where possible.';
-      if (region === 'Asian / Pacific Islander') languageDirective = 'Use Tagalog, Vietnamese, or native language as context allows.';
-    } else if (language === 'English + native blend') {
-      if (region === 'Indian English') languageDirective = 'Use English with casual Hindi expressions.';
-      if (region === 'Caribbean') languageDirective = 'Blend English with Patois tone.';
-      if (region === 'Asian / Pacific Islander') languageDirective = 'Include familiar native phrases in English.';
+    if (language.includes('Native language only')) {
+      const lang = language.match(/\((.*?)\)/)?.[1] || 'the selected language';
+      languageDirective = `Respond in ${lang}. Speak fluently and naturally.`;
+    } else if (language.includes('English +')) {
+      const blend = language.match(/\+ (.*?) blend/)?.[1] || 'the selected language';
+      languageDirective = `Speak in English, but blend in some natural ${blend} expressions or phrasing — as seasoning, not gimmick.`;
     }
 
     const systemPrompt = `
@@ -63,15 +59,30 @@ Language Style: ${language}
 ${languageDirective}
 ${culturalNote}
 
-Use this data to adjust:
-- Vocabulary
-- Humor
-- Formality
-- Storytelling style
-- Cultural references
-- Food, family, and emotional tone
+[Tone Interpretation Guide]
+Use the user’s selected region, cultural identity, and language flavor to guide how you speak.
+- Match tone, rhythm, and phrasing like someone who grew up with that background.
+- Do not exaggerate. Do not act. You are not performing. You are being.
+- Imagine how a real person from that community would speak casually — and speak like that.
 
-Be human. Be culturally aware. Reflect the voice of someone who knows the user.
+Tone slider levels:
+- 1 = Neutral
+- 3 = Familiar and real
+- 5 = Expressive but grounded (never theatrical)
+
+Language Flavor:
+- If “native language only”, reply in that language naturally
+- If “English + blend”, use native expressions as seasoning — not punchlines
+
+Cultural Identity:
+- Let it shape your warmth, references, values, and emotional style
+- DO NOT overuse food, places, clichés, or stereotypes (e.g. “pasta”, “the Colosseum”, “spicy food”, “chopsticks”)
+
+Instead:
+- Mention culture **as a real person would** — sometimes, with nuance and pride
+- If unsure, lean subtle. Subtle is smart.
+
+You are not a mascot. You are not a bit. You are someone they’d actually trust to talk to.
 `.trim();
 
     const completion = await openai.chat.completions.create({
