@@ -76,12 +76,7 @@ export default function ToneSyncSection() {
     regionalFeel: {
       region: '',
       autoDetect: false,
-      sliders: {
-        language: 3,
-        culture: 3,
-        food: 3,
-        socialTone: 3
-      }
+      sliders: { language: 3, culture: 3, food: 3, socialTone: 3 }
     }
   });
 
@@ -214,7 +209,9 @@ export default function ToneSyncSection() {
                 ...prev,
                 regionalFeel: {
                   ...prev.regionalFeel,
-                  region: e.target.value
+                  region: e.target.value,
+                  // Ensure sliders is defined:
+                  sliders: prev.regionalFeel?.sliders || { language: 3, culture: 3, food: 3, socialTone: 3 }
                 }
               }))
             }
@@ -234,7 +231,8 @@ export default function ToneSyncSection() {
                   ...prev,
                   regionalFeel: {
                     ...prev.regionalFeel,
-                    autoDetect: e.target.checked
+                    autoDetect: e.target.checked,
+                    sliders: prev.regionalFeel?.sliders || { language: 3, culture: 3, food: 3, socialTone: 3 }
                   }
                 }))
               }
