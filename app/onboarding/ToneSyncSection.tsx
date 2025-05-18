@@ -20,16 +20,16 @@ interface ToneSyncData {
     value: number;
   }[];
   swearing?: string;
-  regionalFeel: {
-    region: string;
-    autoDetect: boolean;
+  languageFlavor?: string;
+  regionalFeel?: {
+    region?: string;
+    autoDetect?: boolean;
     sliders: RegionalSliders;
   };
 }
 
-const intro = `Let’s calibrate how I speak to you.
-Some people prefer warmth, others want direct answers.
-This helps me reflect your personality, tone, and — if you want — a regional flavor.`;
+const intro = `Let’s calibrate how I speak to you — tone, rhythm, even the kind of language I use.
+This helps me reflect your personality and culture in the way I actually talk.`;
 
 const defaultPreferences = [
   { label: 'Formality', scale: 'Formal ←→ Casual', value: 3 },
@@ -39,6 +39,14 @@ const defaultPreferences = [
   { label: 'Playfulness', scale: 'Serious ←→ Witty', value: 3 },
   { label: 'Encouragement', scale: 'Chill ←→ Hype me up', value: 3 },
   { label: 'Language Style', scale: 'Clean ←→ Slang', value: 3 }
+];
+
+const languageFlavorOptions = [
+  'English only',
+  'Native language only',
+  'English + native blend',
+  'Formal regional language',
+  'Slang / casual regional'
 ];
 
 const swearingOptions = [
@@ -60,7 +68,8 @@ const regionOptions = [
   'Australian',
   'Caribbean',
   'Indian English',
-  'South African'
+  'South African',
+  'Asian / Pacific Islander'
 ];
 
 const defaultSliders: RegionalSliders = {
@@ -70,21 +79,24 @@ const defaultSliders: RegionalSliders = {
   socialTone: 3
 };
 
-export default function ToneSyncSection() {
+export default function ToneSyncSection({ existingData }: { existingData?: ToneSyncData }) {
   const { user } = useUser();
   const router = useRouter();
   const supabase = getSupabaseClient();
   const indexRef = useRef(0);
 
-  const [form, setForm] = useState<ToneSyncData>({
-    preferences: defaultPreferences,
-    swearing: '',
-    regionalFeel: {
-      region: '',
-      autoDetect: false,
-      sliders: defaultSliders
+  const [form, setForm] = useState<ToneSyncData>(
+    existingData ?? {
+      preferences: defaultPreferences,
+      swearing: '',
+      languageFlavor: 'English only',
+      regionalFeel: {
+        region: '',
+        autoDetect: false,
+        sliders: defaultSliders
+      }
     }
-  });
+  );
 
   const [step, setStep] = useState(0);
   const [typing, setTyping] = useState('');
@@ -206,6 +218,21 @@ export default function ToneSyncSection() {
             </select>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Language Flavor</label>
+            <select
+              className="w-full border p-2 rounded"
+              value={form.languageFlavor || 'English only'}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, languageFlavor: e.target.value }))
+              }
+            >
+              {languageFlavorOptions.map((opt) => (
+                <option key={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+
           <hr className="border-gray-300" />
 
           <h2 className="text-lg font-semibold text-gray-800">Regional Feel & Dialect</h2>
@@ -213,7 +240,7 @@ export default function ToneSyncSection() {
           <label className="block text-sm font-medium text-gray-700">Region</label>
           <select
             className="w-full border p-2 rounded"
-            value={form.regionalFeel.region}
+            value={form.regionalFeel?.region || ''}
             onChange={(e) =>
               setForm((prev) => ({
                 ...prev,
@@ -237,15 +264,12 @@ export default function ToneSyncSection() {
                 type="range"
                 min={1}
                 max={5}
-                value={form.regionalFeel.sliders[key as keyof RegionalSliders] ?? 3}
+                value={form.regionalFeel?.sliders[key as keyof RegionalSliders] ?? 3}
                 onChange={(e) =>
                   updateRegionalSlider(key as keyof RegionalSliders, Number(e.target.value))
                 }
                 className="w-full"
               />
-              <div className="text-sm text-right text-gray-600 italic">
-                Level: {form.regionalFeel.sliders[key as keyof RegionalSliders] ?? 3}
-              </div>
             </div>
           ))}
 
@@ -253,7 +277,7 @@ export default function ToneSyncSection() {
             <input
               type="checkbox"
               className="mr-2"
-              checked={form.regionalFeel.autoDetect}
+              checked={form.regionalFeel?.autoDetect || false}
               onChange={(e) =>
                 setForm((prev) => ({
                   ...prev,
