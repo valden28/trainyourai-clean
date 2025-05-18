@@ -1,3 +1,4 @@
+// Final /app/onboarding/page.tsx with ToneSync accordion item removed
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -15,7 +16,6 @@ import FoodSection from './FoodSection';
 import PhysicalSection from './PhysicalSection';
 import PopCultureSection from './PopCultureSection';
 import HealthSection from './HealthSection';
-import ToneSyncSection from './ToneSyncSection';
 import TravelSection from './TravelSection';
 import SportsSection from './SportsSection';
 
@@ -33,15 +33,15 @@ export default function OnboardingPage() {
   useEffect(() => {
     const fetchVault = async () => {
       const res = await fetch('/api/vault');
-      const data = await res.json();
-      setVault(data);
+      const json = await res.json();
+      setVault(json);
     };
-    fetchVault();
-  }, []);
+    if (user) fetchVault();
+  }, [user]);
 
   return (
     <main className="max-w-3xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">TrainYourAI: InnerView Onboarding</h1>
+      <h1 className="text-3xl font-bold mb-6 text-blue-700">Train Your AI</h1>
       <Accordion type="single" collapsible className="space-y-4">
         <AccordionItem value="identity">
           <AccordionTrigger>1. Identity & Background</AccordionTrigger>
@@ -93,66 +93,51 @@ export default function OnboardingPage() {
         </AccordionItem>
 
         <AccordionItem value="food">
-         <AccordionTrigger>8. Food & Dietary Preferences</AccordionTrigger>
-         <AccordionContent>
-          <FoodSection existingData={vault?.food} />
-         </AccordionContent>
+          <AccordionTrigger>8. Food & Dietary Preferences</AccordionTrigger>
+          <AccordionContent>
+            <FoodSection existingData={vault?.food} />
+          </AccordionContent>
         </AccordionItem>
 
         <AccordionItem value="physical">
-         <AccordionTrigger>9. Physical Attributes</AccordionTrigger>
-         <AccordionContent>
-          <PhysicalSection existingData={vault?.physical} />
-         </AccordionContent>
-       </AccordionItem>
+          <AccordionTrigger>9. Physical Attributes</AccordionTrigger>
+          <AccordionContent>
+            <PhysicalSection existingData={vault?.physical} />
+          </AccordionContent>
+        </AccordionItem>
 
-       <AccordionItem value="popculture">
-        <AccordionTrigger>10. Pop Culture & Personal Taste</AccordionTrigger>
-        <AccordionContent>
-         <PopCultureSection existingData={vault?.popculture} />
-        </AccordionContent>
-      </AccordionItem>
+        <AccordionItem value="popculture">
+          <AccordionTrigger>10. Pop Culture & Personal Taste</AccordionTrigger>
+          <AccordionContent>
+            <PopCultureSection existingData={vault?.popculture} />
+          </AccordionContent>
+        </AccordionItem>
 
-      <AccordionItem value="sports">
-       <AccordionTrigger>11. Sports & Teams</AccordionTrigger>
-       <AccordionContent>
-        <SportsSection existingData={vault?.sports} />
-      </AccordionContent>
-     </AccordionItem>
+        <AccordionItem value="sports">
+          <AccordionTrigger>11. Sports & Teams</AccordionTrigger>
+          <AccordionContent>
+            <SportsSection existingData={vault?.sports} />
+          </AccordionContent>
+        </AccordionItem>
 
-     <AccordionItem value="travel">
-  <AccordionTrigger>12. Travel</AccordionTrigger>
-  <AccordionContent>
-    <TravelSection existingData={vault?.travel} />
-  </AccordionContent>
-      </AccordionItem>
+        <AccordionItem value="travel">
+          <AccordionTrigger>12. Travel</AccordionTrigger>
+          <AccordionContent>
+            <TravelSection existingData={vault?.travel} />
+          </AccordionContent>
+        </AccordionItem>
 
-     <AccordionItem value="health">
-      <AccordionTrigger>13. Medical & Health + Fitness</AccordionTrigger>
-      <AccordionContent>
-       <HealthSection existingData={vault?.health} />
-      </AccordionContent>
-    </AccordionItem>
+        <AccordionItem value="health">
+          <AccordionTrigger>13. Medical & Health + Fitness</AccordionTrigger>
+          <AccordionContent>
+            <HealthSection existingData={vault?.health} />
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
-     <AccordionItem value="tone">
-      <AccordionTrigger>14. ToneSync Preferences</AccordionTrigger>
-      <AccordionContent>
-      <ToneSyncSection />
-      </AccordionContent>
-    </AccordionItem>
-    </Accordion>  {/* ADD THIS */}
-
-<div className="mt-10">
-  <p className="text-sm text-gray-600 mb-2">You can return and edit these sections anytime.</p>
-  <div className="flex justify-end">
-    <button
-      onClick={() => router.push('/chat-core')}
-      className="px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700"
-    >
-      Launch Assistant
-    </button>
-  </div>
-</div>
+      <div className="mt-10 text-center text-sm text-gray-500">
+        You can return and edit these sections anytime.
+      </div>
     </main>
   );
 }
