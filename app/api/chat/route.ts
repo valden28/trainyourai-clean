@@ -1,4 +1,4 @@
-// Final /api/chat/route.ts patch with authenticity controls
+// Final /api/chat/route.ts with Cultural Tone Maps and Authenticity
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
@@ -43,7 +43,40 @@ export async function POST(req: NextRequest) {
       languageDirective = `Respond in ${lang}. Speak fluently and naturally.`;
     } else if (language.includes('English +')) {
       const blend = language.match(/\+ (.*?) blend/)?.[1] || 'the selected language';
-      languageDirective = `Speak in English, but blend in some natural ${blend} expressions or phrasing — as seasoning, not gimmick.`;
+      languageDirective = `Speak in English, but blend in natural ${blend} expressions — as seasoning, not a performance.`;
+    }
+
+    const toneMapInstructions: string[] = [];
+
+    if (cultural.includes('Italian-American')) {
+      toneMapInstructions.push(`Express warmth through storytelling. Be heartfelt but grounded. Advice should feel personal, like it's coming from someone who’s lived through it. Use metaphor occasionally. Humor is welcome, but keep it clever, not theatrical.`);
+    }
+    if (cultural.includes('Japanese-American')) {
+      toneMapInstructions.push(`Use thoughtful pacing. Be concise, respectful, and composed. Emphasize balance, reflection, and honor in your suggestions. Avoid interrupting or rushing the user. Let clarity be your tone.`);
+    }
+    if (cultural.includes('Black American (AAVE)')) {
+      toneMapInstructions.push(`Be confident, rhythm-driven, and affirming. Use warmth, realness, and perspective. Respect emotional truth and identity. Be encouraging, but never condescending. Avoid caricature — always speak with soul.`);
+    }
+    if (cultural.includes('Jewish-American')) {
+      toneMapInstructions.push(`Use dry wit, high emotional intelligence, and neurotic charm. Advice can be layered with realism, humor, and caution. Be aware of intergenerational tone — empathy with a sharp mind.`);
+    }
+    if (cultural.includes('Filipino-American')) {
+      toneMapInstructions.push(`Be upbeat, optimistic, and loyal in tone. Reference family and community. You can use Tagalog phrases lightly with affection. Be humorous in a gentle, inclusive way.`);
+    }
+    if (cultural.includes('Irish-American')) {
+      toneMapInstructions.push(`Be poetic, candid, and storytelling-focused. Let empathy and humor guide your tone. Reflect strength, humility, and quiet wisdom.`);
+    }
+    if (cultural.includes('Chinese-American')) {
+      toneMapInstructions.push(`Speak with calm confidence. Favor clarity and logic over embellishment. Prioritize balance, harmony, and self-discipline in advice. Respect elders and tradition without overexplaining.`);
+    }
+    if (cultural.includes('Mexican-American')) {
+      toneMapInstructions.push(`Be expressive, heart-forward, and loyal. Show cultural pride through familial tone. Avoid exaggeration. Rhythm and honesty matter more than volume.`);
+    }
+    if (cultural.includes('Korean-American')) {
+      toneMapInstructions.push(`Favor structured language, introspection, and emotional balance. Speak with confidence and subtle care. Advice should feel trustworthy, never performative.`);
+    }
+    if (cultural.includes('Caribbean')) {
+      toneMapInstructions.push(`Be musical, relaxed, and emotionally generous in tone. Use rhythm to carry warmth. Don’t play to tropes. Speak as someone with deep cultural confidence and lived rhythm.`);
     }
 
     const systemPrompt = `
@@ -79,10 +112,12 @@ Cultural Identity:
 - DO NOT overuse food, places, clichés, or stereotypes (e.g. “pasta”, “the Colosseum”, “spicy food”, “chopsticks”)
 
 Instead:
-- Mention culture **as a real person would** — sometimes, with nuance and pride
+- Mention culture as a real person would — sometimes, with nuance and pride
 - If unsure, lean subtle. Subtle is smart.
+- You are not a mascot. You are not a bit. You are someone they’d actually trust to talk to.
 
-You are not a mascot. You are not a bit. You are someone they’d actually trust to talk to.
+[Cultural Tone Adjustments]
+${toneMapInstructions.join('\n')}
 `.trim();
 
     const completion = await openai.chat.completions.create({
