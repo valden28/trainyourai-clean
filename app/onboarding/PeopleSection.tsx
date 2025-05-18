@@ -47,7 +47,27 @@ export default function PeopleSection({ existingData }: SectionProps) {
         : step < people.length
           ? `Tell me about this person.`
           : 'That’s everyone for now. You can always add more later.';
-
+  
+    indexRef.current = 0;
+    setTyping('');
+    setShowDots(true);
+  
+    const delay = setTimeout(() => {
+      setShowDots(false);
+  
+      const type = () => {
+        if (indexRef.current < text.length) {
+          setTyping((prev) => prev + text.charAt(indexRef.current));
+          indexRef.current++;
+          setTimeout(type, 60); // Same speed, but controlled
+        }
+      };
+  
+      type();
+    }, 900);
+  
+    return () => clearTimeout(delay);
+  }, [step, people]);
     indexRef.current = 0;
     setTyping('');
     setShowDots(true);
@@ -244,4 +264,5 @@ export default function PeopleSection({ existingData }: SectionProps) {
       )}
     </main>
   );
+
 }
