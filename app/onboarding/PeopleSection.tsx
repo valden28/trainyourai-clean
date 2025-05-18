@@ -21,12 +21,12 @@ interface SectionProps {
 const intro = `Let’s talk about the people in your life — family, friends, partners, coworkers.
 The ones who matter, the ones who show up, the ones you care about (even if it’s complicated).`;
 
-export default function PeopleSection({ existingData = [] }: SectionProps) {
+export default function PeopleSection({ existingData }: SectionProps) {
   const { user } = useUser();
   const router = useRouter();
   const supabase = getSupabaseClient();
 
-  const [people, setPeople] = useState<Person[]>([...existingData]);
+  const [people, setPeople] = useState<Person[]>(() => Array.isArray(existingData) ? [...existingData] : []);
   const [step, setStep] = useState(-1);
   const [typing, setTyping] = useState('');
   const [saving, setSaving] = useState(false);
