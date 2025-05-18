@@ -137,7 +137,7 @@ export default function OnboardingPage() {
      <AccordionItem value="tone">
       <AccordionTrigger>14. ToneSync Preferences</AccordionTrigger>
       <AccordionContent>
-       <ToneSyncSection existingData={vault?.tonesync} />
+      <ToneSyncSection />
       </AccordionContent>
     </AccordionItem>
     </Accordion>  {/* ADD THIS */}
