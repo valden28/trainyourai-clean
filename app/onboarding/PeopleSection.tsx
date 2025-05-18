@@ -26,7 +26,7 @@ export default function PeopleSection({ existingData = [] }: SectionProps) {
   const router = useRouter();
   const supabase = getSupabaseClient();
 
-  const [people, setPeople] = useState<Person[]>(() => [...existingData]);
+  const [people, setPeople] = useState<Person[]>([...existingData]);
   const [step, setStep] = useState(-1);
   const [typing, setTyping] = useState('');
   const [saving, setSaving] = useState(false);
@@ -56,14 +56,16 @@ export default function PeopleSection({ existingData = [] }: SectionProps) {
     return () => clearInterval(interval);
   }, [step, people]);
 
-  const handleChange = (index: number, field: keyof Person, value: any) => {
-    const updated = [...people];
-    updated[index][field] = value;
-    setPeople(updated);
+  const handleChange = <K extends keyof Person>(index: number, field: K, value: Person[K]) => {
+    setPeople((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
   };
 
   const addPerson = () => {
-    setPeople([...people, { name: '', relationship: '', isLiving: true }]);
+    setPeople((prev) => [...prev, { name: '', relationship: '', isLiving: true }]);
     setStep(people.length);
   };
 
