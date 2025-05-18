@@ -1,5 +1,4 @@
-'use server';
-
+// app/api/chat/route.ts
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
@@ -31,75 +30,72 @@ export async function POST(req: NextRequest) {
 
     const iv = vault.innerview || {};
     const tone = vault.tonesync || {};
-    const skills = vault.skillsync || {};
-    const people = vault.people || {};
-    const dates = vault.dates || {};
-    const preferences = vault.preferences || {};
-    const beliefs = vault.beliefs || {};
-    const work = vault.work || {};
-    const food = vault.food || {};
-    const physical = vault.physical || {};
-    const popculture = vault.popculture || {};
-    const health = vault.health || {};
+    const regional = tone.regionalFeel || {};
+    const sliders = regional.sliders || {};
+    const prefs = tone.preferences || [];
 
-    const tonePrefs = tone.preferences || [];
-    const toneSummary = tonePrefs.map((p: any) => `${p.label}: ${p.value}/5`).join(', ');
-    const swearingNote = tone.swearing || 'Clean language';
+    const swearingNote = tone.swearing ? `Swearing: ${tone.swearing}` : '';
+    const toneSummary = prefs.map((p: { label: string; value: number }) => `${p.label}: ${p.value}/5`).join(', ');
+    const regionalToneSummary = Object.entries(sliders).map(([k, v]) => `${k}: ${v}/5`).join(', ');
+    const regionTone = regional.region || 'None';
+    const languageFlavor = tone.languageFlavor || 'English only';
 
-    const region = tone?.regionalFeel?.region || 'None';
-    const regionSliders = tone?.regionalFeel?.sliders || {};
-    const languageFlavor = region !== 'None' ? `${region} - language: ${regionSliders.language ?? 3}/5, culture: ${regionSliders.culture ?? 3}/5, food: ${regionSliders.food ?? 3}/5, socialTone: ${regionSliders.socialTone ?? 3}/5` : 'None';
+    let languageDirective = '';
+    if (languageFlavor === 'Native language only') {
+      if (regionTone === 'Indian English') languageDirective = 'Respond entirely in Hindi. Do not use English unless clarity is at risk.';
+      if (regionTone === 'Caribbean') languageDirective = 'Respond entirely in Caribbean Patois unless clarity requires English.';
+      if (regionTone === 'Asian / Pacific Islander') languageDirective = 'Respond in the native Asian regional language most appropriate (e.g., Tagalog, Vietnamese, or Japanese) based on context.';
+    } else if (languageFlavor === 'English + native blend') {
+      if (regionTone === 'Indian English') languageDirective = 'Use English mixed with Hindi expressions and phrasing.';
+      if (regionTone === 'Caribbean') languageDirective = 'Use English mixed with Caribbean Patois-style phrasing.';
+      if (regionTone === 'Asian / Pacific Islander') languageDirective = 'Use English with culturally appropriate Asian phrasing and honorifics.';
+    }
 
     const systemPrompt = `
-You are a deeply personalized assistant for Den.
+You are a highly personalized assistant for a user named ${iv.full_name ?? 'User'}.
+Speak in a way that reflects their preferences, personality, and tone.
+Use the user's regional tone and language preferences to shape your voice.
 
-Use the following profile data to influence how you speak, what tone you use, and how you make suggestions. Do not explain this data to the user — simply incorporate it into your behavior.
+[ToneSync Summary]
+- ${toneSummary}
+- ${swearingNote}
+- Regional: ${regionTone}
+- Sliders: ${regionalToneSummary}
+- Language Style: ${languageFlavor}
+- ${languageDirective}
 
----
-[Identity & Background]
-Name: ${iv.full_name || 'Den'}
-Nickname: ${iv.nickname || 'Den'}
-Hometown: ${iv.hometown || 'N/A'}
-Location: ${iv.location || 'N/A'}
-Birthplace: ${iv.birthplace || 'N/A'}
-Profession: ${iv.profession || 'N/A'}
-Bio: ${iv.bio || 'N/A'}
-
-[ToneSync Preferences]
-- Swearing: ${swearingNote}
-- Style Preferences: ${toneSummary}
-- Regional Feel: ${languageFlavor}
-
-[Work]
-${Object.entries(work).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+[Identity]
+${Object.entries(iv).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 
 [People]
-${Object.entries(people).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+${Object.entries(vault.people || {}).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 
 [Important Dates]
-${Object.entries(dates).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+${Object.entries(vault.dates || {}).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 
 [Preferences]
-${Object.entries(preferences).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+${Object.entries(vault.preferences || {}).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 
 [Beliefs]
-${Object.entries(beliefs).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+${Object.entries(vault.beliefs || {}).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+
+[Work]
+${Object.entries(vault.work || {}).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 
 [Food]
-${Object.entries(food).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+${Object.entries(vault.food || {}).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 
 [Physical]
-${Object.entries(physical).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+${Object.entries(vault.physical || {}).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 
 [Pop Culture]
-${Object.entries(popculture).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+${Object.entries(vault.popculture || {}).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 
 [Health]
-${Object.entries(health).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+${Object.entries(vault.health || {}).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 
----
-
-Use this profile to guide every response. Match tone, cultural references, regional dialect, and emotional calibration accordingly.
+Always speak like a human. Be natural, culturally aware, and flexible based on region and tone.
+Do not sound robotic.
 `.trim();
 
     const completion = await openai.chat.completions.create({
