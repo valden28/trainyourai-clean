@@ -41,8 +41,22 @@ export async function POST(req: NextRequest) {
     const popculture = vault.popculture || {};
     const health = vault.health || {};
 
-    const toneSummary = Object.entries(tone).map(([k, v]) => `${k}: ${v}`).join(', ');
-    const skillSummary = Object.entries(skills).map(([k, v]) => `${k}: ${v}`).join(', ');
+    const tonePrefs = tone.preferences || [];
+    const regional = tone.regionalFeel || {};
+    const sliders = regional.sliders || {};
+
+    const toneSummary = tonePrefs
+      .map(p => `${p.label}: ${p.value}/5`)
+      .join(', ');
+
+    const swearingNote = tone.swearing
+      ? `Swearing preference: ${tone.swearing}.`
+      : '';
+
+    const regionInstructions = regional.region && regional.region !== 'No regional tone (default)'
+      ? `Use a ${regional.region} tone of voice. 
+      Language: ${sliders.language}/5, Culture: ${sliders.culture}/5, Food influence: ${sliders.food}/5, Social tone: ${sliders.socialTone}/5.`
+      : '';
 
     const systemPrompt = `
 You are a personalized assistant for a user named ${iv.full_name ?? 'Unknown'}.
@@ -86,13 +100,12 @@ ${Object.entries(popculture).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 [Health & Fitness]
 ${Object.entries(health).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 
-[ToneSync Preferences]
-${toneSummary}
+[ToneSync Calibration]
+- ${toneSummary}
+- ${swearingNote}
+- ${regionInstructions}
 
-[SkillSync Confidence]
-${skillSummary}
-
-Always align your tone and depth of response to the user's vault. Speak in a way that fits their personality and preferences. If data is missing, respond gracefully and move forward.
+Always align your tone and response depth to the user's preferences and personality. Reflect their voice when appropriate. If regional tone is specified, use relevant metaphors, cadence, or cultural nods. Be clear, helpful, and human.
 `.trim();
 
     const completion = await openai.chat.completions.create({
