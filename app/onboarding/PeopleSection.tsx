@@ -12,6 +12,9 @@ interface Person {
   birthday?: string;
   isLiving?: boolean;
   notes?: string;
+  address?: string;
+  howMet?: string;
+  seeFrequency?: string;
 }
 
 interface SectionProps {
@@ -34,14 +37,16 @@ export default function PeopleSection({ existingData }: SectionProps) {
   const indexRef = useRef(0);
 
   const isComplete = step >= people.length;
-  const percent = Math.round(((step + 1) / Math.max(1, people.length)) * 100);
 
   useEffect(() => {
+    const currentName = people[step]?.name;
     const text = step === -1
       ? intro
-      : step < people.length
-        ? `Tell me about ${people[step]?.name || 'this person'}.`
-        : 'That’s everyone for now. You can always add more later.';
+      : step < people.length && currentName && currentName.length > 0
+        ? `Tell me about ${currentName}.`
+        : step < people.length
+          ? `Tell me about this person.`
+          : 'That’s everyone for now. You can always add more later.';
 
     indexRef.current = 0;
     setTyping('');
@@ -56,8 +61,8 @@ export default function PeopleSection({ existingData }: SectionProps) {
         } else {
           clearInterval(interval);
         }
-      }, 65);
-    }, 800);
+      }, 60);
+    }, 900);
 
     return () => clearTimeout(delay);
   }, [step, people]);
@@ -111,18 +116,13 @@ export default function PeopleSection({ existingData }: SectionProps) {
 
       {step >= 0 && step < people.length && (
         <div className="space-y-4">
-          <input
-            className="w-full border p-2 rounded"
-            placeholder="Name"
-            value={people[step].name || ''}
-            onChange={(e) => handleChange(step, 'name', e.target.value)}
-          />
+          <label className="block text-sm font-medium text-gray-700">Relationship</label>
           <select
             className="w-full border p-2 rounded"
             value={people[step].relationship || ''}
             onChange={(e) => handleChange(step, 'relationship', e.target.value)}
           >
-            <option value="">Relationship</option>
+            <option value="">Select relationship</option>
             <option value="Spouse">Spouse</option>
             <option value="Partner">Partner</option>
             <option value="Parent">Parent</option>
@@ -134,12 +134,61 @@ export default function PeopleSection({ existingData }: SectionProps) {
             <option value="It’s complicated">It’s complicated</option>
             <option value="Other">Other</option>
           </select>
+
+          <label className="block text-sm font-medium text-gray-700">Full Name</label>
+          <input
+            className="w-full border p-2 rounded"
+            placeholder="Name"
+            value={people[step].name || ''}
+            onChange={(e) => handleChange(step, 'name', e.target.value)}
+          />
+
+          <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
           <input
             type="date"
             className="w-full border p-2 rounded"
             value={people[step].birthday || ''}
             onChange={(e) => handleChange(step, 'birthday', e.target.value)}
           />
+
+          <label className="block text-sm font-medium text-gray-700">Address (optional)</label>
+          <input
+            className="w-full border p-2 rounded"
+            placeholder="Address"
+            value={people[step].address || ''}
+            onChange={(e) => handleChange(step, 'address', e.target.value)}
+          />
+
+          <label className="block text-sm font-medium text-gray-700">How did you meet?</label>
+          <select
+            className="w-full border p-2 rounded"
+            value={people[step].howMet || ''}
+            onChange={(e) => handleChange(step, 'howMet', e.target.value)}
+          >
+            <option value="">Select one</option>
+            <option value="Through family">Through family</option>
+            <option value="School or university">School or university</option>
+            <option value="Work">Work</option>
+            <option value="Online">Online</option>
+            <option value="Social gathering">Social gathering</option>
+            <option value="Other">Other</option>
+          </select>
+
+          <label className="block text-sm font-medium text-gray-700">How often do you see them?</label>
+          <select
+            className="w-full border p-2 rounded"
+            value={people[step].seeFrequency || ''}
+            onChange={(e) => handleChange(step, 'seeFrequency', e.target.value)}
+          >
+            <option value="">Select frequency</option>
+            <option value="Daily">Daily</option>
+            <option value="Weekly">Weekly</option>
+            <option value="Monthly">Monthly</option>
+            <option value="A few times a year">A few times a year</option>
+            <option value="Rarely">Rarely</option>
+            <option value="Haven’t seen in years">Haven’t seen in years</option>
+          </select>
+
           <div className="flex items-center gap-2">
             <label className="text-sm text-gray-700">Are they living?</label>
             <input
@@ -148,6 +197,8 @@ export default function PeopleSection({ existingData }: SectionProps) {
               onChange={(e) => handleChange(step, 'isLiving', e.target.checked)}
             />
           </div>
+
+          <label className="block text-sm font-medium text-gray-700">Notes</label>
           <textarea
             rows={3}
             className="w-full border p-2 rounded"
