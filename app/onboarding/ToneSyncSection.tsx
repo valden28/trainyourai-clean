@@ -1,4 +1,4 @@
-// Final ToneSyncSection.tsx with default export ensured
+// Final ToneSyncSection.tsx with handleSliderChange TypeScript-safe fix
 'use client';
 
 import { useUser } from '@auth0/nextjs-auth0/client';
@@ -30,6 +30,13 @@ interface ToneSyncData {
   };
 }
 
+const defaultSliders: RegionalSliders = {
+  language: 3,
+  culture: 3,
+  food: 3,
+  socialTone: 3
+};
+
 const ToneSyncSection = ({ existingData }: { existingData?: ToneSyncData }) => {
   const { user } = useUser();
   const router = useRouter();
@@ -53,12 +60,7 @@ const ToneSyncSection = ({ existingData }: { existingData?: ToneSyncData }) => {
       regionalFeel: {
         region: '',
         autoDetect: false,
-        sliders: {
-          language: 3,
-          culture: 3,
-          food: 3,
-          socialTone: 3
-        }
+        sliders: defaultSliders
       }
     }
   );
@@ -96,7 +98,10 @@ const ToneSyncSection = ({ existingData }: { existingData?: ToneSyncData }) => {
       regionalFeel: {
         ...prev.regionalFeel,
         sliders: {
-          ...(prev.regionalFeel?.sliders ?? {}),
+          language: prev.regionalFeel?.sliders?.language ?? defaultSliders.language,
+          culture: prev.regionalFeel?.sliders?.culture ?? defaultSliders.culture,
+          food: prev.regionalFeel?.sliders?.food ?? defaultSliders.food,
+          socialTone: prev.regionalFeel?.sliders?.socialTone ?? defaultSliders.socialTone,
           [key]: value
         }
       }
