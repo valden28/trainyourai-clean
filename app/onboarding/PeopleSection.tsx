@@ -29,6 +29,7 @@ export default function PeopleSection({ existingData }: SectionProps) {
   const [people, setPeople] = useState<Person[]>(() => Array.isArray(existingData) ? [...existingData] : []);
   const [step, setStep] = useState(-1);
   const [typing, setTyping] = useState('');
+  const [showDots, setShowDots] = useState(false);
   const [saving, setSaving] = useState(false);
   const indexRef = useRef(0);
 
@@ -44,16 +45,21 @@ export default function PeopleSection({ existingData }: SectionProps) {
 
     indexRef.current = 0;
     setTyping('');
-    const interval = setInterval(() => {
-      if (indexRef.current < text.length) {
-        setTyping((prev) => prev + text[indexRef.current]);
-        indexRef.current++;
-      } else {
-        clearInterval(interval);
-      }
-    }, 40);
+    setShowDots(true);
 
-    return () => clearInterval(interval);
+    const delay = setTimeout(() => {
+      setShowDots(false);
+      const interval = setInterval(() => {
+        if (indexRef.current < text.length) {
+          setTyping((prev) => prev + text[indexRef.current]);
+          indexRef.current++;
+        } else {
+          clearInterval(interval);
+        }
+      }, 55);
+    }, 800);
+
+    return () => clearTimeout(delay);
   }, [step, people]);
 
   const handleChange = <K extends keyof Person>(index: number, field: K, value: Person[K]) => {
@@ -65,8 +71,11 @@ export default function PeopleSection({ existingData }: SectionProps) {
   };
 
   const addPerson = () => {
-    setPeople((prev) => [...prev, { name: '', relationship: '', isLiving: true }]);
-    setStep(people.length);
+    setPeople((prev) => {
+      const updated = [...prev, { name: '', relationship: '', isLiving: true }];
+      setStep(updated.length - 1);
+      return updated;
+    });
   };
 
   const handleSave = async () => {
@@ -84,7 +93,11 @@ export default function PeopleSection({ existingData }: SectionProps) {
       <h1 className="text-2xl font-bold mb-6 text-blue-700">People in Your Life</h1>
 
       <div className="min-h-[100px] mb-6">
-        <p className="text-base font-medium whitespace-pre-line leading-relaxed">{typing}</p>
+        {showDots ? (
+          <p className="text-base font-medium text-gray-400 animate-pulse">[ • • • ]</p>
+        ) : (
+          <p className="text-base font-medium whitespace-pre-line leading-relaxed">{typing}</p>
+        )}
       </div>
 
       {step === -1 && (
