@@ -2,67 +2,71 @@
 
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getSupabaseClient } from '@/utils/supabaseClient';
 import { updateFamiliarityScore } from '@/utils/familiarity';
 
 interface PhysicalData {
   build?: string;
   height?: string;
-  clothing?: string;
-  assistive?: string;
-  activities?: string;
-  sensitivity?: string;
-  narrative?: string;
+  weightRange?: string;
+  shirtSize?: string;
+  pantsSize?: string;
+  shoeSize?: string;
+  assistiveGear?: string;
+  visualNotes?: string;
 }
 
 interface SectionProps {
   existingData?: PhysicalData;
 }
 
-const intro = `This section is about how you present and perceive yourself physically.
-It helps me support you in areas like fitness, accessibility, and personalization.
-This is your vault — nothing is shared, and you can skip anything that doesn’t feel relevant.`;
+const intro = `Let’s get a quick snapshot of how you look and move.
+This helps me recommend products, personalize responses, and support anything related to comfort, sizing, or accessibility.`;
 
 const questions = [
   {
     key: 'build',
     type: 'dropdown',
-    label: 'How would you describe your body type or general build?',
-    options: [
-      'Slim',
-      'Athletic',
-      'Average',
-      'Curvy',
-      'Larger build',
-      'Prefer not to say',
-      'Other'
-    ]
+    label: 'How would you describe your body type?',
+    options: ['Slim', 'Athletic', 'Average', 'Curvy', 'Larger build', 'Other']
   },
   {
     key: 'height',
-    label: 'What is your height? (optional)',
-    placeholder: 'e.g. 5’8” or 173 cm'
+    label: 'What is your height?',
+    placeholder: 'e.g. 5’11” or 180 cm'
   },
   {
-    key: 'clothing',
-    label: 'What is your clothing size (if you know it)?',
-    placeholder: 'Shirt, pants, shoes — any details that help with fit or style'
+    key: 'weightRange',
+    type: 'dropdown',
+    label: 'What is your weight range?',
+    options: ['Under 120 lbs', '120–150 lbs', '150–180 lbs', '180–220 lbs', '220–260 lbs', 'Over 260 lbs', 'Prefer not to say']
   },
   {
-    key: 'assistive',
-    label: 'Do you use any assistive devices or accessibility tools?',
-    placeholder: 'e.g. Glasses, hearing aids, mobility support, adaptive tech'
+    key: 'shirtSize',
+    type: 'dropdown',
+    label: 'What shirt size do you usually wear?',
+    options: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Other']
   },
   {
-    key: 'activities',
-    label: 'Are there any physical activities you avoid or enjoy?',
-    placeholder: 'E.g. avoid running but love swimming. Can’t lift heavy objects. I walk 3 miles a day…'
+    key: 'pantsSize',
+    label: 'What is your pants size (waist/inseam)?',
+    placeholder: 'e.g. 34x30 or 32W 34L'
   },
   {
-    key: 'sensitivity',
-    label: 'Any physical or sensory sensitivities I should keep in mind?',
-    placeholder: 'e.g. hates overhead lights, strong smells, scratchy fabrics...'
+    key: 'shoeSize',
+    label: 'What is your shoe size?',
+    placeholder: 'e.g. 10.5 US or 44 EU'
+  },
+  {
+    key: 'assistiveGear',
+    label: 'Do you use any assistive gear or support devices?',
+    placeholder: 'e.g. glasses, hearing aid, brace, cane, etc.'
+  },
+  {
+    key: 'visualNotes',
+    label: 'Anything else visual I should know to personalize experiences?',
+    placeholder: 'e.g. tattoos, hairstyle, accessories, posture, visual identity...'
   }
 ];
 
@@ -179,13 +183,13 @@ export default function PhysicalAttributesSection({ existingData }: SectionProps
       ) : (
         <div className="space-y-4">
           <label className="block text-sm font-medium text-gray-700">
-            Anything else you’d like me to understand about your physical experience?
+            Anything else I should understand about your physical presence or preferences?
           </label>
           <textarea
             rows={4}
             className="w-full border p-2 rounded"
-            value={form.narrative || ''}
-            onChange={(e) => handleChange('narrative', e.target.value)}
+            value={form.visualNotes || ''}
+            onChange={(e) => handleChange('visualNotes', e.target.value)}
           />
 
           <button

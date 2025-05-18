@@ -2,23 +2,21 @@
 
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSupabaseClient } from '@/utils/supabaseClient';
 import { updateFamiliarityScore } from '@/utils/familiarity';
 
-interface ToneSetting {
-  label: string;
-  scale: string;
-  value: number;
-}
-
-interface ToneData {
-  preferences: ToneSetting[];
+interface ToneSyncData {
+  preferences: {
+    label: string;
+    scale: string;
+    value: number;
+  }[];
   swearing?: string;
-}
-
-interface SectionProps {
-  existingData?: ToneData;
+  regionalFeel?: {
+    region?: string;
+    intensity?: number;
+  };
 }
 
 const intro = `Let’s calibrate how I speak to you.
@@ -26,7 +24,7 @@ Some people prefer warmth, others want direct answers.
 Some love a little wit — others prefer calm, clear, and focused.
 This section tunes my tone to fit your style.`;
 
-const defaultPreferences: ToneSetting[] = [
+const defaultPreferences = [
   { label: 'Formality', scale: 'Formal ←→ Casual', value: 3 },
   { label: 'Depth', scale: 'Surface-level ←→ Deep & thoughtful', value: 3 },
   { label: 'Warmth', scale: 'Cool / professional ←→ Friendly / empathetic', value: 3 },
@@ -43,24 +41,50 @@ const swearingOptions = [
   'Depends on context'
 ];
 
-const valueLabels = ['1', '2', '3', '4', '5'];
+const regions = [
+  'No regional tone (default)',
+  'Southern U.S.',
+  'New York / Northeast',
+  'Midwest',
+  'West Coast',
+  'Pacific Northwest',
+  'British (UK – London)',
+  'Irish',
+  'Australian',
+  'Caribbean',
+  'Indian English',
+  'South African'
+];
 
-export default function ToneSyncModule({ existingData }: SectionProps) {
+const intensityLabels = [
+  'Subtle tone (a hint)',
+  'Light expression',
+  'Moderate inflection + expressions',
+  'Noticeable stylization',
+  'Strong dialect + metaphors'
+];
+
+export default function ToneSyncSection() {
   const { user } = useUser();
   const router = useRouter();
   const supabase = getSupabaseClient();
 
-  const [preferences, setPreferences] = useState<ToneSetting[]>(
-    existingData?.preferences || defaultPreferences
-  );
-  const [swearing, setSwearing] = useState<string>(existingData?.swearing || '');
+  const [form, setForm] = useState<ToneSyncData>({
+    preferences: defaultPreferences,
+    swearing: '',
+    regionalFeel: {
+      region: '',
+      intensity: 3
+    }
+  });
+
   const [step, setStep] = useState(0);
   const [typing, setTyping] = useState('');
   const [showDots, setShowDots] = useState(false);
   const [saving, setSaving] = useState(false);
   const indexRef = useRef(0);
 
-  const current = preferences[step];
+  const current = form.preferences[step];
 
   useEffect(() => {
     const rawText = intro;
@@ -84,27 +108,30 @@ export default function ToneSyncModule({ existingData }: SectionProps) {
     return () => clearTimeout(delay);
   }, []);
 
-  const handleSlider = (value: number) => {
-    setPreferences((prev) => {
-      const updated = [...prev];
+  const handleSliderChange = (value: number) => {
+    setForm((prev) => {
+      const updated = [...prev.preferences];
       updated[step].value = value;
-      return updated;
+      return { ...prev, preferences: updated };
     });
   };
 
   const handleSave = async () => {
     if (!user?.sub) return;
     setSaving(true);
-    await supabase.from('vaults_test').upsert(
-      {
-        user_uid: user.sub,
-        tonesync: {
-          preferences,
-          swearing
-        }
-      },
-      { onConflict: 'user_uid' }
-    );
+    await supabase
+      .from('vaults_test')
+      .upsert(
+        {
+          user_uid: user.sub,
+          tonesync: {
+            preferences: form.preferences,
+            swearing: form.swearing,
+            regionalFeel: form.regionalFeel
+          }
+        },
+        { onConflict: 'user_uid' }
+      );
     await updateFamiliarityScore(user.sub);
     router.push('/dashboard');
   };
@@ -121,22 +148,21 @@ export default function ToneSyncModule({ existingData }: SectionProps) {
         ) : null}
       </div>
 
-      {step < preferences.length ? (
+      {step < form.preferences.length ? (
         <div className="space-y-4">
-          <label className="block text-sm font-medium text-gray-700">
-            {current.label}
-          </label>
-          <div className="text-sm text-gray-500 mb-1 italic">{current.scale}</div>
+          <label className="block text-sm font-medium text-gray-700">{current.label}</label>
+          <div className="text-sm text-gray-500 italic mb-1">{current.scale}</div>
           <input
             type="range"
             min={1}
             max={5}
+            step={1}
             value={current.value}
-            onChange={(e) => handleSlider(parseInt(e.target.value))}
+            onChange={(e) => handleSliderChange(parseInt(e.target.value))}
             className="w-full"
           />
-          <div className="text-sm text-right text-gray-600">
-            Current setting: <strong>{valueLabels[current.value - 1]}</strong>
+          <div className="text-sm text-right text-gray-600 italic">
+            Current: {current.value}
           </div>
           <div className="flex justify-between mt-4">
             <button
@@ -155,18 +181,70 @@ export default function ToneSyncModule({ existingData }: SectionProps) {
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
-          <label className="block text-sm font-medium text-gray-700">Comfort with swearing</label>
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Comfort with swearing</label>
+            <select
+              className="w-full border p-2 rounded mt-1"
+              value={form.swearing || ''}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, swearing: e.target.value }))
+              }
+            >
+              <option value="">Select one</option>
+              {swearingOptions.map((opt) => (
+                <option key={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+
+          <hr className="border-gray-300" />
+
+          <h2 className="text-lg font-semibold text-gray-800">Regional Feel & Dialect</h2>
+
+          <label className="block text-sm font-medium text-gray-700">Pick a region</label>
           <select
             className="w-full border p-2 rounded"
-            value={swearing}
-            onChange={(e) => setSwearing(e.target.value)}
+            value={form.regionalFeel?.region || ''}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                regionalFeel: {
+                  ...prev.regionalFeel,
+                  region: e.target.value
+                }
+              }))
+            }
           >
             <option value="">Select one</option>
-            {swearingOptions.map((opt) => (
-              <option key={opt}>{opt}</option>
+            {regions.map((region) => (
+              <option key={region}>{region}</option>
             ))}
           </select>
+
+          <label className="block text-sm font-medium text-gray-700 mt-4">How strong?</label>
+          <input
+            type="range"
+            min={1}
+            max={5}
+            step={1}
+            value={form.regionalFeel?.intensity || 3}
+            onChange={(e) =>
+              setForm((prev) => ({
+                ...prev,
+                regionalFeel: {
+                  ...prev.regionalFeel,
+                  intensity: parseInt(e.target.value)
+                }
+              }))
+            }
+            className="w-full"
+          />
+          <div className="text-sm text-right text-gray-600 italic">
+            {
+              intensityLabels[(form.regionalFeel?.intensity || 3) - 1]
+            }
+          </div>
 
           <button
             onClick={handleSave}
