@@ -44,7 +44,7 @@ export default function DashboardPage() {
   const missing = (field: string) => !vault?.[field];
 
   const handleStart = () => router.push('/onboarding');
-  const handleTone = () => router.push('/onboarding');
+  const handleTone = () => router.push('/tonesync');
   const handleChat = () => router.push('/chat-core');
 
   const isComplete =
@@ -62,8 +62,10 @@ export default function DashboardPage() {
 
       {vault && (
         <>
-          <div className="mb-6 p-4 rounded shadow-md border-l-8 flex justify-between items-center"
-               style={{ borderColor: isComplete ? '#22c55e' : '#ef4444', backgroundColor: '#f9fafb' }}>
+          <div
+            className="mb-6 p-4 rounded shadow-md border-l-8 flex justify-between items-center"
+            style={{ borderColor: isComplete ? '#22c55e' : '#ef4444', backgroundColor: '#f9fafb' }}
+          >
             <div>
               <p className="font-semibold text-lg">
                 Vault Status: {isComplete ? 'Complete' : 'Incomplete'}
@@ -108,9 +110,7 @@ export default function DashboardPage() {
                   strokeWidth="3"
                   stroke="currentColor"
                   fill="none"
-                  d="M18 2.0845
-                     a 15.9155 15.9155 0 0 1 0 31.831
-                     a 15.9155 15.9155 0 0 1 0 -31.831"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                 />
                 <path
                   className="text-blue-600 transition-all duration-500"
@@ -118,9 +118,7 @@ export default function DashboardPage() {
                   stroke="currentColor"
                   fill="none"
                   strokeDasharray={`${vault?.familiarity_score || 0}, 100`}
-                  d="M18 2.0845
-                     a 15.9155 15.9155 0 0 1 0 31.831
-                     a 15.9155 15.9155 0 0 1 0 -31.831"
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center text-lg font-semibold text-blue-700">
@@ -136,26 +134,26 @@ export default function DashboardPage() {
             <div className="bg-gray-100 p-4 rounded shadow">
               <h2 className="font-semibold mb-2">InnerView</h2>
               <p className="text-sm text-gray-700">
-                Your core identity and values. Essential for personalized AI.
+                Tell me who you are — your story, values, and what you care about. This is where your assistant learns to think like someone who truly knows you.
               </p>
               <button
                 onClick={handleStart}
                 className="mt-2 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
               >
-                {missing('innerview') ? 'Start' : 'Edit'}
+                {missing('innerview') ? 'Start' : 'Re-Interview'}
               </button>
             </div>
 
             <div className="bg-gray-100 p-4 rounded shadow">
               <h2 className="font-semibold mb-2">ToneSync</h2>
               <p className="text-sm text-gray-700">
-                Calibrate your assistant’s voice and style.
+                Choose how I speak — region, rhythm, language, and cultural flavor. I’ll adjust my tone to feel like someone you’d actually talk to.
               </p>
               <button
                 onClick={handleTone}
                 className="mt-2 bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700"
               >
-                {missing('tonesync') ? 'Start' : 'Edit'}
+                {missing('tonesync') ? 'Start' : 'Recalibrate'}
               </button>
             </div>
           </div>
