@@ -93,59 +93,66 @@ export default function OnboardingPage() {
         </AccordionItem>
 
         <AccordionItem value="food">
-          <AccordionTrigger>8. Food & Dietary Preferences</AccordionTrigger>
-          <AccordionContent>
-            <FoodSection existingData={vault?.food} />
-          </AccordionContent>
+         <AccordionTrigger>8. Food & Dietary Preferences</AccordionTrigger>
+         <AccordionContent>
+          <FoodSection existingData={vault?.food} />
+         </AccordionContent>
         </AccordionItem>
 
-        <AccordionItem value="popculture">
-          <AccordionTrigger>9. Pop Culture & Personal Taste</AccordionTrigger>
-          <AccordionContent>
-            <PopCultureSection existingData={vault?.popculture} />
-          </AccordionContent>
-        </AccordionItem>
+        <AccordionItem value="physical">
+         <AccordionTrigger>9. Physical Attributes</AccordionTrigger>
+         <AccordionContent>
+          <PhysicalSection existingData={vault?.physical} />
+         </AccordionContent>
+       </AccordionItem>
 
-        <AccordionItem value="sports">
-          <AccordionTrigger>10. Sports & Teams</AccordionTrigger>
-          <AccordionContent>
-            <SportsSection existingData={vault?.sports} />
-          </AccordionContent>
-        </AccordionItem>
+       <AccordionItem value="popculture">
+        <AccordionTrigger>10. Pop Culture & Personal Taste</AccordionTrigger>
+        <AccordionContent>
+         <PopCultureSection existingData={vault?.popculture} />
+        </AccordionContent>
+      </AccordionItem>
 
-        <AccordionItem value="travel">
-          <AccordionTrigger>11. Travel</AccordionTrigger>
-          <AccordionContent>
-            <TravelSection existingData={vault?.travel} />
-          </AccordionContent>
-        </AccordionItem>
+      <AccordionItem value="sports">
+       <AccordionTrigger>11. Sports & Teams</AccordionTrigger>
+       <AccordionContent>
+        <SportsSection existingData={vault?.sports} />
+      </AccordionContent>
+     </AccordionItem>
 
-        <AccordionItem value="health">
-          <AccordionTrigger>12. Medical & Health + Fitness</AccordionTrigger>
-          <AccordionContent>
-            <HealthSection existingData={vault?.health} />
-          </AccordionContent>
-        </AccordionItem>
+     <AccordionItem value="travel">
+  <AccordionTrigger>12. Travel</AccordionTrigger>
+  <AccordionContent>
+    <TravelSection existingData={vault?.travel} />
+  </AccordionContent>
+      </AccordionItem>
 
-        <AccordionItem value="tone">
-          <AccordionTrigger>13. ToneSync Preferences</AccordionTrigger>
-          <AccordionContent>
-            <ToneSyncSection existingData={vault?.tonesync} />
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+     <AccordionItem value="health">
+      <AccordionTrigger>13. Medical & Health + Fitness</AccordionTrigger>
+      <AccordionContent>
+       <HealthSection existingData={vault?.health} />
+      </AccordionContent>
+    </AccordionItem>
 
-      <div className="mt-10">
-        <p className="text-sm text-gray-600 mb-2">You can return and edit these sections anytime.</p>
-        <div className="flex justify-end">
-          <button
-            onClick={() => router.push('/chat-core')}
-            className="px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700"
-          >
-            Launch Assistant
-          </button>
-        </div>
-      </div>
+     <AccordionItem value="tone">
+      <AccordionTrigger>14. ToneSync Preferences</AccordionTrigger>
+      <AccordionContent>
+       <ToneSyncSection existingData={vault?.tonesync} />
+      </AccordionContent>
+    </AccordionItem>
+    </Accordion>  {/* ADD THIS */}
+
+<div className="mt-10">
+  <p className="text-sm text-gray-600 mb-2">You can return and edit these sections anytime.</p>
+  <div className="flex justify-end">
+    <button
+      onClick={() => router.push('/chat-core')}
+      className="px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700"
+    >
+      Launch Assistant
+    </button>
+  </div>
+</div>
     </main>
   );
 }
