@@ -21,8 +21,8 @@ interface SectionProps {
   existingData?: Person[];
 }
 
-const intro = `Let’s talk about the people in your life — family, friends, partners, coworkers.
-The ones who matter, the ones who show up, the ones you care about (even if it’s complicated).`;
+const intro = ` Let’s talk about the people in your life — family, friends, partners, coworkers.
+The ones who matter, the ones who show up, the ones you care about (even if it’s complicated).`; // <-- prepended space
 
 export default function PeopleSection({ existingData }: SectionProps) {
   const { user } = useUser();
@@ -42,14 +42,14 @@ export default function PeopleSection({ existingData }: SectionProps) {
 
   useEffect(() => {
     const currentName = people[step]?.name;
-    const text =
+    const rawText =
       step === -1
         ? intro
         : step < people.length && currentName && currentName.length > 0
-        ? `Tell me about ${currentName}.`
+        ? ` Tell me about ${currentName}.`
         : step < people.length
-        ? `Tell me about this person.`
-        : `That’s everyone for now. You can always add more later.`;
+        ? ` Tell me about this person.`
+        : ` That’s everyone for now. You can always add more later.`; // <-- prepended space here too
 
     indexRef.current = 0;
     setTyping('');
@@ -58,13 +58,14 @@ export default function PeopleSection({ existingData }: SectionProps) {
     const delay = setTimeout(() => {
       setShowDots(false);
 
-      // Show first letter after delay
-      setTyping(text.charAt(0));
-      indexRef.current = 1;
-
       const type = () => {
-        if (indexRef.current < text.length) {
-          setTyping((prev) => prev + text.charAt(indexRef.current));
+        if (indexRef.current < rawText.length) {
+          const nextChar = rawText.charAt(indexRef.current);
+          setTyping((prev) =>
+            indexRef.current === 0 && nextChar === ' '
+              ? prev // Skip adding the dummy space
+              : prev + nextChar
+          );
           indexRef.current++;
           setTimeout(type, 60);
         }
