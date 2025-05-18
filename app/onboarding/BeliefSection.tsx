@@ -2,16 +2,16 @@
 
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSupabaseClient } from '@/utils/supabaseClient';
 import { updateFamiliarityScore } from '@/utils/familiarity';
 
 interface BeliefData {
   values?: string[];
-  worldview?: string;
   politics?: string;
-  causes?: string;
-  nonNegotiables?: string;
+  causes?: string[];
+  worldview?: string;
+  narrative?: string;
 }
 
 interface SectionProps {
@@ -19,18 +19,24 @@ interface SectionProps {
 }
 
 const intro = `Now let’s talk about what drives you.
-Your core beliefs, values, and personal “rules of the road.”
-These help me align with what matters to you — especially when offering suggestions, advice, or perspective.`;
+Your values and worldview can shape how you think, decide, and prioritize.
+This helps me stay aligned when making suggestions or offering advice.`;
 
-const valueTags = [
-  'Honesty', 'Loyalty', 'Independence', 'Ambition', 'Kindness',
-  'Simplicity', 'Efficiency', 'Creativity', 'Curiosity', 'Respect',
-  'Faith', 'Justice', 'Other'
+const values = [
+  'Honesty', 'Kindness', 'Independence', 'Ambition',
+  'Loyalty', 'Justice', 'Simplicity', 'Creativity',
+  'Efficiency', 'Curiosity', 'Faith', 'Respect', 'Other'
 ];
 
 const politicalOptions = [
-  'Apolitical', 'Liberal', 'Conservative', 'Libertarian',
-  'Progressive', 'Moderate / Centrist', 'Independent', 'Other', 'Prefer not to say'
+  'Apolitical', 'Liberal', 'Conservative', 'Progressive',
+  'Libertarian', 'Moderate / Centrist', 'Independent', 'Other', 'Prefer not to say'
+];
+
+const causeTags = [
+  'Mental health', 'Education', 'Equity', 'Environment',
+  'Free speech', 'Veterans', 'Healthcare access',
+  'Tech ethics', 'Animal welfare', 'Other'
 ];
 
 export default function BeliefSection({ existingData }: SectionProps) {
@@ -49,13 +55,8 @@ export default function BeliefSection({ existingData }: SectionProps) {
     {
       key: 'values',
       type: 'multi',
-      label: 'What personal values guide your decisions?',
-      options: valueTags
-    },
-    {
-      key: 'worldview',
-      label: 'Are there any core beliefs you hold that shape your worldview?',
-      placeholder: 'Spiritual, ethical, philosophical, or moral — in your own words.'
+      label: 'What personal values guide your behavior?',
+      options: values
     },
     {
       key: 'politics',
@@ -65,13 +66,14 @@ export default function BeliefSection({ existingData }: SectionProps) {
     },
     {
       key: 'causes',
-      label: 'Are there causes or topics you feel strongly about?',
-      placeholder: 'e.g. mental health, education, equity, environment, technology, veterans...'
+      type: 'multi',
+      label: 'Are there causes or issues you feel strongly about?',
+      options: causeTags
     },
     {
-      key: 'nonNegotiables',
-      label: 'Do you have any “non-negotiables” — personal policies you live by?',
-      placeholder: 'e.g. I don’t cancel on family. I sleep on big decisions. Sundays are no-phone.'
+      key: 'worldview',
+      label: 'How would you summarize your worldview or life philosophy?',
+      placeholder: 'Totally optional — only if it helps frame how you see things.'
     }
   ];
 
@@ -142,6 +144,7 @@ export default function BeliefSection({ existingData }: SectionProps) {
       {step < questions.length ? (
         <div className="space-y-4">
           <label className="block text-sm font-medium text-gray-700">{current.label}</label>
+
           {'options' in current && current.type === 'multi' ? (
             <div className="flex flex-wrap gap-2">
               {current.options!.map((option) => (
@@ -182,6 +185,7 @@ export default function BeliefSection({ existingData }: SectionProps) {
               }
             />
           )}
+
           <div className="flex justify-between mt-4">
             <button
               disabled={step === 0}
@@ -201,13 +205,13 @@ export default function BeliefSection({ existingData }: SectionProps) {
       ) : (
         <div className="space-y-4">
           <label className="block text-sm font-medium text-gray-700">
-            Anything else I should understand about your principles or values?
+            Anything else I should understand about your beliefs or personal philosophy?
           </label>
           <textarea
             rows={4}
             className="w-full border p-2 rounded"
-            value={form.nonNegotiables || ''}
-            onChange={(e) => handleChange('nonNegotiables', e.target.value)}
+            value={form.narrative || ''}
+            onChange={(e) => handleChange('narrative', e.target.value)}
           />
 
           <button
