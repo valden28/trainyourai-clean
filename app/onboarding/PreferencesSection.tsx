@@ -2,71 +2,131 @@
 
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getSupabaseClient } from '@/utils/supabaseClient';
 import { updateFamiliarityScore } from '@/utils/familiarity';
 
-interface IdentityData {
-  upbringing?: string;
-  culture?: string;
-  beliefs?: string;
-  identity?: string;
-  communication?: string;
-  worldview?: string;
+interface PreferencesData {
+  energy?: string;
+  processing?: string;
+  structure?: string;
+  depth?: string;
+  recharge?: string;
+  tonePreferences?: string[];
   narrative?: string;
 }
 
 interface SectionProps {
-  existingData?: IdentityData;
+  existingData?: PreferencesData;
 }
 
-const intro = `Let’s go deeper into your background — the values, culture, and identity that shaped how you see the world.
-This helps me respond in ways that feel aligned with who you are, where you’ve come from, and how you move through life.`;
+const intro = `Let’s tune in to your personality and interaction style.
+This helps me communicate in a way that mirrors how you think, feel, and recharge.`;
 
-const questions = [
-  {
-    key: 'upbringing',
-    label: 'What was your upbringing like? (Where you grew up, early influences, environment)',
-    placeholder: 'Open text'
-  },
-  {
-    key: 'culture',
-    label: 'Do you identify with any specific cultural background(s)?',
-    placeholder: 'This could include nationality, ethnicity, religion, language, etc.'
-  },
-  {
-    key: 'beliefs',
-    label: 'Do you hold any spiritual, philosophical, or ethical beliefs that guide you?',
-    placeholder: 'Optional, but helpful for tone and reflection.'
-  },
-  {
-    key: 'identity',
-    label: 'Are there identity markers that matter to how you see yourself?',
-    placeholder: 'e.g. creative, neurodivergent, immigrant, introvert, etc.'
-  },
-  {
-    key: 'communication',
-    label: 'How do you prefer to communicate or learn?',
-    placeholder: 'e.g. visual learner, needs time to process, likes bullet points…'
-  },
-  {
-    key: 'worldview',
-    label: 'How would you describe your general worldview or philosophy?',
-    placeholder: 'Optional — can be playful, deep, or simple.'
-  }
+const energyOptions = [
+  'Very introverted',
+  'Somewhat introverted',
+  'Balanced',
+  'Somewhat extroverted',
+  'Very extroverted'
 ];
 
-export default function IdentitySection({ existingData }: SectionProps) {
+const processingOptions = [
+  'Strongly emotional',
+  'Emotion-leaning',
+  'Balanced',
+  'Logic-leaning',
+  'Strongly logical'
+];
+
+const structureOptions = [
+  'Highly structured',
+  'Prefer a plan',
+  'Flexible',
+  'Go with the flow'
+];
+
+const depthOptions = [
+  'Deep and reflective',
+  'Balanced depth',
+  'Light and fun',
+  'Depends on the moment'
+];
+
+const rechargeOptions = [
+  'Alone time',
+  'Time with close people',
+  'Nature / outdoors',
+  'Movement / exercise',
+  'Stillness and rest',
+  'Social energy',
+  'Other'
+];
+
+const toneTags = [
+  'Warm',
+  'Direct',
+  'Funny',
+  'Motivating',
+  'Gentle',
+  'Challenging',
+  'Professional',
+  'Playful',
+  'Deep',
+  'Quick responses',
+  'Creative'
+];
+
+export default function PreferencesSection({ existingData }: SectionProps) {
   const { user } = useUser();
   const router = useRouter();
   const supabase = getSupabaseClient();
 
-  const [form, setForm] = useState<IdentityData>(existingData || {});
+  const [form, setForm] = useState<PreferencesData>(existingData || {});
   const [step, setStep] = useState(0);
   const [typing, setTyping] = useState('');
   const [showDots, setShowDots] = useState(false);
   const [saving, setSaving] = useState(false);
   const indexRef = useRef(0);
+
+  const questions = [
+    {
+      key: 'energy',
+      type: 'dropdown',
+      label: 'How would you describe your social energy or introvert/extrovert lean?',
+      options: energyOptions
+    },
+    {
+      key: 'processing',
+      type: 'dropdown',
+      label: 'Do you tend to be more emotional or logical in how you process things?',
+      options: processingOptions
+    },
+    {
+      key: 'structure',
+      type: 'dropdown',
+      label: 'Do you prefer structure or spontaneity?',
+      options: structureOptions
+    },
+    {
+      key: 'depth',
+      type: 'dropdown',
+      label: 'Do you like deep conversations or light ones?',
+      options: depthOptions
+    },
+    {
+      key: 'recharge',
+      type: 'dropdown',
+      label: 'How do you usually recharge?',
+      options: rechargeOptions
+    },
+    {
+      key: 'tonePreferences',
+      type: 'multi',
+      label: 'What tones or styles do you like in conversation?',
+      options: toneTags
+    }
+  ];
 
   const current = questions[step];
 
@@ -92,7 +152,17 @@ export default function IdentitySection({ existingData }: SectionProps) {
     return () => clearTimeout(delay);
   }, []);
 
-  const handleChange = <K extends keyof IdentityData>(key: K, value: IdentityData[K]) => {
+  const handleMultiSelect = (key: keyof PreferencesData, option: string) => {
+    setForm((prev) => {
+      const currentVal = prev[key] as string[] | undefined;
+      const next = currentVal?.includes(option)
+        ? currentVal.filter((o) => o !== option)
+        : [...(currentVal || []), option];
+      return { ...prev, [key]: next };
+    });
+  };
+
+  const handleChange = <K extends keyof PreferencesData>(key: K, value: PreferencesData[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -102,7 +172,7 @@ export default function IdentitySection({ existingData }: SectionProps) {
     await supabase.from('vaults_test').upsert(
       {
         user_uid: user.sub,
-        innerview: form
+        preferences: form
       },
       { onConflict: 'user_uid' }
     );
@@ -112,7 +182,7 @@ export default function IdentitySection({ existingData }: SectionProps) {
 
   return (
     <main className="min-h-screen bg-white text-black p-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-2 text-blue-700">Identity & Background</h1>
+      <h1 className="text-2xl font-bold mb-2 text-blue-700">Personality & Preferences</h1>
 
       <div className="min-h-[100px] mb-6">
         {typing ? (
@@ -125,15 +195,37 @@ export default function IdentitySection({ existingData }: SectionProps) {
       {step < questions.length ? (
         <div className="space-y-4">
           <label className="block text-sm font-medium text-gray-700">{current.label}</label>
-          <textarea
-            rows={3}
-            className="w-full border p-2 rounded"
-            placeholder={current.placeholder || ''}
-            value={form[current.key as keyof IdentityData] || ''}
-            onChange={(e) =>
-              handleChange(current.key as keyof IdentityData, e.target.value)
-            }
-          />
+          {'options' in current && current.type === 'multi' ? (
+            <div className="flex flex-wrap gap-2">
+              {current.options!.map((option) => (
+                <button
+                  key={option}
+                  onClick={() => handleMultiSelect(current.key as keyof PreferencesData, option)}
+                  className={`px-3 py-1 rounded border ${
+                    (form[current.key as keyof PreferencesData] as string[])?.includes(option)
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-black border-gray-300'
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <select
+              className="w-full border p-2 rounded"
+              value={form[current.key as keyof PreferencesData] || ''}
+              onChange={(e) =>
+                handleChange(current.key as keyof PreferencesData, e.target.value)
+              }
+            >
+              <option value="">Select one</option>
+              {current.options!.map((option) => (
+                <option key={option}>{option}</option>
+              ))}
+            </select>
+          )}
+
           <div className="flex justify-between mt-4">
             <button
               disabled={step === 0}
@@ -153,7 +245,7 @@ export default function IdentitySection({ existingData }: SectionProps) {
       ) : (
         <div className="space-y-4">
           <label className="block text-sm font-medium text-gray-700">
-            Anything else you want stored about your identity or background?
+            Anything else you'd like me to know about your style or personality?
           </label>
           <textarea
             rows={4}
@@ -167,7 +259,7 @@ export default function IdentitySection({ existingData }: SectionProps) {
             disabled={saving}
             className="w-full bg-green-600 text-white py-2 px-4 rounded disabled:opacity-50"
           >
-            {saving ? 'Saving...' : 'Save and Complete InnerView'}
+            {saving ? 'Saving...' : 'Save and Continue'}
           </button>
         </div>
       )}
