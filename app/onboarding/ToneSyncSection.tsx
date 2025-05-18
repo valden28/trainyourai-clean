@@ -2,9 +2,16 @@
 
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { getSupabaseClient } from '@/utils/supabaseClient';
 import { updateFamiliarityScore } from '@/utils/familiarity';
+
+interface RegionalSliders {
+  language: number;
+  culture: number;
+  food: number;
+  socialTone: number;
+}
 
 interface ToneSyncData {
   preferences: {
@@ -15,14 +22,14 @@ interface ToneSyncData {
   swearing?: string;
   regionalFeel?: {
     region?: string;
-    intensity?: number;
+    autoDetect?: boolean;
+    sliders: RegionalSliders;
   };
 }
 
 const intro = `Let’s calibrate how I speak to you.
 Some people prefer warmth, others want direct answers.
-Some love a little wit — others prefer calm, clear, and focused.
-This section tunes my tone to fit your style.`;
+This helps me reflect your personality, tone, and — if you want — a regional flavor.`;
 
 const defaultPreferences = [
   { label: 'Formality', scale: 'Formal ←→ Casual', value: 3 },
@@ -41,7 +48,7 @@ const swearingOptions = [
   'Depends on context'
 ];
 
-const regions = [
+const regionOptions = [
   'No regional tone (default)',
   'Southern U.S.',
   'New York / Northeast',
@@ -56,13 +63,7 @@ const regions = [
   'South African'
 ];
 
-const intensityLabels = [
-  'Subtle tone (a hint)',
-  'Light expression',
-  'Moderate inflection + expressions',
-  'Noticeable stylization',
-  'Strong dialect + metaphors'
-];
+const sliderLabels = ['1', '2', '3', '4', '5'];
 
 export default function ToneSyncSection() {
   const { user } = useUser();
@@ -74,7 +75,13 @@ export default function ToneSyncSection() {
     swearing: '',
     regionalFeel: {
       region: '',
-      intensity: 3
+      autoDetect: false,
+      sliders: {
+        language: 3,
+        culture: 3,
+        food: 3,
+        socialTone: 3
+      }
     }
   });
 
@@ -124,11 +131,7 @@ export default function ToneSyncSection() {
       .upsert(
         {
           user_uid: user.sub,
-          tonesync: {
-            preferences: form.preferences,
-            swearing: form.swearing,
-            regionalFeel: form.regionalFeel
-          }
+          tonesync: form
         },
         { onConflict: 'user_uid' }
       );
@@ -162,7 +165,7 @@ export default function ToneSyncSection() {
             className="w-full"
           />
           <div className="text-sm text-right text-gray-600 italic">
-            Current: {current.value}
+            Current: {sliderLabels[current.value - 1]}
           </div>
           <div className="flex justify-between mt-4">
             <button
@@ -200,7 +203,7 @@ export default function ToneSyncSection() {
 
           <hr className="border-gray-300" />
 
-          <h2 className="text-lg font-semibold text-gray-800">Regional Feel & Dialect</h2>
+          <h2 className="text-lg font-semibold text-gray-800">Regional Feel & Context</h2>
 
           <label className="block text-sm font-medium text-gray-700">Pick a region</label>
           <select
@@ -217,39 +220,64 @@ export default function ToneSyncSection() {
             }
           >
             <option value="">Select one</option>
-            {regions.map((region) => (
+            {regionOptions.map((region) => (
               <option key={region}>{region}</option>
             ))}
           </select>
 
-          <label className="block text-sm font-medium text-gray-700 mt-4">How strong?</label>
-          <input
-            type="range"
-            min={1}
-            max={5}
-            step={1}
-            value={form.regionalFeel?.intensity || 3}
-            onChange={(e) =>
-              setForm((prev) => ({
-                ...prev,
-                regionalFeel: {
-                  ...prev.regionalFeel,
-                  intensity: parseInt(e.target.value)
-                }
-              }))
-            }
-            className="w-full"
-          />
-          <div className="text-sm text-right text-gray-600 italic">
-            {
-              intensityLabels[(form.regionalFeel?.intensity || 3) - 1]
-            }
+          <div className="flex items-center gap-2 mt-4">
+            <input
+              type="checkbox"
+              checked={form.regionalFeel?.autoDetect || false}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  regionalFeel: {
+                    ...prev.regionalFeel,
+                    autoDetect: e.target.checked
+                  }
+                }))
+              }
+            />
+            <label className="text-sm font-medium text-gray-700">
+              Auto-detect my region (coming soon)
+            </label>
           </div>
+
+          {['language', 'culture', 'food', 'socialTone'].map((key) => (
+            <div key={key} className="mt-6">
+              <label className="block text-sm font-medium text-gray-700 capitalize">
+                {key === 'socialTone' ? 'Social tone' : key} influence
+              </label>
+              <input
+                type="range"
+                min={1}
+                max={5}
+                value={form.regionalFeel?.sliders[key as keyof RegionalSliders] || 3}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    regionalFeel: {
+                      ...prev.regionalFeel,
+                      sliders: {
+                        ...prev.regionalFeel?.sliders,
+                        [key]: parseInt(e.target.value)
+                      }
+                    }
+                  }))
+                }
+                className="w-full"
+              />
+              <div className="text-sm text-right text-gray-600 italic">
+                Level: {form.regionalFeel?.sliders[key as keyof RegionalSliders]}
+              </div>
+            </div>
+          ))}
 
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full bg-green-600 text-white py-2 px-4 rounded disabled:opacity-50"
+            className="w-full mt-6 bg-green-600 text-white py-2 px-4 rounded disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save Tone Preferences'}
           </button>
