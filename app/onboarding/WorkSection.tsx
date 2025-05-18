@@ -7,14 +7,15 @@ import { getSupabaseClient } from '@/utils/supabaseClient';
 import { updateFamiliarityScore } from '@/utils/familiarity';
 
 interface WorkData {
-  role?: string;
-  ownBusiness?: string;
+  title?: string;
+  employer?: string;
+  industry?: string;
+  schedule?: string;
+  ownsBusiness?: string;
   businessName?: string;
   businessType?: string;
   businessSize?: string;
-  industry?: string;
-  schedule?: string;
-  aiHelp?: string;
+  wantsHelp?: string;
   narrative?: string;
 }
 
@@ -22,20 +23,15 @@ interface SectionProps {
   existingData?: WorkData;
 }
 
-const intro = `Let’s capture what you do — or what you’re focused on day to day.
-Whether it’s a job, running a business, studying, parenting, or something else entirely, this helps me understand your responsibilities, pace, and headspace.`;
+const intro = `Let’s capture your current role and pace — whether you’re working, studying, parenting, or running your own thing.
+This helps me know what kind of responsibilities you’re juggling, and how I can support you with work-related tasks.`;
 
-const roleOptions = [
-  'Business owner', 'Employee', 'Freelancer', 'Student',
-  'Parent or caregiver', 'Retired', 'Looking for work', 'Other'
-];
-
-const industryOptions = [
+const industries = [
   'Education', 'Technology', 'Finance', 'Healthcare', 'Food & Hospitality',
   'Construction', 'Design', 'Retail', 'Logistics', 'Entertainment', 'Other'
 ];
 
-const scheduleOptions = [
+const schedules = [
   '9 to 5', 'Shift-based', 'Freelance / variable', 'Nights / weekends',
   'I set my own hours', 'I’m not currently working'
 ];
@@ -61,53 +57,15 @@ export default function WorkSection({ existingData }: SectionProps) {
   const indexRef = useRef(0);
 
   const questions = [
-    {
-      key: 'role',
-      type: 'dropdown',
-      label: 'What best describes your primary role right now?',
-      options: roleOptions
-    },
-    {
-      key: 'ownBusiness',
-      type: 'dropdown',
-      label: 'Do you own or run your own business?',
-      options: ['Yes', 'No']
-    },
-    {
-      key: 'businessName',
-      label: 'What’s your business called?',
-      condition: (form: WorkData) => form.ownBusiness === 'Yes'
-    },
-    {
-      key: 'businessType',
-      label: 'What does your business do?',
-      condition: (form: WorkData) => form.ownBusiness === 'Yes'
-    },
-    {
-      key: 'businessSize',
-      type: 'dropdown',
-      label: 'Roughly how many people work with you?',
-      options: businessSizes,
-      condition: (form: WorkData) => form.ownBusiness === 'Yes'
-    },
-    {
-      key: 'industry',
-      type: 'dropdown',
-      label: 'What industry or field are you in?',
-      options: industryOptions
-    },
-    {
-      key: 'schedule',
-      type: 'dropdown',
-      label: 'What’s your current work schedule like?',
-      options: scheduleOptions
-    },
-    {
-      key: 'aiHelp',
-      type: 'dropdown',
-      label: 'Do you want me to support you with work-related tasks?',
-      options: helpOptions
-    }
+    { key: 'title', label: 'What’s your current job title or role?' },
+    { key: 'employer', label: 'Who do you work for (or study under)?' },
+    { key: 'industry', label: 'What field or industry are you in?', type: 'dropdown', options: industries },
+    { key: 'schedule', label: 'What’s your current schedule like?', type: 'dropdown', options: schedules },
+    { key: 'ownsBusiness', label: 'Do you also own or run your own business?', type: 'dropdown', options: ['Yes', 'No'] },
+    { key: 'businessName', label: 'What’s your business called?', condition: (form: WorkData) => form.ownsBusiness === 'Yes' },
+    { key: 'businessType', label: 'What does your business do?', condition: (form: WorkData) => form.ownsBusiness === 'Yes' },
+    { key: 'businessSize', label: 'Roughly how many people work with you?', type: 'dropdown', options: businessSizes, condition: (form: WorkData) => form.ownsBusiness === 'Yes' },
+    { key: 'wantsHelp', label: 'Do you want me to support you with work-related tasks?', type: 'dropdown', options: helpOptions }
   ];
 
   const current = questions[step];
@@ -213,7 +171,7 @@ export default function WorkSection({ existingData }: SectionProps) {
       ) : (
         <div className="space-y-4">
           <label className="block text-sm font-medium text-gray-700">
-            Anything else I should know about your work or responsibilities?
+            Anything else I should know about your work life or responsibilities?
           </label>
           <textarea
             rows={4}

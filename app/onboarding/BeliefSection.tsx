@@ -7,11 +7,11 @@ import { getSupabaseClient } from '@/utils/supabaseClient';
 import { updateFamiliarityScore } from '@/utils/familiarity';
 
 interface BeliefData {
+  spiritualIdentity?: string;
   values?: string[];
-  politics?: string;
   causes?: string[];
+  politics?: string;
   worldview?: string;
-  narrative?: string;
 }
 
 interface SectionProps {
@@ -19,24 +19,37 @@ interface SectionProps {
 }
 
 const intro = `Now let’s talk about what drives you.
-Your values and worldview can shape how you think, decide, and prioritize.
-This helps me stay aligned when making suggestions or offering advice.`;
+Your values, beliefs, and causes can shape how you make decisions — and how you want to show up in the world.
+This helps me align with what matters to you.`;
 
-const values = [
-  'Honesty', 'Kindness', 'Independence', 'Ambition',
-  'Loyalty', 'Justice', 'Simplicity', 'Creativity',
-  'Efficiency', 'Curiosity', 'Faith', 'Respect', 'Other'
+const spiritualOptions = [
+  'Agnostic',
+  'Atheist',
+  'Christian',
+  'Catholic',
+  'Jewish',
+  'Muslim',
+  'Hindu',
+  'Buddhist',
+  'Spiritual but not religious',
+  'Not sure',
+  'Prefer not to say',
+  'Other'
 ];
 
-const politicalOptions = [
-  'Apolitical', 'Liberal', 'Conservative', 'Progressive',
-  'Libertarian', 'Moderate / Centrist', 'Independent', 'Other', 'Prefer not to say'
+const values = [
+  'Honesty', 'Loyalty', 'Independence', 'Kindness', 'Efficiency',
+  'Simplicity', 'Ambition', 'Creativity', 'Curiosity', 'Justice', 'Faith', 'Respect', 'Other'
 ];
 
 const causeTags = [
-  'Mental health', 'Education', 'Equity', 'Environment',
-  'Free speech', 'Veterans', 'Healthcare access',
-  'Tech ethics', 'Animal welfare', 'Other'
+  'Mental health', 'Education', 'Equity', 'Environment', 'Free speech',
+  'Veterans', 'Healthcare access', 'Tech ethics', 'Animal welfare', 'Other'
+];
+
+const politics = [
+  'Apolitical', 'Liberal', 'Conservative', 'Libertarian',
+  'Progressive', 'Moderate / Centrist', 'Independent', 'Other', 'Prefer not to say'
 ];
 
 export default function BeliefSection({ existingData }: SectionProps) {
@@ -53,27 +66,33 @@ export default function BeliefSection({ existingData }: SectionProps) {
 
   const questions = [
     {
+      key: 'spiritualIdentity',
+      label: 'Do you identify with a particular religion or spiritual belief system?',
+      type: 'dropdown',
+      options: spiritualOptions
+    },
+    {
       key: 'values',
-      type: 'multi',
       label: 'What personal values guide your behavior?',
+      type: 'multi',
       options: values
     },
     {
-      key: 'politics',
-      type: 'dropdown',
-      label: 'How would you describe your political stance?',
-      options: politicalOptions
-    },
-    {
       key: 'causes',
+      label: 'Are there causes or issues you care deeply about?',
       type: 'multi',
-      label: 'Are there causes or issues you feel strongly about?',
       options: causeTags
     },
     {
+      key: 'politics',
+      label: 'How would you describe your political stance?',
+      type: 'dropdown',
+      options: politics
+    },
+    {
       key: 'worldview',
-      label: 'How would you summarize your worldview or life philosophy?',
-      placeholder: 'Totally optional — only if it helps frame how you see things.'
+      label: 'Anything else I should understand about your worldview or operating principles?',
+      placeholder: 'Optional — only if it helps frame how you see things.'
     }
   ];
 
@@ -205,13 +224,13 @@ export default function BeliefSection({ existingData }: SectionProps) {
       ) : (
         <div className="space-y-4">
           <label className="block text-sm font-medium text-gray-700">
-            Anything else I should understand about your beliefs or personal philosophy?
+            Anything else I should understand about your beliefs, values, or worldview?
           </label>
           <textarea
             rows={4}
             className="w-full border p-2 rounded"
-            value={form.narrative || ''}
-            onChange={(e) => handleChange('narrative', e.target.value)}
+            value={form.worldview || ''}
+            onChange={(e) => handleChange('worldview', e.target.value)}
           />
 
           <button

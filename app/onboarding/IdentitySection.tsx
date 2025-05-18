@@ -7,12 +7,16 @@ import { getSupabaseClient } from '@/utils/supabaseClient';
 import { updateFamiliarityScore } from '@/utils/familiarity';
 
 interface IdentityData {
+  fullName?: string;
+  nickname?: string;
+  dob?: string;
+  hometown?: string;
+  currentLocation?: string;
+  birthplace?: string;
   upbringing?: string;
   culture?: string[];
-  beliefs?: string;
-  identityMarkers?: string[];
   communication?: string;
-  worldview?: string;
+  identityMarkers?: string[];
   narrative?: string;
 }
 
@@ -20,8 +24,8 @@ interface SectionProps {
   existingData?: IdentityData;
 }
 
-const intro = `Let’s go deeper into your background — the values, culture, and identity that shaped how you see the world.
-This helps me respond in ways that feel aligned with who you are, where you’ve come from, and how you move through life.`;
+const intro = `Let’s lock in the basics — who you are, where you’re from, and how you move through the world.
+This helps me speak naturally and respond with the right context — especially when names, dates, or personal tone matter.`;
 
 const upbringingOptions = [
   'Urban', 'Suburban', 'Rural', 'Religious', 'Multicultural', 'Nomadic or moved often', 'Other'
@@ -32,14 +36,14 @@ const culturalTags = [
   'Middle Eastern', 'European', 'Indigenous / Native', 'Mixed / Multicultural', 'Other'
 ];
 
-const communicationStyles = [
-  'Direct and efficient', 'Warm and expressive', 'Visual learner',
-  'Bullet points preferred', 'Long-form, reflective', 'Asks a lot of questions', 'Other'
-];
-
 const identityTags = [
   'Creative', 'Neurodivergent', 'Immigrant', 'Introvert', 'Extrovert',
   'Queer / LGBTQ+', 'Spiritual', 'Academic', 'Empath', 'Leader', 'Other'
+];
+
+const communicationStyles = [
+  'Direct and efficient', 'Warm and expressive', 'Visual learner',
+  'Bullet points preferred', 'Long-form, reflective', 'Asks a lot of questions', 'Other'
 ];
 
 export default function IdentitySection({ existingData }: SectionProps) {
@@ -55,40 +59,16 @@ export default function IdentitySection({ existingData }: SectionProps) {
   const indexRef = useRef(0);
 
   const questions = [
-    {
-      key: 'upbringing',
-      type: 'dropdown',
-      label: 'How would you describe your upbringing or early environment?',
-      options: upbringingOptions
-    },
-    {
-      key: 'culture',
-      type: 'multi',
-      label: 'What cultural identities do you most connect with?',
-      options: culturalTags
-    },
-    {
-      key: 'beliefs',
-      label: 'Do you hold any spiritual, philosophical, or ethical beliefs that guide you?',
-      placeholder: 'Optional — but can influence tone and perspective.'
-    },
-    {
-      key: 'identityMarkers',
-      type: 'multi',
-      label: 'Are there any identity markers that matter to how you see yourself?',
-      options: identityTags
-    },
-    {
-      key: 'communication',
-      type: 'dropdown',
-      label: 'How do you prefer to communicate or learn?',
-      options: communicationStyles
-    },
-    {
-      key: 'worldview',
-      label: 'How would you describe your general worldview or outlook?',
-      placeholder: 'Optional — feel free to skip or be brief.'
-    }
+    { key: 'fullName', label: 'What’s your full name?' },
+    { key: 'nickname', label: 'Do you go by a nickname or preferred name?' },
+    { key: 'dob', label: 'When is your birthday?', type: 'date' },
+    { key: 'hometown', label: 'What town or city do you consider your hometown?' },
+    { key: 'currentLocation', label: 'Where do you currently live?' },
+    { key: 'birthplace', label: 'Where were you born?' },
+    { key: 'upbringing', label: 'How would you describe your upbringing or early environment?', type: 'dropdown', options: upbringingOptions },
+    { key: 'culture', label: 'What cultural identities do you most connect with?', type: 'multi', options: culturalTags },
+    { key: 'identityMarkers', label: 'Are there any identity markers that matter to how you see yourself?', type: 'multi', options: identityTags },
+    { key: 'communication', label: 'How do you prefer to communicate or learn?', type: 'dropdown', options: communicationStyles }
   ];
 
   const current = questions[step];
@@ -187,17 +167,26 @@ export default function IdentitySection({ existingData }: SectionProps) {
                 <option key={option}>{option}</option>
               ))}
             </select>
+          ) : current.type === 'date' ? (
+            <input
+              type="date"
+              className="w-full border p-2 rounded"
+              value={form[current.key as keyof IdentityData] || ''}
+              onChange={(e) =>
+                handleChange(current.key as keyof IdentityData, e.target.value)
+              }
+            />
           ) : (
             <textarea
               rows={3}
               className="w-full border p-2 rounded"
-              placeholder={current.placeholder || ''}
               value={form[current.key as keyof IdentityData] || ''}
               onChange={(e) =>
                 handleChange(current.key as keyof IdentityData, e.target.value)
               }
             />
           )}
+
           <div className="flex justify-between mt-4">
             <button
               disabled={step === 0}
@@ -217,7 +206,7 @@ export default function IdentitySection({ existingData }: SectionProps) {
       ) : (
         <div className="space-y-4">
           <label className="block text-sm font-medium text-gray-700">
-            Anything else that helps explain who you are or what shaped you?
+            Anything else I should understand about your identity or background?
           </label>
           <textarea
             rows={4}
