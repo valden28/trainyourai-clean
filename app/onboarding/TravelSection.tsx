@@ -1,4 +1,4 @@
-''use client';
+'use client';
 
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
@@ -53,8 +53,6 @@ export default function TravelSection({ existingData }: SectionProps) {
 
     const delay = setTimeout(() => {
       setShowDots(false);
-
-      // Immediately render the first character
       setTyping(text.charAt(0));
       indexRef.current = 1;
 
