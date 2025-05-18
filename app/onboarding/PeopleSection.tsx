@@ -40,7 +40,7 @@ export default function PeopleSection({ existingData }: SectionProps) {
     const text = step === -1
       ? intro
       : step < people.length
-        ? `Tell me about ${people[step].name || 'this person'}.`
+        ? `Tell me about ${people[step]?.name || 'this person'}.`
         : 'That’s everyone for now. You can always add more later.';
 
     indexRef.current = 0;
@@ -56,7 +56,7 @@ export default function PeopleSection({ existingData }: SectionProps) {
         } else {
           clearInterval(interval);
         }
-      }, 55);
+      }, 65);
     }, 800);
 
     return () => clearTimeout(delay);
@@ -102,10 +102,10 @@ export default function PeopleSection({ existingData }: SectionProps) {
 
       {step === -1 && (
         <button
-          onClick={() => setStep(people.length > 0 ? 0 : -1)}
+          onClick={addPerson}
           className="px-4 py-2 bg-blue-600 text-white rounded"
         >
-          {people.length ? 'Start' : 'Add Someone'}
+          Add Someone
         </button>
       )}
 
