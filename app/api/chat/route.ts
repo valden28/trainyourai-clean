@@ -1,4 +1,3 @@
-// app/api/chat/route.ts
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
@@ -46,7 +45,7 @@ export async function POST(req: NextRequest) {
     const sliders = regional.sliders || {};
 
     const toneSummary = tonePrefs
-      .map(p => `${p.label}: ${p.value}/5`)
+      .map((p: { label: string; value: number }) => `${p.label}: ${p.value}/5`)
       .join(', ');
 
     const swearingNote = tone.swearing
@@ -54,8 +53,7 @@ export async function POST(req: NextRequest) {
       : '';
 
     const regionInstructions = regional.region && regional.region !== 'No regional tone (default)'
-      ? `Use a ${regional.region} tone of voice. 
-      Language: ${sliders.language}/5, Culture: ${sliders.culture}/5, Food influence: ${sliders.food}/5, Social tone: ${sliders.socialTone}/5.`
+      ? `Use a ${regional.region} tone. Language: ${sliders.language}/5. Culture: ${sliders.culture}/5. Food: ${sliders.food}/5. Social tone: ${sliders.socialTone}/5.`
       : '';
 
     const systemPrompt = `
@@ -105,7 +103,7 @@ ${Object.entries(health).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 - ${swearingNote}
 - ${regionInstructions}
 
-Always align your tone and response depth to the user's preferences and personality. Reflect their voice when appropriate. If regional tone is specified, use relevant metaphors, cadence, or cultural nods. Be clear, helpful, and human.
+Always align your tone and response depth to the user's preferences and personality. Reflect their voice when appropriate. If regional tone is specified, use relevant metaphors, cadence, and cultural context. Be clear, helpful, and human.
 `.trim();
 
     const completion = await openai.chat.completions.create({
