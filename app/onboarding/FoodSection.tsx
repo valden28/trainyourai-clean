@@ -1,127 +1,148 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useUser } from '@auth0/nextjs-auth0/client';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { updateFamiliarityScore } from '@/utils/familiarity';
+import { getSupabaseClient } from '@/utils/supabaseClient';
 
-interface FoodSectionProps {
-  existingData?: any;
+interface FoodData {
+  favorites?: string;
+  dislikes?: string;
+  restrictions?: string;
+  allergies?: string;
+  diningStyle?: string;
+  notes?: string;
 }
 
-export default function FoodSection({ existingData }: FoodSectionProps) {
-  const [formState, setFormState] = useState({
-    favorites: '',
-    allergies: '',
-    diet: '',
-    caffeine: '',
-    alcohol: ''
-  });
+interface SectionProps {
+  existingData?: FoodData;
+}
 
-  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [collapsed, setCollapsed] = useState(false);
-  const [isEditing, setIsEditing] = useState(true);
+const intro = ` Let’s talk about how you eat — your food preferences, restrictions, and favorites.`;
+
+export default function FoodSection({ existingData }: SectionProps) {
+  const { user } = useUser();
+  const router = useRouter();
+  const supabase = getSupabaseClient();
+
+  const [form, setForm] = useState<FoodData>(existingData || {});
+  const [typing, setTyping] = useState('');
+  const [showDots, setShowDots] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const indexRef = useRef(0);
 
   useEffect(() => {
-    if (existingData) {
-      setFormState(existingData);
-      setIsEditing(false);
-      setCollapsed(true);
-      setStatus('saved');
-    }
-  }, [existingData]);
+    const rawText = intro;
+
+    indexRef.current = 0;
+    setTyping('');
+    setShowDots(true);
+
+    const delay = setTimeout(() => {
+      setShowDots(false);
+
+      const type = () => {
+        if (indexRef.current < rawText.length) {
+          const nextChar = rawText.charAt(indexRef.current);
+          setTyping((prev) =>
+            indexRef.current === 0 && nextChar === ' ' ? prev : prev + nextChar
+          );
+          indexRef.current++;
+          setTimeout(type, 60);
+        }
+      };
+
+      type();
+    }, 900);
+
+    return () => clearTimeout(delay);
+  }, []);
+
+  const handleChange = <K extends keyof FoodData>(field: K, value: FoodData[K]) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
 
   const handleSave = async () => {
-    setStatus('saving');
-    const res = await fetch('/api/save-section?field=food', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: formState })
-    });
-
-    if (res.ok) {
-      setStatus('saved');
-      setCollapsed(true);
-      setIsEditing(false);
-    } else {
-      setStatus('error');
-    }
+    if (!user?.sub) return;
+    setSaving(true);
+    await supabase
+      .from('vaults_test')
+      .upsert({ user_uid: user.sub, food: form }, { onConflict: 'user_uid' });
+    await updateFamiliarityScore(user.sub);
+    router.push('/dashboard');
   };
-
-  const update = (field: string, value: string) => {
-    setFormState((prev) => ({ ...prev, [field]: value }));
-    setStatus('idle');
-  };
-
-  if (collapsed && !isEditing) {
-    return (
-      <div className="flex justify-end">
-        <button
-          onClick={() => setIsEditing(true)}
-          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-        >
-          Edit
-        </button>
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <label className="block font-medium">Favorite Foods or Meals</label>
-        <input
-          value={formState.favorites}
-          onChange={(e) => update('favorites', e.target.value)}
-          className="w-full p-2 border rounded"
-        />
-      </div>
-      <div>
-        <label className="block font-medium">Allergies</label>
-        <input
-          value={formState.allergies}
-          onChange={(e) => update('allergies', e.target.value)}
-          className="w-full p-2 border rounded"
-        />
-      </div>
-      <div>
-        <label className="block font-medium">Diet Type (e.g. Vegan, Keto, etc.)</label>
-        <input
-          value={formState.diet}
-          onChange={(e) => update('diet', e.target.value)}
-          className="w-full p-2 border rounded"
-        />
-      </div>
-      <div>
-        <label className="block font-medium">Caffeine Habits</label>
-        <input
-          value={formState.caffeine}
-          onChange={(e) => update('caffeine', e.target.value)}
-          className="w-full p-2 border rounded"
-        />
-      </div>
-      <div>
-        <label className="block font-medium">Alcohol Habits</label>
-        <input
-          value={formState.alcohol}
-          onChange={(e) => update('alcohol', e.target.value)}
-          className="w-full p-2 border rounded"
-        />
+    <main className="min-h-screen bg-white text-black p-6 max-w-xl mx-auto">
+      <h1 className="text-2xl font-bold mb-2 text-blue-700">Food & Beverage Preferences</h1>
+      <p className="text-sm text-gray-600 mb-6">
+        The way you eat says a lot about you. Whether you’re adventurous or selective, plant-based or protein-forward — your dietary patterns help your assistant support recommendations, reservations, gifts, and even social planning.
+      </p>
+
+      <div className="min-h-[100px] mb-6">
+        {showDots ? (
+          <p className="text-base font-medium text-gray-400 animate-pulse">[ • • • ]</p>
+        ) : (
+          <p className="text-base font-medium whitespace-pre-line leading-relaxed">{typing}</p>
+        )}
       </div>
 
-      <div className="flex justify-end">
+      <div className="space-y-4">
+        <label className="block text-sm font-medium text-gray-700">Favorite Foods or Cuisines</label>
+        <input
+          className="w-full border p-2 rounded"
+          value={form.favorites || ''}
+          onChange={(e) => handleChange('favorites', e.target.value)}
+        />
+
+        <label className="block text-sm font-medium text-gray-700">Foods You Dislike</label>
+        <input
+          className="w-full border p-2 rounded"
+          value={form.dislikes || ''}
+          onChange={(e) => handleChange('dislikes', e.target.value)}
+        />
+
+        <label className="block text-sm font-medium text-gray-700">Diet or Restrictions</label>
+        <input
+          className="w-full border p-2 rounded"
+          placeholder="e.g. vegetarian, keto, halal"
+          value={form.restrictions || ''}
+          onChange={(e) => handleChange('restrictions', e.target.value)}
+        />
+
+        <label className="block text-sm font-medium text-gray-700">Allergies</label>
+        <input
+          className="w-full border p-2 rounded"
+          placeholder="e.g. peanuts, shellfish"
+          value={form.allergies || ''}
+          onChange={(e) => handleChange('allergies', e.target.value)}
+        />
+
+        <label className="block text-sm font-medium text-gray-700">Dining Style or Habits</label>
+        <input
+          className="w-full border p-2 rounded"
+          placeholder="e.g. fast casual, slow meals, takeout, eats late"
+          value={form.diningStyle || ''}
+          onChange={(e) => handleChange('diningStyle', e.target.value)}
+        />
+
+        <label className="block text-sm font-medium text-gray-700">Notes</label>
+        <textarea
+          rows={3}
+          className="w-full border p-2 rounded"
+          value={form.notes || ''}
+          onChange={(e) => handleChange('notes', e.target.value)}
+        />
+
         <button
           onClick={handleSave}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          disabled={saving}
+          className="mt-4 w-full bg-green-600 text-white py-2 px-4 rounded disabled:opacity-50"
         >
-          {status === 'saving'
-            ? 'Saving...'
-            : status === 'saved'
-            ? 'Saved!'
-            : 'Save'}
+          {saving ? 'Saving...' : 'Save and Continue'}
         </button>
       </div>
-
-      {status === 'error' && (
-        <p className="text-sm text-red-600 mt-2">Failed to save. Please try again.</p>
-      )}
-    </div>
+    </main>
   );
 }

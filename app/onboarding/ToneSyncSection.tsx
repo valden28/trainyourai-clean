@@ -1,114 +1,133 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useUser } from '@auth0/nextjs-auth0/client';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { updateFamiliarityScore } from '@/utils/familiarity';
+import { getSupabaseClient } from '@/utils/supabaseClient';
 
-interface ToneSyncSectionProps {
-  existingData?: any;
+interface ToneSetting {
+  label: string;
+  value: number;
 }
 
-const toneFields = ['humor', 'energy', 'formality', 'confidence', 'directness'];
+interface SectionProps {
+  existingData?: ToneSetting[];
+}
 
-const toneLabels: Record<string, string[]> = {
-  humor: ['None', 'Dry', 'Witty', 'Playful', 'Silly'],
-  energy: ['Low', 'Relaxed', 'Neutral', 'Energetic', 'High-octane'],
-  formality: ['Casual', 'Neutral', 'Formal', 'Very formal', 'Ultra formal'],
-  confidence: ['Humble', 'Balanced', 'Assertive', 'Bold', 'Dominant'],
-  directness: ['Indirect', 'Subtle', 'Clear', 'Very clear', 'Blunt']
-};
+const intro = ` Let’s tune your assistant’s tone and communication style. These sliders will help it sound more like you — or the way you want it to sound.`;
 
-export default function ToneSyncSection({ existingData }: ToneSyncSectionProps) {
-  const [formState, setFormState] = useState<Record<string, number>>({});
-  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [collapsed, setCollapsed] = useState(false);
-  const [isEditing, setIsEditing] = useState(true);
+const defaultToneSettings: ToneSetting[] = [
+  { label: 'Formality (Casual → Professional)', value: 3 },
+  { label: 'Humor (Dry → Playful)', value: 3 },
+  { label: 'Empathy (Neutral → Warm)', value: 3 },
+  { label: 'Directness (Soft → Blunt)', value: 3 },
+  { label: 'Detail Level (Brief → Elaborate)', value: 3 },
+  { label: 'Enthusiasm (Chill → Excited)', value: 3 },
+  { label: 'Profanity (Clean → Unfiltered)', value: 2 },
+  { label: 'Energy (Slow → Fast-Paced)', value: 3 }
+];
+
+export default function ToneSyncSection({ existingData }: SectionProps) {
+  const { user } = useUser();
+  const router = useRouter();
+  const supabase = getSupabaseClient();
+
+  const [settings, setSettings] = useState<ToneSetting[]>(
+    existingData && Array.isArray(existingData) && existingData.length > 0
+      ? existingData
+      : defaultToneSettings
+  );
+
+  const [typing, setTyping] = useState('');
+  const [showDots, setShowDots] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const indexRef = useRef(0);
 
   useEffect(() => {
-    if (existingData) {
-      const formatted = Object.fromEntries(
-        Object.entries(existingData).map(([k, v]) => [k, toneLabels[k].indexOf(v as string)])
-      );
-      setFormState(formatted);
-      setIsEditing(false);
-      setCollapsed(true);
-      setStatus('saved');
-    }
-  }, [existingData]);
+    const rawText = intro;
+
+    indexRef.current = 0;
+    setTyping('');
+    setShowDots(true);
+
+    const delay = setTimeout(() => {
+      setShowDots(false);
+
+      const type = () => {
+        if (indexRef.current < rawText.length) {
+          const nextChar = rawText.charAt(indexRef.current);
+          setTyping((prev) =>
+            indexRef.current === 0 && nextChar === ' ' ? prev : prev + nextChar
+          );
+          indexRef.current++;
+          setTimeout(type, 60);
+        }
+      };
+
+      type();
+    }, 900);
+
+    return () => clearTimeout(delay);
+  }, []);
+
+  const handleChange = (index: number, value: number) => {
+    setSettings((prev) => {
+      const updated = [...prev];
+      updated[index].value = value;
+      return updated;
+    });
+  };
 
   const handleSave = async () => {
-    const formatted = Object.fromEntries(
-      Object.entries(formState).map(([field, index]) => [field, toneLabels[field][index]])
-    );
-
-    setStatus('saving');
-    const res = await fetch('/api/save-section?field=tonesync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: formatted })
-    });
-
-    if (res.ok) {
-      setStatus('saved');
-      setCollapsed(true);
-      setIsEditing(false);
-    } else {
-      setStatus('error');
-    }
+    if (!user?.sub) return;
+    setSaving(true);
+    await supabase
+      .from('vaults_test')
+      .upsert({ user_uid: user.sub, tonesync: settings }, { onConflict: 'user_uid' });
+    await updateFamiliarityScore(user.sub);
+    router.push('/dashboard');
   };
-
-  const updateSlider = (field: string, index: number) => {
-    setFormState((prev) => ({ ...prev, [field]: index }));
-    setStatus('idle');
-  };
-
-  if (collapsed && !isEditing) {
-    return (
-      <div className="flex justify-end">
-        <button
-          onClick={() => setIsEditing(true)}
-          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-        >
-          Edit
-        </button>
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-6">
-      {toneFields.map((field) => (
-        <div key={field} className="space-y-1">
-          <label className="block font-medium capitalize">{field}</label>
-          <input
-            type="range"
-            min={0}
-            max={4}
-            step={1}
-            value={formState[field] ?? 2}
-            onChange={(e) => updateSlider(field, parseInt(e.target.value))}
-            className="w-full"
-          />
-          <div className="text-sm text-gray-600">
-            {toneLabels[field][formState[field] ?? 2]} ({(formState[field] ?? 2) + 1}/5)
-          </div>
-        </div>
-      ))}
+    <main className="min-h-screen bg-white text-black p-6 max-w-xl mx-auto">
+      <h1 className="text-2xl font-bold mb-2 text-blue-700">Tone & Voice Preferences</h1>
+      <p className="text-sm text-gray-600 mb-6">
+        Every person has a different tone — and your assistant should reflect yours. These sliders help calibrate how it speaks, explains, jokes, or supports based on your vibe.
+      </p>
 
-      <div className="flex justify-end">
-        <button
-          onClick={handleSave}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          {status === 'saving'
-            ? 'Saving...'
-            : status === 'saved'
-            ? 'Saved!'
-            : 'Save'}
-        </button>
+      <div className="min-h-[100px] mb-6">
+        {showDots ? (
+          <p className="text-base font-medium text-gray-400 animate-pulse">[ • • • ]</p>
+        ) : (
+          <p className="text-base font-medium whitespace-pre-line leading-relaxed">{typing}</p>
+        )}
       </div>
 
-      {status === 'error' && (
-        <p className="text-sm text-red-600 mt-2">Failed to save. Please try again.</p>
-      )}
-    </div>
+      <div className="space-y-6">
+        {settings.map((tone, index) => (
+          <div key={index} className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">{tone.label}</label>
+            <input
+              type="range"
+              min={1}
+              max={5}
+              step={1}
+              value={tone.value}
+              onChange={(e) => handleChange(index, parseInt(e.target.value))}
+              className="w-full"
+            />
+          </div>
+        ))}
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="mt-4 w-full bg-green-600 text-white py-2 px-4 rounded disabled:opacity-50"
+        >
+          {saving ? 'Saving...' : 'Save and Continue'}
+        </button>
+      </div>
+    </main>
   );
 }
