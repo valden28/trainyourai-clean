@@ -53,8 +53,6 @@ export default function TravelSection({ existingData }: SectionProps) {
 
     const delay = setTimeout(() => {
       setShowDots(false);
-      setTyping(text.charAt(0));
-      indexRef.current = 1;
 
       const type = () => {
         if (indexRef.current < text.length) {
