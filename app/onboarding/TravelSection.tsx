@@ -10,6 +10,8 @@ interface Trip {
   destination: string;
   reason?: string;
   date?: string;
+  travelType?: string;
+  frequency?: string;
   notes?: string;
 }
 
@@ -127,32 +129,52 @@ export default function TravelSection({ existingData }: SectionProps) {
           <label className="block text-sm font-medium text-gray-700">Destination</label>
           <input
             className="w-full border p-2 rounded"
-            placeholder="Where did you go?"
+            placeholder="City, country, or landmark"
             value={trips[step].destination || ''}
             onChange={(e) => handleChange(step, 'destination', e.target.value)}
           />
 
-          <label className="block text-sm font-medium text-gray-700">Purpose of Trip</label>
-          <input
+          <label className="block text-sm font-medium text-gray-700">Type of Travel</label>
+          <select
             className="w-full border p-2 rounded"
-            placeholder="Vacation, work, family, etc."
-            value={trips[step].reason || ''}
-            onChange={(e) => handleChange(step, 'reason', e.target.value)}
-          />
+            value={trips[step].travelType || ''}
+            onChange={(e) => handleChange(step, 'travelType', e.target.value)}
+          >
+            <option value="">Select one</option>
+            <option value="Vacation">Vacation</option>
+            <option value="Work or Business">Work or Business</option>
+            <option value="Family Visit">Family Visit</option>
+            <option value="Event or Occasion">Event or Occasion</option>
+            <option value="Personal escape">Personal escape</option>
+            <option value="Other">Other</option>
+          </select>
 
-          <label className="block text-sm font-medium text-gray-700">Date</label>
+          <label className="block text-sm font-medium text-gray-700">Date or Year</label>
           <input
-            type="date"
             className="w-full border p-2 rounded"
+            placeholder="MM/YYYY or just a year"
             value={trips[step].date || ''}
             onChange={(e) => handleChange(step, 'date', e.target.value)}
           />
+
+          <label className="block text-sm font-medium text-gray-700">How often do you take trips like this?</label>
+          <select
+            className="w-full border p-2 rounded"
+            value={trips[step].frequency || ''}
+            onChange={(e) => handleChange(step, 'frequency', e.target.value)}
+          >
+            <option value="">Select frequency</option>
+            <option value="Multiple times per year">Multiple times per year</option>
+            <option value="Once a year">Once a year</option>
+            <option value="Every few years">Every few years</option>
+            <option value="Once in a lifetime">Once in a lifetime</option>
+          </select>
 
           <label className="block text-sm font-medium text-gray-700">Notes</label>
           <textarea
             rows={3}
             className="w-full border p-2 rounded"
-            placeholder="Any highlights or details you want to remember..."
+            placeholder="Any highlights or personal meaning behind this trip..."
             value={trips[step].notes || ''}
             onChange={(e) => handleChange(step, 'notes', e.target.value)}
           />

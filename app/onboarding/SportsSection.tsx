@@ -10,6 +10,7 @@ interface Sport {
   team?: string;
   league?: string;
   level?: string;
+  frequency?: string;
   notes?: string;
 }
 
@@ -104,9 +105,7 @@ export default function SportsSection({ existingData }: SectionProps) {
     <main className="min-h-screen bg-white text-black p-6 max-w-xl mx-auto">
       <h1 className="text-2xl font-bold mb-2 text-blue-700">Teams & Sports</h1>
       <p className="text-sm text-gray-600 mb-6">
-        Sports are personal. Whether you're a lifelong fan, a player, or just casually into it —
-        the teams and games you care about reveal your energy, connection points, and even identity.
-        This helps your assistant reference events, seasons, and shared interests more naturally.
+        Whether you're a lifelong fan, a casual follower, or a former athlete — your sports interests help shape your energy, identity, and what gets you fired up. Teams, leagues, hometown loyalty — all of it gives your assistant better context for conversation and personalization.
       </p>
 
       <div className="min-h-[100px] mb-6">
@@ -136,19 +135,47 @@ export default function SportsSection({ existingData }: SectionProps) {
             onChange={(e) => handleChange(step, 'team', e.target.value)}
           />
 
-          <label className="block text-sm font-medium text-gray-700">League or Level</label>
+          <label className="block text-sm font-medium text-gray-700">League or Organization</label>
           <input
             className="w-full border p-2 rounded"
-            placeholder="e.g. MLB, College, Youth, etc."
+            placeholder="e.g. MLB, Premier League, NCAA, etc."
             value={sports[step].league || ''}
             onChange={(e) => handleChange(step, 'league', e.target.value)}
           />
+
+          <label className="block text-sm font-medium text-gray-700">Level of Fandom</label>
+          <select
+            className="w-full border p-2 rounded"
+            value={sports[step].level || ''}
+            onChange={(e) => handleChange(step, 'level', e.target.value)}
+          >
+            <option value="">Select one</option>
+            <option value="Die-hard">Die-hard</option>
+            <option value="Lifelong fan">Lifelong fan</option>
+            <option value="Casual viewer">Casual viewer</option>
+            <option value="Used to follow closely">Used to follow closely</option>
+            <option value="Former athlete">Former athlete</option>
+            <option value="Other">Other</option>
+          </select>
+
+          <label className="block text-sm font-medium text-gray-700">How often do you follow this sport or team?</label>
+          <select
+            className="w-full border p-2 rounded"
+            value={sports[step].frequency || ''}
+            onChange={(e) => handleChange(step, 'frequency', e.target.value)}
+          >
+            <option value="">Select frequency</option>
+            <option value="Every game or match">Every game or match</option>
+            <option value="Weekly or regular updates">Weekly or regular updates</option>
+            <option value="Big events only (e.g. playoffs, tournaments)">Big events only</option>
+            <option value="Rarely now, but used to">Rarely now, but used to</option>
+          </select>
 
           <label className="block text-sm font-medium text-gray-700">Notes</label>
           <textarea
             rows={3}
             className="w-full border p-2 rounded"
-            placeholder="Any personal connection, memories, or details..."
+            placeholder="Any connection, history, or favorite moments to note..."
             value={sports[step].notes || ''}
             onChange={(e) => handleChange(step, 'notes', e.target.value)}
           />
