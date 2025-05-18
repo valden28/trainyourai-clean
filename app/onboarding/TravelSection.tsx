@@ -47,8 +47,8 @@ export default function TravelSection({ existingData }: SectionProps) {
         ? `Tell me about this trip.`
         : `That’s all for now — but you can always add more later.`;
 
-    indexRef.current = 0;
-    setTyping('');
+    indexRef.current = 1;
+    setTyping(text.charAt(0)); // Manually show the first character
     setShowDots(true);
 
     const delay = setTimeout(() => {

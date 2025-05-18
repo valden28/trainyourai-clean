@@ -51,8 +51,8 @@ export default function PeopleSection({ existingData }: SectionProps) {
         ? `Tell me about this person.`
         : `That’s everyone for now. You can always add more later.`;
 
-    indexRef.current = 0;
-    setTyping('');
+    indexRef.current = 1;
+    setTyping(text.charAt(0)); // Show first letter manually
     setShowDots(true);
 
     const delay = setTimeout(() => {
