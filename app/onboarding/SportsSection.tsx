@@ -17,8 +17,7 @@ interface SectionProps {
   existingData?: Sport[];
 }
 
-const intro = ` Let’s talk about the teams and sports you follow — or play.
-Whether you're a casual fan or all-in, it helps shape how you connect with others.`; // dummy space
+const intro = ` Let’s talk about the teams and sports you follow — or play. Whether you're a casual fan or all-in, it helps shape how you connect with others.`;
 
 export default function SportsSection({ existingData }: SectionProps) {
   const { user } = useUser();
@@ -45,7 +44,7 @@ export default function SportsSection({ existingData }: SectionProps) {
         ? ` Tell me about your connection to ${currentTeam}.`
         : step < sports.length
         ? ` Tell me about this team or sport.`
-        : ` That’s it for now — but you can always add more later.`; // dummy space
+        : ` That’s it for now — but you can always add more later.`;
 
     indexRef.current = 0;
     setTyping('');
@@ -58,9 +57,7 @@ export default function SportsSection({ existingData }: SectionProps) {
         if (indexRef.current < rawText.length) {
           const nextChar = rawText.charAt(indexRef.current);
           setTyping((prev) =>
-            indexRef.current === 0 && nextChar === ' '
-              ? prev
-              : prev + nextChar
+            indexRef.current === 0 && nextChar === ' ' ? prev : prev + nextChar
           );
           indexRef.current++;
           setTimeout(type, 60);
@@ -105,7 +102,12 @@ export default function SportsSection({ existingData }: SectionProps) {
 
   return (
     <main className="min-h-screen bg-white text-black p-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6 text-blue-700">Teams & Sports</h1>
+      <h1 className="text-2xl font-bold mb-2 text-blue-700">Teams & Sports</h1>
+      <p className="text-sm text-gray-600 mb-6">
+        Sports are personal. Whether you're a lifelong fan, a player, or just casually into it —
+        the teams and games you care about reveal your energy, connection points, and even identity.
+        This helps your assistant reference events, seasons, and shared interests more naturally.
+      </p>
 
       <div className="min-h-[100px] mb-6">
         {showDots ? (

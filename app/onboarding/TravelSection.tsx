@@ -17,8 +17,7 @@ interface SectionProps {
   existingData?: Trip[];
 }
 
-const intro = ` Let’s talk about the places you’ve been and the trips you’ve taken.
-Whether it was for fun, work, family, or escape — they all tell a story.`; // <-- prepended space
+const intro = ` Let’s talk about the places you’ve been and the trips you’ve taken. Whether it was for fun, work, family, or escape — they all tell a story.`;
 
 export default function TravelSection({ existingData }: SectionProps) {
   const { user } = useUser();
@@ -41,11 +40,11 @@ export default function TravelSection({ existingData }: SectionProps) {
     const rawText =
       step === -1
         ? intro
-        : step < trips.length && currentDestination && currentDestination.length > 0
+        : step < trips.length && currentDestination
         ? ` Tell me about your trip to ${currentDestination}.`
         : step < trips.length
         ? ` Tell me about this trip.`
-        : ` That’s all for now — but you can always add more later.`; // <-- prepended space
+        : ` That’s all for now — but you can always add more later.`;
 
     indexRef.current = 0;
     setTyping('');
@@ -53,20 +52,16 @@ export default function TravelSection({ existingData }: SectionProps) {
 
     const delay = setTimeout(() => {
       setShowDots(false);
-
       const type = () => {
         if (indexRef.current < rawText.length) {
           const nextChar = rawText.charAt(indexRef.current);
           setTyping((prev) =>
-            indexRef.current === 0 && nextChar === ' '
-              ? prev
-              : prev + nextChar
+            indexRef.current === 0 && nextChar === ' ' ? prev : prev + nextChar
           );
           indexRef.current++;
           setTimeout(type, 60);
         }
       };
-
       type();
     }, 900);
 
@@ -105,7 +100,10 @@ export default function TravelSection({ existingData }: SectionProps) {
 
   return (
     <main className="min-h-screen bg-white text-black p-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6 text-blue-700">Travel & Places</h1>
+      <h1 className="text-2xl font-bold mb-2 text-blue-700">Travel & Places</h1>
+      <p className="text-sm text-gray-600 mb-6">
+        Where you go matters. The trips you’ve taken — and the reasons you took them — offer insight into your lifestyle, values, and history. Travel is often tied to relationships, memory, and mindset. It helps your assistant understand your pace, passions, and preferences.
+      </p>
 
       <div className="min-h-[100px] mb-6">
         {showDots ? (
