@@ -1,118 +1,224 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useUser } from '@auth0/nextjs-auth0/client';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
+import { getSupabaseClient } from '@/utils/supabaseClient';
+import { updateFamiliarityScore } from '@/utils/familiarity';
 
-interface BeliefSectionProps {
-  existingData?: any;
+interface BeliefData {
+  values?: string[];
+  worldview?: string;
+  politics?: string;
+  causes?: string;
+  nonNegotiables?: string;
 }
 
-export default function BeliefSection({ existingData }: BeliefSectionProps) {
-  const [formState, setFormState] = useState({
-    core_values: '',
-    religion: '',
-    worldview: '',
-    boundaries: ''
-  });
+interface SectionProps {
+  existingData?: BeliefData;
+}
 
-  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [collapsed, setCollapsed] = useState(false);
-  const [isEditing, setIsEditing] = useState(true);
+const intro = `Now let’s talk about what drives you.
+Your core beliefs, values, and personal “rules of the road.”
+These help me align with what matters to you — especially when offering suggestions, advice, or perspective.`;
+
+const valueTags = [
+  'Honesty', 'Loyalty', 'Independence', 'Ambition', 'Kindness',
+  'Simplicity', 'Efficiency', 'Creativity', 'Curiosity', 'Respect',
+  'Faith', 'Justice', 'Other'
+];
+
+const politicalOptions = [
+  'Apolitical', 'Liberal', 'Conservative', 'Libertarian',
+  'Progressive', 'Moderate / Centrist', 'Independent', 'Other', 'Prefer not to say'
+];
+
+export default function BeliefSection({ existingData }: SectionProps) {
+  const { user } = useUser();
+  const router = useRouter();
+  const supabase = getSupabaseClient();
+
+  const [form, setForm] = useState<BeliefData>(existingData || {});
+  const [step, setStep] = useState(0);
+  const [typing, setTyping] = useState('');
+  const [showDots, setShowDots] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const indexRef = useRef(0);
+
+  const questions = [
+    {
+      key: 'values',
+      type: 'multi',
+      label: 'What personal values guide your decisions?',
+      options: valueTags
+    },
+    {
+      key: 'worldview',
+      label: 'Are there any core beliefs you hold that shape your worldview?',
+      placeholder: 'Spiritual, ethical, philosophical, or moral — in your own words.'
+    },
+    {
+      key: 'politics',
+      type: 'dropdown',
+      label: 'How would you describe your political stance?',
+      options: politicalOptions
+    },
+    {
+      key: 'causes',
+      label: 'Are there causes or topics you feel strongly about?',
+      placeholder: 'e.g. mental health, education, equity, environment, technology, veterans...'
+    },
+    {
+      key: 'nonNegotiables',
+      label: 'Do you have any “non-negotiables” — personal policies you live by?',
+      placeholder: 'e.g. I don’t cancel on family. I sleep on big decisions. Sundays are no-phone.'
+    }
+  ];
+
+  const current = questions[step];
 
   useEffect(() => {
-    if (existingData) {
-      setFormState(existingData);
-      setIsEditing(false);
-      setCollapsed(true);
-      setStatus('saved');
-    }
-  }, [existingData]);
+    const rawText = intro;
+    indexRef.current = 0;
+    setTyping('');
+    setShowDots(true);
+    const delay = setTimeout(() => {
+      setShowDots(false);
+      const type = () => {
+        if (indexRef.current < rawText.length) {
+          const nextChar = rawText.charAt(indexRef.current);
+          setTyping((prev) =>
+            indexRef.current === 0 && nextChar === ' ' ? prev : prev + nextChar
+          );
+          indexRef.current++;
+          setTimeout(type, 60);
+        }
+      };
+      type();
+    }, 900);
+    return () => clearTimeout(delay);
+  }, []);
+
+  const handleMultiSelect = (key: keyof BeliefData, option: string) => {
+    setForm((prev) => {
+      const currentVal = prev[key] as string[] | undefined;
+      const next = currentVal?.includes(option)
+        ? currentVal.filter((o) => o !== option)
+        : [...(currentVal || []), option];
+      return { ...prev, [key]: next };
+    });
+  };
+
+  const handleChange = <K extends keyof BeliefData>(key: K, value: BeliefData[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
 
   const handleSave = async () => {
-    setStatus('saving');
-    const res = await fetch('/api/save-section?field=beliefs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: formState })
-    });
-
-    if (res.ok) {
-      setStatus('saved');
-      setCollapsed(true);
-      setIsEditing(false);
-    } else {
-      setStatus('error');
-    }
-  };
-
-  const update = (field: string, value: string) => {
-    setFormState((prev) => ({ ...prev, [field]: value }));
-    setStatus('idle');
-  };
-
-  if (collapsed && !isEditing) {
-    return (
-      <div className="flex justify-end">
-        <button
-          onClick={() => setIsEditing(true)}
-          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-        >
-          Edit
-        </button>
-      </div>
+    if (!user?.sub) return;
+    setSaving(true);
+    await supabase.from('vaults_test').upsert(
+      {
+        user_uid: user.sub,
+        beliefs: form
+      },
+      { onConflict: 'user_uid' }
     );
-  }
+    await updateFamiliarityScore(user.sub);
+    router.push('/dashboard');
+  };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <label className="block font-medium">Core Values</label>
-        <input
-          value={formState.core_values}
-          onChange={(e) => update('core_values', e.target.value)}
-          className="w-full p-2 border rounded"
-        />
-      </div>
-      <div>
-        <label className="block font-medium">Religion / Spiritual Beliefs</label>
-        <input
-          value={formState.religion}
-          onChange={(e) => update('religion', e.target.value)}
-          className="w-full p-2 border rounded"
-        />
-      </div>
-      <div>
-        <label className="block font-medium">Worldview</label>
-        <input
-          value={formState.worldview}
-          onChange={(e) => update('worldview', e.target.value)}
-          className="w-full p-2 border rounded"
-        />
-      </div>
-      <div>
-        <label className="block font-medium">Boundaries</label>
-        <input
-          value={formState.boundaries}
-          onChange={(e) => update('boundaries', e.target.value)}
-          className="w-full p-2 border rounded"
-        />
+    <main className="min-h-screen bg-white text-black p-6 max-w-xl mx-auto">
+      <h1 className="text-2xl font-bold mb-2 text-blue-700">Beliefs, Values & Operating Principles</h1>
+
+      <div className="min-h-[100px] mb-6">
+        {typing ? (
+          <p className="text-base font-medium whitespace-pre-line leading-relaxed">{typing}</p>
+        ) : showDots ? (
+          <p className="text-base font-medium text-gray-400 animate-pulse">[ • • • ]</p>
+        ) : null}
       </div>
 
-      <div className="flex justify-end">
-        <button
-          onClick={handleSave}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          {status === 'saving'
-            ? 'Saving...'
-            : status === 'saved'
-            ? 'Saved!'
-            : 'Save'}
-        </button>
-      </div>
+      {step < questions.length ? (
+        <div className="space-y-4">
+          <label className="block text-sm font-medium text-gray-700">{current.label}</label>
+          {'options' in current && current.type === 'multi' ? (
+            <div className="flex flex-wrap gap-2">
+              {current.options!.map((option) => (
+                <button
+                  key={option}
+                  onClick={() => handleMultiSelect(current.key as keyof BeliefData, option)}
+                  className={`px-3 py-1 rounded border ${
+                    (form[current.key as keyof BeliefData] as string[])?.includes(option)
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-black border-gray-300'
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          ) : current.type === 'dropdown' ? (
+            <select
+              className="w-full border p-2 rounded"
+              value={form[current.key as keyof BeliefData] || ''}
+              onChange={(e) =>
+                handleChange(current.key as keyof BeliefData, e.target.value)
+              }
+            >
+              <option value="">Select one</option>
+              {current.options!.map((option) => (
+                <option key={option}>{option}</option>
+              ))}
+            </select>
+          ) : (
+            <textarea
+              rows={3}
+              className="w-full border p-2 rounded"
+              placeholder={current.placeholder || ''}
+              value={form[current.key as keyof BeliefData] || ''}
+              onChange={(e) =>
+                handleChange(current.key as keyof BeliefData, e.target.value)
+              }
+            />
+          )}
+          <div className="flex justify-between mt-4">
+            <button
+              disabled={step === 0}
+              onClick={() => setStep((s) => Math.max(s - 1, 0))}
+              className="px-4 py-2 bg-gray-300 text-black rounded disabled:opacity-50"
+            >
+              Back
+            </button>
+            <button
+              onClick={() => setStep((s) => s + 1)}
+              className="px-4 py-2 bg-blue-600 text-white rounded"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <label className="block text-sm font-medium text-gray-700">
+            Anything else I should understand about your principles or values?
+          </label>
+          <textarea
+            rows={4}
+            className="w-full border p-2 rounded"
+            value={form.nonNegotiables || ''}
+            onChange={(e) => handleChange('nonNegotiables', e.target.value)}
+          />
 
-      {status === 'error' && (
-        <p className="text-sm text-red-600 mt-2">Failed to save. Please try again.</p>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full bg-green-600 text-white py-2 px-4 rounded disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Save and Continue'}
+          </button>
+        </div>
       )}
-    </div>
+    </main>
   );
 }
