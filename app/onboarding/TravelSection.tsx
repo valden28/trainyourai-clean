@@ -17,8 +17,8 @@ interface SectionProps {
   existingData?: Trip[];
 }
 
-const intro = `Let’s talk about the places you’ve been and the trips you’ve taken.
-Whether it was for fun, work, family, or escape — they all tell a story.`;
+const intro = ` Let’s talk about the places you’ve been and the trips you’ve taken.
+Whether it was for fun, work, family, or escape — they all tell a story.`; // <-- prepended space
 
 export default function TravelSection({ existingData }: SectionProps) {
   const { user } = useUser();
@@ -38,25 +38,30 @@ export default function TravelSection({ existingData }: SectionProps) {
 
   useEffect(() => {
     const currentDestination = trips[step]?.destination;
-    const text =
+    const rawText =
       step === -1
         ? intro
         : step < trips.length && currentDestination && currentDestination.length > 0
-        ? `Tell me about your trip to ${currentDestination}.`
+        ? ` Tell me about your trip to ${currentDestination}.`
         : step < trips.length
-        ? `Tell me about this trip.`
-        : `That’s all for now — but you can always add more later.`;
+        ? ` Tell me about this trip.`
+        : ` That’s all for now — but you can always add more later.`; // <-- prepended space
 
-    indexRef.current = 1;
-    setTyping(text.charAt(0)); // Manually show the first character
+    indexRef.current = 0;
+    setTyping('');
     setShowDots(true);
 
     const delay = setTimeout(() => {
       setShowDots(false);
 
       const type = () => {
-        if (indexRef.current < text.length) {
-          setTyping((prev) => prev + text.charAt(indexRef.current));
+        if (indexRef.current < rawText.length) {
+          const nextChar = rawText.charAt(indexRef.current);
+          setTyping((prev) =>
+            indexRef.current === 0 && nextChar === ' '
+              ? prev
+              : prev + nextChar
+          );
           indexRef.current++;
           setTimeout(type, 60);
         }

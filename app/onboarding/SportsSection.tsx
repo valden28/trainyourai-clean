@@ -2,161 +2,156 @@
 
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { updateFamiliarityScore } from '@/utils/familiarity';
 import { getSupabaseClient } from '@/utils/supabaseClient';
 
-interface SectionProps {
-  existingData?: any;
+interface Sport {
+  team?: string;
+  league?: string;
+  level?: string;
+  notes?: string;
 }
 
-const sportsQuestions = [
-  {
-    id: 'leagues',
-    label: 'Do you follow any major sports?',
-    type: 'tags',
-    options: ['NFL', 'NBA', 'MLB', 'NHL', 'College Football', 'College Basketball', 'Soccer', 'Tennis', 'Golf', 'UFC/MMA', 'Racing', 'None', 'Other']
-  },
-  {
-    id: 'teams',
-    label: 'Any teams you root for — teams that actually matter to you?',
-    type: 'tags',
-    options: ['Yankees', 'Red Sox', 'Cowboys', 'Lakers', 'Warriors', 'Patriots', 'Packers', 'Duke', 'Alabama', 'Man U', 'Barcelona', 'Other']
-  },
-  {
-    id: 'played',
-    label: 'Any sports you’ve played, coached, or still play now?',
-    type: 'tags',
-    options: ['Baseball', 'Basketball', 'Football', 'Soccer', 'Tennis', 'Golf', 'Track/Running', 'Martial Arts', 'Swimming', 'Pickleball', 'Other']
-  },
-  {
-    id: 'viewing_style',
-    label: 'Do you usually watch games live, stream them, or just check scores later?',
-    type: 'dropdown',
-    options: ['Watch live', 'Stream when I can', 'Just check scores', 'Rarely follow']
-  },
-  {
-    id: 'rituals',
-    label: 'Anything else I should know about how sports show up in your life — family traditions, rivalries, game-day rules?',
-    type: 'text'
-  }
-];
+interface SectionProps {
+  existingData?: Sport[];
+}
+
+const intro = ` Let’s talk about the teams and sports you follow — or play.
+Whether you're a casual fan or all-in, it helps shape how you connect with others.`; // dummy space
 
 export default function SportsSection({ existingData }: SectionProps) {
   const { user } = useUser();
   const router = useRouter();
+  const supabase = getSupabaseClient();
+
+  const [sports, setSports] = useState<Sport[]>(() =>
+    Array.isArray(existingData) ? [...existingData] : []
+  );
   const [step, setStep] = useState(-1);
   const [typing, setTyping] = useState('');
-  const [answers, setAnswers] = useState<any>(existingData || {});
+  const [showDots, setShowDots] = useState(false);
   const [saving, setSaving] = useState(false);
+  const indexRef = useRef(0);
 
-  const current = sportsQuestions[step];
-  const isComplete = step >= sportsQuestions.length;
+  const isComplete = step >= sports.length;
 
   useEffect(() => {
-    const text = step === -1
-      ? `Let’s talk sports — whether you’re a diehard, casual fan, or just here for the game-day food.\nKnowing who you root for helps me bring the right energy at the right time — or know when not to interrupt.`
-      : current?.label || '';
+    const currentTeam = sports[step]?.team;
+    const rawText =
+      step === -1
+        ? intro
+        : step < sports.length && currentTeam
+        ? ` Tell me about your connection to ${currentTeam}.`
+        : step < sports.length
+        ? ` Tell me about this team or sport.`
+        : ` That’s it for now — but you can always add more later.`; // dummy space
 
-    let i = 0;
+    indexRef.current = 0;
     setTyping('');
-    const interval = setInterval(() => {
-      setTyping((prev) => prev + text[i]);
-      i++;
-      if (i >= text.length) clearInterval(interval);
-    }, 35);
+    setShowDots(true);
 
-    return () => clearInterval(interval);
-  }, [step]);
+    const delay = setTimeout(() => {
+      setShowDots(false);
 
-  const handleChange = (e: any) => {
-    if (!current?.id) return;
-    setAnswers({ ...answers, [current.id]: e.target.value });
+      const type = () => {
+        if (indexRef.current < rawText.length) {
+          const nextChar = rawText.charAt(indexRef.current);
+          setTyping((prev) =>
+            indexRef.current === 0 && nextChar === ' '
+              ? prev
+              : prev + nextChar
+          );
+          indexRef.current++;
+          setTimeout(type, 60);
+        }
+      };
+
+      type();
+    }, 900);
+
+    return () => clearTimeout(delay);
+  }, [step, sports]);
+
+  const handleChange = <K extends keyof Sport>(
+    index: number,
+    field: K,
+    value: Sport[K]
+  ) => {
+    setSports((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
   };
 
-  const handleMultiSelect = (id: string, option: string) => {
-    const selected = Array.isArray(answers[id]) ? answers[id] : [];
-    const updated = selected.includes(option)
-      ? selected.filter((item: string) => item !== option)
-      : [...selected, option];
-    setAnswers({ ...answers, [id]: updated });
+  const addSport = () => {
+    setSports((prev) => {
+      const updated = [...prev, {}];
+      setStep(updated.length - 1);
+      return updated;
+    });
   };
 
   const handleSave = async () => {
     if (!user?.sub) return;
     setSaving(true);
-
-    const supabase = getSupabaseClient();
     await supabase
       .from('vaults_test')
-      .upsert(
-        { user_uid: user.sub, sports: answers },
-        { onConflict: 'user_uid' }
-      );
-
+      .upsert({ user_uid: user.sub, sports }, { onConflict: 'user_uid' });
     await updateFamiliarityScore(user.sub);
     router.push('/dashboard');
   };
 
   return (
     <main className="min-h-screen bg-white text-black p-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6 text-blue-700">Sports & Teams</h1>
+      <h1 className="text-2xl font-bold mb-6 text-blue-700">Teams & Sports</h1>
 
       <div className="min-h-[100px] mb-6">
-        <p className="text-base font-medium whitespace-pre-line leading-relaxed">{typing}</p>
+        {showDots ? (
+          <p className="text-base font-medium text-gray-400 animate-pulse">[ • • • ]</p>
+        ) : (
+          <p className="text-base font-medium whitespace-pre-line leading-relaxed">{typing}</p>
+        )}
       </div>
 
-      {step === -1 ? (
+      {step === -1 && (
         <button
-          onClick={() => setStep(0)}
+          onClick={addSport}
           className="px-4 py-2 bg-blue-600 text-white rounded"
         >
-          Start
+          Add a Team or Sport
         </button>
-      ) : !isComplete ? (
-        <div>
-          {current.type === 'dropdown' && (
-            <select
-              className="w-full border p-2 rounded mb-6"
-              value={answers[current.id] || ''}
-              onChange={handleChange}
-            >
-              <option value="">Select one</option>
-              {current.options?.map((opt: string) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
-          )}
+      )}
 
-          {current.type === 'tags' && current.options && (
-            <div className="mb-6 flex flex-wrap gap-2">
-              {current.options.map((opt: string) => (
-                <button
-                  key={opt}
-                  onClick={() => handleMultiSelect(current.id, opt)}
-                  className={`px-3 py-1 rounded-full text-sm border ${
-                    ((answers[current.id] as string[] | undefined) ?? []).includes(opt)
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          )}
+      {step >= 0 && step < sports.length && (
+        <div className="space-y-4">
+          <label className="block text-sm font-medium text-gray-700">Team / Sport Name</label>
+          <input
+            className="w-full border p-2 rounded"
+            placeholder="e.g. Red Sox, Tennis, etc."
+            value={sports[step].team || ''}
+            onChange={(e) => handleChange(step, 'team', e.target.value)}
+          />
 
-          {current.type === 'text' && (
-            <textarea
-              className="w-full border p-2 rounded mb-6"
-              rows={3}
-              value={answers[current.id] || ''}
-              onChange={handleChange}
-              placeholder="Type here..."
-            />
-          )}
+          <label className="block text-sm font-medium text-gray-700">League or Level</label>
+          <input
+            className="w-full border p-2 rounded"
+            placeholder="e.g. MLB, College, Youth, etc."
+            value={sports[step].league || ''}
+            onChange={(e) => handleChange(step, 'league', e.target.value)}
+          />
 
-          <div className="flex justify-between">
+          <label className="block text-sm font-medium text-gray-700">Notes</label>
+          <textarea
+            rows={3}
+            className="w-full border p-2 rounded"
+            placeholder="Any personal connection, memories, or details..."
+            value={sports[step].notes || ''}
+            onChange={(e) => handleChange(step, 'notes', e.target.value)}
+          />
+
+          <div className="flex justify-between mt-4">
             <button
               onClick={() => setStep((s) => Math.max(s - 1, 0))}
               disabled={step === 0}
@@ -172,14 +167,24 @@ export default function SportsSection({ existingData }: SectionProps) {
             </button>
           </div>
         </div>
-      ) : (
-        <button
-          onClick={handleSave}
-          className="px-6 py-2 bg-green-600 text-white rounded disabled:opacity-50"
-          disabled={saving}
-        >
-          {saving ? 'Saving...' : 'Save & Finish'}
-        </button>
+      )}
+
+      {isComplete && (
+        <div className="space-y-4">
+          <button
+            onClick={addSport}
+            className="px-4 py-2 bg-blue-500 text-white rounded"
+          >
+            Add Another
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-6 py-2 bg-green-600 text-white rounded disabled:opacity-50"
+            disabled={saving}
+          >
+            {saving ? 'Saving...' : 'Save and Continue'}
+          </button>
+        </div>
       )}
     </main>
   );
