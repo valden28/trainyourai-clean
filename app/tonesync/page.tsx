@@ -1,4 +1,4 @@
-// app/tonesync/page.tsx — Final TypeScript-safe version
+// app/tonesync/page.tsx — Type-safe and clean
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -11,7 +11,7 @@ export default function ToneSyncPage() {
   const { user, isLoading } = useUser();
   const router = useRouter();
   const supabase = getSupabaseClient();
-  const [existingData, setExistingData] = useState(null);
+  const [existingData, setExistingData] = useState<any>(null);
 
   useEffect(() => {
     if (!isLoading && !user) {
