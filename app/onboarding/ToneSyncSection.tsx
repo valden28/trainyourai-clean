@@ -43,6 +43,8 @@ const swearingOptions = [
   'Depends on context'
 ];
 
+const valueLabels = ['1', '2', '3', '4', '5'];
+
 export default function ToneSyncModule({ existingData }: SectionProps) {
   const { user } = useUser();
   const router = useRouter();
@@ -133,6 +135,9 @@ export default function ToneSyncModule({ existingData }: SectionProps) {
             onChange={(e) => handleSlider(parseInt(e.target.value))}
             className="w-full"
           />
+          <div className="text-sm text-right text-gray-600">
+            Current setting: <strong>{valueLabels[current.value - 1]}</strong>
+          </div>
           <div className="flex justify-between mt-4">
             <button
               disabled={step === 0}
