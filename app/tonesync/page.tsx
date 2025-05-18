@@ -1,4 +1,4 @@
-// app/tonesync/page.tsx
+// app/tonesync/page.tsx — Final TypeScript-safe version
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -21,10 +21,11 @@ export default function ToneSyncPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!user?.sub) return;
       const { data } = await supabase
         .from('vaults_test')
         .select('tonesync')
-        .eq('user_uid', user?.sub)
+        .eq('user_uid', user.sub)
         .single();
       setExistingData(data?.tonesync || null);
     };
