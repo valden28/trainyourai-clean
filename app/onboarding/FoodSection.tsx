@@ -1,3 +1,5 @@
+// Full FoodSection.tsx — Starts Here
+
 'use client';
 
 import { useUser } from '@auth0/nextjs-auth0/client';
@@ -27,82 +29,36 @@ const intro = `Food isn’t just fuel — it’s comfort, culture, creativity, a
 This helps me recommend meals, avoid dealbreakers, and support your preferences with more flavor.`;
 
 const questions = [
-  { key: 'diet', type: 'multi', label: 'Do you follow a specific diet or eating style?' },
-  {
-    key: 'favorites',
-    type: 'dropdown',
-    label: 'What’s your favorite kind of food?',
-    options: [
-      'Italian',
-      'Mexican',
-      'Indian',
-      'Japanese',
-      'Chinese',
-      'Thai',
-      'Mediterranean',
-      'American comfort food',
-      'BBQ',
-      'Vegan or plant-based',
-      'Seafood',
-      'Breakfast foods',
-      'Other'
-    ]
-  },
-  { key: 'avoids', type: 'text', label: 'Are there any foods or ingredients you avoid — even if not allergic?' },
-  {
-    key: 'allergies',
-    type: 'multi',
-    label: 'Any allergies or sensitivities?',
-    options: ['Nuts', 'Shellfish', 'Dairy', 'Soy', 'Eggs', 'Wheat', 'Sesame', 'Other']
-  },
-  {
-    key: 'guiltyPleasures',
-    type: 'dropdown',
-    label: 'Do you have a guilty pleasure?',
-    options: [
-      'Chocolate',
-      'Ice cream',
-      'Cheeseburgers',
-      'Pizza',
-      'Soda',
-      'Fried food',
-      'Late-night snacks',
-      'Alcohol',
-      'None of these',
-      'Other'
-    ]
-  },
-  { key: 'drinks', type: 'text', label: 'Favorite drinks or daily go-tos?' },
-  {
-    key: 'cookingStyle',
-    type: 'dropdown',
-    label: 'How do you typically eat?',
-    options: [
-      'Mostly cook for myself',
-      'Partner or family does most of the cooking',
-      'I eat out or order in a lot',
-      'Mix of everything',
-      'It depends'
-    ]
-  },
-  {
-    key: 'cookingEnjoyment',
-    type: 'dropdown',
-    label: 'Do you enjoy cooking?',
-    options: [
-      'I love it',
-      'I can hold my own',
-      'I’m still learning',
-      'Not really',
-      'I’d rather order'
-    ]
-  },
-  {
-    key: 'wantsHelp',
-    type: 'dropdown',
-    label: 'Do you want help with food ideas or planning?',
-    options: ['Yes, regularly', 'Occasionally', 'Only if I ask', 'No thanks']
-  }
+  { key: 'diet', type: 'multi', label: 'Do you follow a specific diet or eating style?', options: [
+    'Vegan', 'Vegetarian', 'Gluten-Free', 'Dairy-Free', 'Low-Carb',
+    'Keto', 'Paleo', 'Mediterranean', 'Intermittent Fasting',
+    'No Restrictions', 'Other'
+  ]},
+  { key: 'favorites', type: 'dropdown', label: 'What’s your favorite kind of food?', options: [
+    'Italian', 'Mexican', 'Indian', 'Japanese', 'Chinese',
+    'Thai', 'Mediterranean', 'American comfort food', 'BBQ',
+    'Vegan or plant-based', 'Seafood', 'Breakfast foods', 'Other'
+  ]},
+  { key: 'avoids', label: 'Are there any foods or ingredients you avoid — even if not allergic?' },
+  { key: 'allergies', type: 'multi', label: 'Any allergies or sensitivities?', options: [
+    'Nuts', 'Shellfish', 'Dairy', 'Soy', 'Eggs', 'Wheat', 'Sesame', 'Other'
+  ]},
+  { key: 'guiltyPleasures', type: 'dropdown', label: 'Do you have a guilty pleasure?', options: [
+    'Chocolate', 'Ice cream', 'Cheeseburgers', 'Pizza', 'Soda',
+    'Fried food', 'Late-night snacks', 'Alcohol', 'None of these', 'Other'
+  ]},
+  { key: 'drinks', label: 'Favorite drinks or daily go-tos?' },
+  { key: 'cookingStyle', type: 'dropdown', label: 'How do you typically eat?', options: [
+    'Mostly cook for myself', 'Partner or family does most of the cooking',
+    'I eat out or order in a lot', 'Mix of everything', 'It depends'
+  ]},
+  { key: 'cookingEnjoyment', type: 'dropdown', label: 'Do you enjoy cooking?', options: [
+    'I love it', 'I can hold my own', 'I’m still learning',
+    'Not really', 'I’d rather order'
+  ]},
+  { key: 'wantsHelp', type: 'dropdown', label: 'Do you want help with food ideas or planning?', options: [
+    'Yes, regularly', 'Occasionally', 'Only if I ask', 'No thanks'
+  ]}
 ];
 
 export default function FoodSection({ existingData }: SectionProps) {
@@ -180,7 +136,7 @@ export default function FoodSection({ existingData }: SectionProps) {
       {step < questions.length ? (
         <div className="space-y-4">
           <label className="block text-sm font-medium text-gray-700">{current.label}</label>
-          {current.type === 'multi' ? (
+          {'options' in current && current.type === 'multi' ? (
             <div className="flex flex-wrap gap-2">
               {current.options!.map((option) => (
                 <button
