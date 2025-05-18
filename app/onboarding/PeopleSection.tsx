@@ -29,7 +29,9 @@ export default function PeopleSection({ existingData }: SectionProps) {
   const router = useRouter();
   const supabase = getSupabaseClient();
 
-  const [people, setPeople] = useState<Person[]>(() => Array.isArray(existingData) ? [...existingData] : []);
+  const [people, setPeople] = useState<Person[]>(() =>
+    Array.isArray(existingData) ? [...existingData] : []
+  );
   const [step, setStep] = useState(-1);
   const [typing, setTyping] = useState('');
   const [showDots, setShowDots] = useState(false);
@@ -40,54 +42,41 @@ export default function PeopleSection({ existingData }: SectionProps) {
 
   useEffect(() => {
     const currentName = people[step]?.name;
-    const text = step === -1
-      ? intro
-      : step < people.length && currentName && currentName.length > 0
+    const text =
+      step === -1
+        ? intro
+        : step < people.length && currentName && currentName.length > 0
         ? `Tell me about ${currentName}.`
         : step < people.length
-          ? `Tell me about this person.`
-          : 'That’s everyone for now. You can always add more later.';
-  
+        ? `Tell me about this person.`
+        : `That’s everyone for now. You can always add more later.`;
+
     indexRef.current = 0;
     setTyping('');
     setShowDots(true);
-  
+
     const delay = setTimeout(() => {
       setShowDots(false);
-  
+
       const type = () => {
         if (indexRef.current < text.length) {
           setTyping((prev) => prev + text.charAt(indexRef.current));
           indexRef.current++;
-          setTimeout(type, 60); // Same speed, but controlled
+          setTimeout(type, 60);
         }
       };
-  
+
       type();
     }, 900);
-  
-    return () => clearTimeout(delay);
-  }, [step, people]);
-    indexRef.current = 0;
-    setTyping('');
-    setShowDots(true);
-
-    const delay = setTimeout(() => {
-      setShowDots(false);
-      const interval = setInterval(() => {
-        if (indexRef.current < text.length) {
-          setTyping((prev) => prev + text[indexRef.current]);
-          indexRef.current++;
-        } else {
-          clearInterval(interval);
-        }
-      }, 60);
-    }, 900);
 
     return () => clearTimeout(delay);
   }, [step, people]);
 
-  const handleChange = <K extends keyof Person>(index: number, field: K, value: Person[K]) => {
+  const handleChange = <K extends keyof Person>(
+    index: number,
+    field: K,
+    value: Person[K]
+  ) => {
     setPeople((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -264,5 +253,4 @@ export default function PeopleSection({ existingData }: SectionProps) {
       )}
     </main>
   );
-
 }
