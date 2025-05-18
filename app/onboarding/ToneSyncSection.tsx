@@ -2,7 +2,7 @@
 
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSupabaseClient } from '@/utils/supabaseClient';
 import { updateFamiliarityScore } from '@/utils/familiarity';
 
@@ -34,11 +34,11 @@ This helps me reflect your personality, tone, and — if you want — a regional
 const defaultPreferences = [
   { label: 'Formality', scale: 'Formal ←→ Casual', value: 3 },
   { label: 'Depth', scale: 'Surface-level ←→ Deep & thoughtful', value: 3 },
-  { label: 'Warmth', scale: 'Cool / professional ←→ Friendly / empathetic', value: 3 },
-  { label: 'Brevity', scale: 'Short & direct ←→ Longer & more detailed', value: 3 },
-  { label: 'Playfulness', scale: 'Serious ←→ Playful / witty', value: 3 },
-  { label: 'Encouragement', scale: 'Chill ←→ Motivating / hype me up', value: 3 },
-  { label: 'Language Style', scale: 'Clean / professional ←→ Slang / relaxed', value: 3 }
+  { label: 'Warmth', scale: 'Cool ←→ Friendly', value: 3 },
+  { label: 'Brevity', scale: 'Short ←→ Detailed', value: 3 },
+  { label: 'Playfulness', scale: 'Serious ←→ Witty', value: 3 },
+  { label: 'Encouragement', scale: 'Chill ←→ Hype me up', value: 3 },
+  { label: 'Language Style', scale: 'Clean ←→ Slang', value: 3 }
 ];
 
 const swearingOptions = [
@@ -63,22 +63,29 @@ const regionOptions = [
   'South African'
 ];
 
-const sliderLabels = ['1', '2', '3', '4', '5'];
+const defaultRegionalSliders: RegionalSliders = {
+  language: 3,
+  culture: 3,
+  food: 3,
+  socialTone: 3
+};
 
-export default function ToneSyncSection() {
+export default function ToneSyncSection({ existingData }: { existingData?: ToneSyncData }) {
   const { user } = useUser();
   const router = useRouter();
   const supabase = getSupabaseClient();
 
-  const [form, setForm] = useState<ToneSyncData>({
-    preferences: defaultPreferences,
-    swearing: '',
-    regionalFeel: {
-      region: '',
-      autoDetect: false,
-      sliders: { language: 3, culture: 3, food: 3, socialTone: 3 }
+  const [form, setForm] = useState<ToneSyncData>(
+    existingData ?? {
+      preferences: defaultPreferences,
+      swearing: '',
+      regionalFeel: {
+        region: '',
+        autoDetect: false,
+        sliders: defaultRegionalSliders
+      }
     }
-  });
+  );
 
   const [step, setStep] = useState(0);
   const [typing, setTyping] = useState('');
@@ -121,17 +128,28 @@ export default function ToneSyncSection() {
   const handleSave = async () => {
     if (!user?.sub) return;
     setSaving(true);
-    await supabase
-      .from('vaults_test')
-      .upsert(
-        {
-          user_uid: user.sub,
-          tonesync: form
-        },
-        { onConflict: 'user_uid' }
-      );
+    await supabase.from('vaults_test').upsert(
+      {
+        user_uid: user.sub,
+        tonesync: form
+      },
+      { onConflict: 'user_uid' }
+    );
     await updateFamiliarityScore(user.sub);
     router.push('/dashboard');
+  };
+
+  const updateRegionalSlider = (key: keyof RegionalSliders, value: number) => {
+    setForm((prev) => ({
+      ...prev,
+      regionalFeel: {
+        ...prev.regionalFeel,
+        sliders: {
+          ...(prev.regionalFeel?.sliders ?? defaultRegionalSliders),
+          [key]: value
+        }
+      }
+    }));
   };
 
   return (
@@ -156,12 +174,9 @@ export default function ToneSyncSection() {
             max={5}
             step={1}
             value={current.value}
-            onChange={(e) => handleSliderChange(parseInt(e.target.value))}
+            onChange={(e) => handleSliderChange(Number(e.target.value))}
             className="w-full"
           />
-          <div className="text-sm text-right text-gray-600 italic">
-            Current: {sliderLabels[current.value - 1]}
-          </div>
           <div className="flex justify-between mt-4">
             <button
               disabled={step === 0}
@@ -181,13 +196,11 @@ export default function ToneSyncSection() {
       ) : (
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Comfort with swearing</label>
+            <label className="block text-sm font-medium text-gray-700">Comfort with Swearing</label>
             <select
               className="w-full border p-2 rounded mt-1"
               value={form.swearing || ''}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, swearing: e.target.value }))
-              }
+              onChange={(e) => setForm((prev) => ({ ...prev, swearing: e.target.value }))}
             >
               <option value="">Select one</option>
               {swearingOptions.map((opt) => (
@@ -198,9 +211,9 @@ export default function ToneSyncSection() {
 
           <hr className="border-gray-300" />
 
-          <h2 className="text-lg font-semibold text-gray-800">Regional Feel & Context</h2>
+          <h2 className="text-lg font-semibold text-gray-800">Regional Feel & Dialect</h2>
 
-          <label className="block text-sm font-medium text-gray-700">Pick a region</label>
+          <label className="block text-sm font-medium text-gray-700">Pick a Region</label>
           <select
             className="w-full border p-2 rounded"
             value={form.regionalFeel?.region || ''}
@@ -210,74 +223,67 @@ export default function ToneSyncSection() {
                 regionalFeel: {
                   ...prev.regionalFeel,
                   region: e.target.value,
-                  // Ensure sliders is defined:
-                  sliders: prev.regionalFeel?.sliders || { language: 3, culture: 3, food: 3, socialTone: 3 }
+                  sliders: prev.regionalFeel?.sliders || defaultRegionalSliders
                 }
               }))
             }
           >
-            <option value="">Select one</option>
+            <option value="">No regional tone (default)</option>
             {regionOptions.map((region) => (
               <option key={region}>{region}</option>
             ))}
           </select>
 
-          <div className="flex items-center gap-2 mt-4">
-            <input
-              type="checkbox"
-              checked={form.regionalFeel?.autoDetect || false}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  regionalFeel: {
-                    ...prev.regionalFeel,
-                    autoDetect: e.target.checked,
-                    sliders: prev.regionalFeel?.sliders || { language: 3, culture: 3, food: 3, socialTone: 3 }
-                  }
-                }))
-              }
-            />
-            <label className="text-sm font-medium text-gray-700">
-              Auto-detect my region (coming soon)
-            </label>
-          </div>
+          {form.regionalFeel?.region && (
+            <>
+              {(['language', 'culture', 'food', 'socialTone'] as (keyof RegionalSliders)[]).map((key) => (
+                <div key={key} className="mt-4">
+                  <label className="text-sm font-medium text-gray-700 capitalize">
+                    {key} influence
+                  </label>
+                  <input
+                    type="range"
+                    min={1}
+                    max={5}
+                    step={1}
+                    value={form.regionalFeel?.sliders?.[key] ?? 3}
+                    onChange={(e) => updateRegionalSlider(key, Number(e.target.value))}
+                    className="w-full"
+                  />
+                  <div className="text-sm text-right text-gray-600 italic">
+                    Level: {form.regionalFeel?.sliders?.[key] ?? 3}
+                  </div>
+                </div>
+              ))}
 
-          {['language', 'culture', 'food', 'socialTone'].map((key) => (
-            <div key={key} className="mt-6">
-              <label className="block text-sm font-medium text-gray-700 capitalize">
-                {key === 'socialTone' ? 'Social tone' : key} influence
-              </label>
-              <input
-                type="range"
-                min={1}
-                max={5}
-                value={form.regionalFeel?.sliders[key as keyof RegionalSliders] || 3}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    regionalFeel: {
-                      ...prev.regionalFeel,
-                      sliders: {
-                        ...prev.regionalFeel?.sliders,
-                        [key]: parseInt(e.target.value)
+              <div className="mt-4 flex items-center">
+                <input
+                  type="checkbox"
+                  className="mr-2"
+                  checked={form.regionalFeel.autoDetect || false}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      regionalFeel: {
+                        ...prev.regionalFeel,
+                        autoDetect: e.target.checked
                       }
-                    }
-                  }))
-                }
-                className="w-full"
-              />
-              <div className="text-sm text-right text-gray-600 italic">
-                Level: {form.regionalFeel?.sliders[key as keyof RegionalSliders]}
+                    }))
+                  }
+                />
+                <label className="text-sm font-medium text-gray-700">
+                  Auto-detect region (coming soon)
+                </label>
               </div>
-            </div>
-          ))}
+            </>
+          )}
 
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full mt-6 bg-green-600 text-white py-2 px-4 rounded disabled:opacity-50"
+            className="w-full bg-green-600 text-white py-2 px-4 rounded disabled:opacity-50 mt-6"
           >
-            {saving ? 'Saving...' : 'Save Tone Preferences'}
+            {saving ? 'Saving...' : 'Save and Continue'}
           </button>
         </div>
       )}
