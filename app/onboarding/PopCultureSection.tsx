@@ -2,18 +2,17 @@
 
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSupabaseClient } from '@/utils/supabaseClient';
 import { updateFamiliarityScore } from '@/utils/familiarity';
 
 interface PopCultureData {
-  favoriteMovie?: string;
-  favoriteTV?: string;
-  favoriteMusic?: string;
-  favoriteBook?: string;
-  favoriteCelebrity?: string;
-  culturalTouchstone?: string;
-  toneInfluence?: string;
+  favorites?: string;
+  music?: string[];
+  artists?: string;
+  media?: string;
+  genres?: string[];
+  influencers?: string;
   narrative?: string;
 }
 
@@ -21,16 +20,17 @@ interface SectionProps {
   existingData?: PopCultureData;
 }
 
-const intro = ` Let’s talk about your taste in entertainment, music, and pop culture. These preferences shape how you think, express yourself, and connect with the world.`;
+const intro = `Let’s make space for fun — the shows you binge, the music you blast, the books or podcasts you return to.
+This helps me understand your taste, make better recs, and reference things that feel familiar or meaningful to you.`;
 
-const questions = [
-  { key: 'favoriteMovie', label: 'What’s a movie you love or always recommend?' },
-  { key: 'favoriteTV', label: 'Do you have a favorite show or series you always come back to?' },
-  { key: 'favoriteMusic', label: 'Who are your favorite artists or go-to music genres?' },
-  { key: 'favoriteBook', label: 'Is there a book or author that shaped you or stuck with you?' },
-  { key: 'favoriteCelebrity', label: 'Are there any public figures, actors, or creators you admire?' },
-  { key: 'culturalTouchstone', label: 'Is there a piece of pop culture that defined a chapter of your life?' },
-  { key: 'toneInfluence', label: 'Does any of this influence the way you speak, joke, or tell stories?' }
+const genreTags = [
+  'Comedy', 'Drama', 'Thriller', 'Sci-Fi', 'Romance', 'Mystery',
+  'Action', 'True Crime', 'Documentary', 'Reality', 'Coming-of-age', 'Fantasy', 'Biographical', 'Other'
+];
+
+const musicGenres = [
+  'Pop', 'Hip-Hop / Rap', 'Rock', 'R&B / Soul', 'Country',
+  'Jazz', 'Classical', 'Electronic / EDM', 'Alternative', 'Indie', 'Worship / Spiritual', 'Other'
 ];
 
 export default function PopCultureSection({ existingData }: SectionProps) {
@@ -38,14 +38,23 @@ export default function PopCultureSection({ existingData }: SectionProps) {
   const router = useRouter();
   const supabase = getSupabaseClient();
 
-  const [formData, setFormData] = useState<PopCultureData>(existingData || {});
+  const [form, setForm] = useState<PopCultureData>(existingData || {});
   const [step, setStep] = useState(0);
   const [typing, setTyping] = useState('');
   const [showDots, setShowDots] = useState(false);
   const [saving, setSaving] = useState(false);
   const indexRef = useRef(0);
 
-  const currentQuestion = questions[step];
+  const questions = [
+    { key: 'favorites', label: 'What are some of your all-time favorite shows, movies, or series?' },
+    { key: 'music', label: 'What kind of music do you enjoy?', type: 'multi', options: musicGenres },
+    { key: 'artists', label: 'Any specific artists or bands you love?' },
+    { key: 'media', label: 'Do you read or listen to anything regularly? (Books, podcasts, newsletters, etc.)' },
+    { key: 'genres', label: 'What genres or themes usually draw you in?', type: 'multi', options: genreTags },
+    { key: 'influencers', label: 'Any creators, celebrities, or personalities you follow or admire?' }
+  ];
+
+  const current = questions[step];
 
   useEffect(() => {
     const rawText = intro;
@@ -69,16 +78,30 @@ export default function PopCultureSection({ existingData }: SectionProps) {
     return () => clearTimeout(delay);
   }, []);
 
-  const handleChange = (key: keyof PopCultureData, value: string) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
+  const handleMultiSelect = (key: keyof PopCultureData, option: string) => {
+    setForm((prev) => {
+      const currentVal = prev[key] as string[] | undefined;
+      const next = currentVal?.includes(option)
+        ? currentVal.filter((o) => o !== option)
+        : [...(currentVal || []), option];
+      return { ...prev, [key]: next };
+    });
+  };
+
+  const handleChange = <K extends keyof PopCultureData>(key: K, value: PopCultureData[K]) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleSave = async () => {
     if (!user?.sub) return;
     setSaving(true);
-    await supabase
-      .from('vaults_test')
-      .upsert({ user_uid: user.sub, popculture: formData }, { onConflict: 'user_uid' });
+    await supabase.from('vaults_test').upsert(
+      {
+        user_uid: user.sub,
+        popculture: form
+      },
+      { onConflict: 'user_uid' }
+    );
     await updateFamiliarityScore(user.sub);
     router.push('/dashboard');
   };
@@ -86,9 +109,6 @@ export default function PopCultureSection({ existingData }: SectionProps) {
   return (
     <main className="min-h-screen bg-white text-black p-6 max-w-xl mx-auto">
       <h1 className="text-2xl font-bold mb-2 text-blue-700">Pop Culture & Personal Taste</h1>
-      <p className="text-sm text-gray-600 mb-6">
-        Your cultural preferences shape how you speak, what resonates with you, and how you relate to others. It also helps your assistant reference things that feel familiar to you.
-      </p>
 
       <div className="min-h-[100px] mb-6">
         {typing ? (
@@ -100,15 +120,33 @@ export default function PopCultureSection({ existingData }: SectionProps) {
 
       {step < questions.length ? (
         <div className="space-y-4">
-          <label className="block text-sm font-medium text-gray-700">
-            {currentQuestion.label}
-          </label>
-          <textarea
-            rows={3}
-            className="w-full border p-2 rounded"
-            value={formData[currentQuestion.key as keyof PopCultureData] || ''}
-            onChange={(e) => handleChange(currentQuestion.key as keyof PopCultureData, e.target.value)}
-          />
+          <label className="block text-sm font-medium text-gray-700">{current.label}</label>
+          {'options' in current && current.type === 'multi' ? (
+            <div className="flex flex-wrap gap-2">
+              {current.options!.map((option) => (
+                <button
+                  key={option}
+                  onClick={() => handleMultiSelect(current.key as keyof PopCultureData, option)}
+                  className={`px-3 py-1 rounded border ${
+                    (form[current.key as keyof PopCultureData] as string[])?.includes(option)
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-black border-gray-300'
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <textarea
+              rows={3}
+              className="w-full border p-2 rounded"
+              value={form[current.key as keyof PopCultureData] || ''}
+              onChange={(e) =>
+                handleChange(current.key as keyof PopCultureData, e.target.value)
+              }
+            />
+          )}
           <div className="flex justify-between mt-4">
             <button
               disabled={step === 0}
@@ -128,12 +166,12 @@ export default function PopCultureSection({ existingData }: SectionProps) {
       ) : (
         <div className="space-y-4">
           <label className="block text-sm font-medium text-gray-700">
-            Anything else that helps explain your taste, style, or what shaped you?
+            Any final thoughts on your taste, style, or what shaped you culturally?
           </label>
           <textarea
             rows={4}
             className="w-full border p-2 rounded"
-            value={formData.narrative || ''}
+            value={form.narrative || ''}
             onChange={(e) => handleChange('narrative', e.target.value)}
           />
 
