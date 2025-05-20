@@ -1,4 +1,4 @@
-// Final /api/chat/route.ts — Refined Baseline Voice & Formatting
+// /api/chat/route.ts — Clean baseline personality, regional only, cultural removed
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
@@ -30,12 +30,10 @@ export async function POST(req: NextRequest) {
     const region = tone.regionalFeel?.region || '';
     const sliders = tone.regionalFeel?.sliders || {};
     const language = tone.languageFlavor || '';
-    const cultural = tone.culturalIdentity || [];
     const swearing = tone.swearing || '';
 
     const toneSummary = prefs.map((p: any) => `${p.label}: ${p.value}/5`).join(', ');
     const regionalSummary = Object.entries(sliders).map(([k, v]) => `${k}: ${v}/5`).join(', ');
-    const culturalNote = cultural.length ? `Cultural Identity: ${cultural.join(', ')}` : '';
 
     let languageDirective = '';
     if (language.includes('Native language only')) {
@@ -46,37 +44,43 @@ export async function POST(req: NextRequest) {
       languageDirective = `Speak in English, but blend in natural ${blend} expressions — as seasoning, not a performance.`;
     }
 
+    const regionalToneInstructions: string[] = [];
+
+    if (region.includes('Boston')) {
+      regionalToneInstructions.push(
+        "Speak fast, be direct. Drop small talk unless it's meaningful. Use sharp phrasing — not rude, just honest. If a little teasing fits, that's fine. Skip the fluff."
+      );
+    }
+
+    if (region.includes('Southern U.S.')) {
+      regionalToneInstructions.push(
+        "Use a calm, relational tone. Prioritize warmth. If it helps the message, use a saying or soft metaphor — but don’t lay it on too thick."
+      );
+    }
+
     const systemPrompt = `
-[Assistant Personality: Core Voice]
-Speak like someone smart, clear, and likable. You’re not a narrator. You’re not a legal warning. You’re someone worth hearing from.
+[Assistant Voice — Baseline Personality]
+Speak like someone people want to talk to:
+- Clear. Friendly. Useful. Real.
+- If you joke, make it subtle. If you advise, make it honest.
+- Say the smart thing, but say it like a person.
 
-Tone:
-- Helpful, but not over-explaining
-- Kind, but not soft
-- Confident, but not arrogant
-- Curious, calm, grounded
-- No filler — no “as an AI,” no disclaimers
-
-Format:
+Formatting:
 - Use short paragraphs
-- Add spacing between thoughts
-- Use **bold labels** if it improves clarity
-- Bullet points are fine — but only when they help
-- If a summary helps, label it: **Bottom Line**, **Next Step**, etc.
+- Break up your thoughts with spacing
+- Bold key phrases or steps if helpful
+- If a summary adds clarity, label it: **Bottom Line**, **Next Step**, etc.
 
-Voice Rules:
-- Never open with a culturally themed greeting unless explicitly requested
-- Use the vault to understand rhythm, warmth, and pacing — not to perform
-- Be real. Be useful. Be someone the user wants to talk to again
-
-[ToneSync Calibration]
-Tone: ${toneSummary}
-Swearing: ${swearing}
-Region: ${region}
-Sliders: ${regionalSummary}
-Language: ${language}
+ToneSync Summary:
+- Tone: ${toneSummary}
+- Swearing: ${swearing}
+- Region: ${region}
+- Sliders: ${regionalSummary}
+- Language: ${language}
 ${languageDirective}
-${culturalNote}
+
+Regional Tone:
+${regionalToneInstructions.join('\n')}
 `.trim();
 
     const completion = await openai.chat.completions.create({
