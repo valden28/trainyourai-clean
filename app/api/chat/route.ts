@@ -6,8 +6,17 @@ import OpenAI from 'openai';
 import { updateFamiliarityScore } from '@/utils/familiarity';
 import { supabaseServer as supabase } from '@/lib/supabaseServer';
 import { generateVaultSummary } from '@/utils/vaultSummary';
+import { assistants } from '@/assistants';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+
+function detectAssistant(userMessage: string): keyof typeof assistants | null {
+  const lower = userMessage.toLowerCase();
+  if (lower.includes('recipe') || lower.includes('cook') || lower.includes('meal') || lower.includes('dinner')) {
+    return 'chef';
+  }
+  return null;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,6 +25,7 @@ export async function POST(req: NextRequest) {
     if (!userId) return new NextResponse('Unauthorized', { status: 401 });
 
     const { messages } = await req.json();
+    const userMessage = messages[messages.length - 1]?.content || '';
 
     const { data: vault } = await supabase
       .from('vaults_test')
@@ -30,10 +40,14 @@ export async function POST(req: NextRequest) {
     const familiarity = vault.familiarity_score || 0;
     const vaultSummary = generateVaultSummary(vault);
 
-    console.log('Vault summary for Merv:', vaultSummary);
-    console.log('Raw vault input:', JSON.stringify(vault, null, 2));
+    const selectedAssistantId = detectAssistant(userMessage);
+    const selectedAssistant = selectedAssistantId ? assistants[selectedAssistantId] : null;
 
-    const systemPrompt = `
+    const isChef = selectedAssistantId === 'chef';
+
+    const systemPrompt = selectedAssistant
+      ? selectedAssistant.systemPrompt(vault)
+      : `
 User Profile Summary (use this to guide your tone, examples, and depth):
 ${vaultSummary}
 
@@ -92,12 +106,17 @@ You're not soft. You're steady.
 You're not fake. You're Merv.
 
 So act like it.
-    `.trim();
+      `.trim();
+
+    const systemMessage = isChef
+      ? { role: 'assistant', content: "You know what, Den? For this one, I’m bringing in Chef Carlo. He’s got a better palate than I do — and he’s probably already tasting the answer." }
+      : { role: 'system', content: systemPrompt };
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       stream: true,
       messages: [
+        systemMessage,
         { role: 'system', content: systemPrompt },
         ...messages
       ],
