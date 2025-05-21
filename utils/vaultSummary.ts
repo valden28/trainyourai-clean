@@ -3,9 +3,9 @@
 export function generateVaultSummary(vault: any): string {
     if (!vault) return '';
   
-    const name = vault.identity?.fullName || 'the user';
+    const name = vault.identity?.fullName || 'User';
     const nickname = vault.identity?.nickname || '';
-    const location = vault.identity?.currentLocation || vault.identity?.hometown || '';
+    const location = vault.identity?.currentLocation || vault.identity?.location || vault.identity?.hometown || '';
     const values = vault.beliefs?.values?.join(', ') || '';
     const tone = vault.preferences?.tonePreferences?.join(', ') || '';
     const people = vault.people?.map((p: any) => p.name).join(', ') || '';
