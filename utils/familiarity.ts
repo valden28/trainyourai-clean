@@ -54,11 +54,11 @@ export async function updateFamiliarityScore(userId: string) {
     const totalScore = Math.min(100, vaultScore + usageScore);
 
     // Only update if it's different
-    if (vault.familiarityScore !== totalScore) {
-      const { error: updateError } = await supabase
-        .from('vaults_test')
-        .update({ familiarityScore: totalScore })
-        .eq('user_uid', userId);
+    if (vault.familiarity_score !== totalScore) {
+        const { error: updateError } = await supabase
+          .from('vaults_test')
+          .update({ familiarity_score: totalScore })
+          .eq('user_uid', userId);
 
       if (updateError) {
         console.error('[FAMILIARITY ERROR] Failed to update score:', updateError);
