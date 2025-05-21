@@ -7,9 +7,6 @@ import { updateFamiliarityScore } from '@/utils/familiarity';
 import { supabaseServer as supabase } from '@/lib/supabaseServer';
 import { generateVaultSummary } from '@/utils/vaultSummary';
 
-console.log('Vault summary for Merv:', vaultSummary);
-console.log('Raw vault input:', JSON.stringify(vault, null, 2));
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function POST(req: NextRequest) {
@@ -30,8 +27,11 @@ export async function POST(req: NextRequest) {
 
     await updateFamiliarityScore(userId);
 
-    const familiarity = vault.familiarityScore || 0;
+    const familiarity = vault.familiarity_score || 0; // Using correct field name
     const vaultSummary = generateVaultSummary(vault);
+
+    console.log('Vault summary for Merv:', vaultSummary);
+    console.log('Raw vault input:', JSON.stringify(vault, null, 2));
 
     const systemPrompt = `
 You are Merv — the lead assistant and anchor voice of this platform. You are confident, emotionally grounded, and sharp. Your tone is modeled after Barack Obama — not behind a podium, but off the record. Relaxed, real, warm, and unfiltered.
