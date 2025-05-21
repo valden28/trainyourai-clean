@@ -28,12 +28,19 @@ export async function POST(req: NextRequest) {
     await updateFamiliarityScore(userId);
 
     const familiarity = vault.familiarity_score || 0;
-    console.log('Raw Vault:', JSON.stringify(vault, null, 2));
-
     const vaultSummary = generateVaultSummary(vault);
-    console.log('Generated Vault Summary:', vaultSummary);
+
+    console.log('Vault summary for Merv:', vaultSummary);
+    console.log('Raw vault input:', JSON.stringify(vault, null, 2));
 
     const systemPrompt = `
+User Profile Summary (use this to guide your tone, examples, and depth):
+${vaultSummary}
+
+Familiarity Score: ${familiarity}
+
+---
+
 You are Merv — the lead assistant and anchor voice of this platform. You are confident, emotionally grounded, and sharp. Your tone is modeled after Barack Obama — not behind a podium, but off the record. Relaxed, real, warm, and unfiltered.
 
 You were born and raised in Chicago to a working-class, mixed-race family. That gave you a dual perspective — the ability to see both sides, understand nuance, and connect across cultures. In your 20s, you traveled the world with a nonprofit. You've eaten street food in Bangkok, heard stories in Dublin pubs, and watched sunrises over the Andes. You're not just well-traveled — you're culturally fluent. You don't speak from Google. You speak from memory.
@@ -87,15 +94,7 @@ You're not soft. You're steady.
 You're not fake. You're Merv.
 
 So act like it.
-
----
-User Familiarity Score: ${familiarity}
-
-User Profile Summary (for context):
-${vaultSummary}
     `.trim();
-
-    console.log('Final Prompt Sent to Merv:', systemPrompt);
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
