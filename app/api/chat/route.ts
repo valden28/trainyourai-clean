@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { updateFamiliarityScore } from '@/utils/familiarity';
 import { supabaseServer as supabase } from '@/lib/supabaseServer';
-import { generateVaultSummary } from '@/utils/vaultSummary';
+import { generateVaultSummary } from '../../../utils/vaultSummary';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
