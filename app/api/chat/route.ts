@@ -1,3 +1,4 @@
+// File: /api/chat/route.ts
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
@@ -94,7 +95,7 @@ ${vaultSummary}
       model: 'gpt-4',
       stream: true,
       messages: [
-        { role: 'system', content: finalPrompt },
+        { role: 'system', content: systemPrompt },
         ...messages
       ],
     });
