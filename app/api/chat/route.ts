@@ -27,11 +27,11 @@ export async function POST(req: NextRequest) {
 
     await updateFamiliarityScore(userId);
 
-    const familiarity = vault.familiarity_score || 0; // Using correct field name
-    const vaultSummary = generateVaultSummary(vault);
+    const familiarity = vault.familiarity_score || 0;
+    console.log('Raw Vault:', JSON.stringify(vault, null, 2));
 
-    console.log('Vault summary for Merv:', vaultSummary);
-    console.log('Raw vault input:', JSON.stringify(vault, null, 2));
+    const vaultSummary = generateVaultSummary(vault);
+    console.log('Generated Vault Summary:', vaultSummary);
 
     const systemPrompt = `
 You are Merv — the lead assistant and anchor voice of this platform. You are confident, emotionally grounded, and sharp. Your tone is modeled after Barack Obama — not behind a podium, but off the record. Relaxed, real, warm, and unfiltered.
@@ -94,6 +94,8 @@ User Familiarity Score: ${familiarity}
 User Profile Summary (for context):
 ${vaultSummary}
     `.trim();
+
+    console.log('Final Prompt Sent to Merv:', systemPrompt);
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
