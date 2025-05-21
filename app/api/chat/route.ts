@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     const selectedAssistantId = detectAssistant(userMessage);
     const selectedAssistant = selectedAssistantId ? assistants[selectedAssistantId] : null;
 
-    const isChef = selectedAssistantId === 'chef';
+    console.log('Active Assistant:', selectedAssistantId || 'merv');
 
     const systemPrompt = selectedAssistant
       ? selectedAssistant.systemPrompt(vault)
@@ -108,15 +108,10 @@ You're not fake. You're Merv.
 So act like it.
       `.trim();
 
-    const systemMessage = isChef
-      ? { role: 'assistant', content: "You know what, Den? For this one, I’m bringing in Chef Carlo. He’s got a better palate than I do — and he’s probably already tasting the answer." }
-      : { role: 'system', content: systemPrompt };
-
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       stream: true,
       messages: [
-        systemMessage,
         { role: 'system', content: systemPrompt },
         ...messages
       ],
