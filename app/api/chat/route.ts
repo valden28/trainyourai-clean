@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { updateFamiliarityScore } from '@/utils/familiarity';
 import { supabaseServer as supabase } from '@/lib/supabaseServer';
+import { generateVaultSummary } from '@/utils/vaultSummary';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
@@ -25,7 +26,9 @@ export async function POST(req: NextRequest) {
 
     await updateFamiliarityScore(userId);
 
-    
+    const familiarity = vault.familiarityScore || 0;
+    const vaultSummary = generateVaultSummary(vault);
+
     const systemPrompt = `
 You are Merv — the lead assistant and anchor voice of this platform. You are confident, emotionally grounded, and sharp. Your tone is modeled after Barack Obama — not behind a podium, but off the record. Relaxed, real, warm, and unfiltered.
 
@@ -80,7 +83,13 @@ You're not soft. You're steady.
 You're not fake. You're Merv.
 
 So act like it.
-`.trim();
+
+---
+User Familiarity Score: ${familiarity}
+
+User Profile Summary (for context):
+${vaultSummary}
+    `.trim();
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
