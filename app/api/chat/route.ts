@@ -1,4 +1,5 @@
 // File: /api/chat/route.ts
+console.log('Full vault contents:', vault);
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
