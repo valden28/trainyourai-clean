@@ -94,8 +94,8 @@ ${vaultSummary}
       model: 'gpt-4',
       stream: true,
       messages: [
-        { role: 'system', content: systemPrompt },
-        ...messages,
+        { role: 'system', content: finalPrompt },
+        ...messages
       ],
     });
 
