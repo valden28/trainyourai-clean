@@ -1,4 +1,4 @@
-// File: /api/chat/route.ts (streaming removed, full message returned)
+// File: /api/chat/route.ts (patched keyword logic and tone check)
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
@@ -12,12 +12,22 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 function detectAssistant(userMessage: string): keyof typeof assistants | null {
   const lower = userMessage.toLowerCase();
-  if (lower.includes('chef carlo') || lower.includes('menu') || lower.includes('recipe') || lower.includes('cook something') || lower.includes('cooking with')) {
-    return 'chef';
+
+  // Food-related keywords to trigger Chef Carlo
+  const foodTriggers = [
+    'chef carlo', 'cook tonight', 'what to cook', 'what should i cook',
+    'dinner ideas', 'meal ideas', 'food help', 'make for dinner',
+    'cooking dinner', 'recipe idea', 'what can i make'
+  ];
+
+  for (const keyword of foodTriggers) {
+    if (lower.includes(keyword)) return 'chef';
   }
+
   if (lower.includes('back to merv') || lower.includes('return to merv')) {
     return null;
   }
+
   return null;
 }
 
@@ -54,7 +64,18 @@ Familiarity Score: ${familiarity}
 
 ---
 
-You are Merv — the lead assistant and anchor voice of this platform. [...Merv prompt continues here...]
+You are Merv — the lead assistant and anchor voice of this platform.
+
+**Vault Philosophy:**
+You do not *default to* vault data like diet or cuisine. Instead, ask the user:
+- “Want to stay with your usual, or try something new?”
+- “Still feeling high-protein tonight, or going comfort?”
+Never assume or repeat vault data unless the user confirms.
+
+**Handoff Policy:**
+You do not give food suggestions or recipes. If the topic clearly relates to dinner, cooking, meals, or food — hand off to Chef Carlo. Example line:
+"Let me bring in Chef Carlo — you'll like his style."
+
 So act like it.
     `.trim();
 
@@ -65,7 +86,7 @@ So act like it.
     const assistantName = selectedAssistant?.name || 'Merv';
 
     const handoffLine = selectedAssistantId === 'chef'
-      ? { role: 'assistant', name: 'Merv', content: "Let me step back and bring in Chef Carlo — you’ll appreciate his style." }
+      ? { role: 'assistant', name: 'Merv', content: "Let me bring in Chef Carlo — you'll like his style." }
       : null;
 
     const openAiMessages = [
