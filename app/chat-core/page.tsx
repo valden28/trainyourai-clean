@@ -1,3 +1,5 @@
+// File: /app/chat-core/page.tsx
+
 'use client';
 
 import { useUser } from '@auth0/nextjs-auth0/client';
@@ -10,18 +12,17 @@ export default function ChatCorePage() {
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [assistantName, setAssistantName] = useState('Merv');
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const chatKey = user ? `trainyourai_chat_${user.sub}` : null;
 
-  // Redirect if not logged in
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/');
     }
   }, [user, isLoading, router]);
 
-  // Load chat from localStorage when user is known
   useEffect(() => {
     if (chatKey) {
       const saved = localStorage.getItem(chatKey);
@@ -29,14 +30,12 @@ export default function ChatCorePage() {
     }
   }, [chatKey]);
 
-  // Save chat to localStorage whenever messages update
   useEffect(() => {
     if (chatKey) {
       localStorage.setItem(chatKey, JSON.stringify(messages));
     }
   }, [messages, chatKey]);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -58,6 +57,13 @@ export default function ChatCorePage() {
       });
 
       const reply = await res.text();
+
+      if (reply.toLowerCase().includes('chef carlo')) {
+        setAssistantName('Chef Carlo');
+      } else if (input.toLowerCase().includes('back to merv') || input.toLowerCase().includes('return to merv')) {
+        setAssistantName('Merv');
+      }
+
       setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
     } catch (err) {
       console.error('Chat error:', err);
@@ -69,6 +75,7 @@ export default function ChatCorePage() {
   const clearChat = () => {
     if (chatKey) localStorage.removeItem(chatKey);
     setMessages([]);
+    setAssistantName('Merv');
   };
 
   return (
@@ -105,7 +112,7 @@ export default function ChatCorePage() {
               m.role === 'user' ? 'bg-blue-200 self-end' : 'bg-gray-100 self-start'
             }`}
           >
-            <strong>{m.role === 'user' ? 'You' : 'Assistant'}:</strong> {m.content}
+            <strong>{m.role === 'user' ? 'You' : assistantName}:</strong> {m.content}
           </div>
         ))}
         <div ref={bottomRef} />
