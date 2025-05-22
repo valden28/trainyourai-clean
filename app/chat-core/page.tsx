@@ -1,4 +1,4 @@
-// File: /app/chat-core/page.tsx
+// File: /app/chat-core/page.tsx (updated to match backend message format)
 
 'use client';
 
@@ -55,25 +55,11 @@ export default function ChatCorePage() {
         body: JSON.stringify({ messages: [...messages, newMessage] }),
       });
 
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      let full = '';
+      if (!res.ok) throw new Error('Failed to get assistant response');
 
-      while (reader) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        full += chunk;
-        const parts = chunk.split('}\n').filter(Boolean);
-        for (const p of parts) {
-          try {
-            const { name, text } = JSON.parse(p + '}');
-            setMessages((prev) => [...prev, { role: 'assistant', name, content: text }]);
-          } catch (e) {
-            console.error('JSON parse error:', e);
-          }
-        }
-      }
+      const reply = await res.json();
+
+      setMessages((prev) => [...prev, reply]);
     } catch (err) {
       console.error('Chat error:', err);
     } finally {
