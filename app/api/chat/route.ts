@@ -1,4 +1,4 @@
-// File: /api/chat/route.ts
+// File: /api/chat/route.ts (streaming removed, full message returned)
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
@@ -54,7 +54,7 @@ Familiarity Score: ${familiarity}
 
 ---
 
-You are Merv — the lead assistant and anchor voice of this platform. [...full Merv prompt omitted for brevity...]
+You are Merv — the lead assistant and anchor voice of this platform. [...Merv prompt continues here...]
 So act like it.
     `.trim();
 
@@ -62,49 +62,34 @@ So act like it.
       ? selectedAssistant.systemPrompt(vault)
       : mervPrompt;
 
-    const handoffMessage = selectedAssistantId === 'chef'
-      ? {
-          role: 'assistant',
-          name: 'Merv',
-          content: "Let me step back and bring in Chef Carlo — you’ll appreciate his style."
-        }
+    const assistantName = selectedAssistant?.name || 'Merv';
+
+    const handoffLine = selectedAssistantId === 'chef'
+      ? { role: 'assistant', name: 'Merv', content: "Let me step back and bring in Chef Carlo — you’ll appreciate his style." }
       : null;
 
-    const responseAssistantName = selectedAssistant?.name || 'Merv';
-
-    const chatMessages = [
+    const openAiMessages = [
       { role: 'system', content: systemPrompt },
-      ...(handoffMessage ? [handoffMessage] : []),
-      ...messages,
+      ...(handoffLine ? [handoffLine] : []),
+      ...messages
     ];
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
-      stream: true,
-      messages: chatMessages,
+      messages: openAiMessages,
     });
 
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      async start(controller) {
-        for await (const part of completion) {
-          const text = part.choices[0]?.delta?.content || '';
-          if (text) {
-            controller.enqueue(encoder.encode(JSON.stringify({ name: responseAssistantName, text })));
-          }
-        }
-        controller.close();
-      },
-    });
+    const reply = completion.choices[0]?.message?.content || '';
 
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Transfer-Encoding': 'chunked'
-      }
-    });
+    const finalMessage = {
+      role: 'assistant',
+      name: assistantName,
+      content: reply,
+    };
+
+    return NextResponse.json(finalMessage);
   } catch (err) {
-    console.error('[CHAT STREAM ERROR]', err);
-    return new NextResponse('Error streaming response', { status: 500 });
+    console.error('[CHAT ROUTE ERROR]', err);
+    return new NextResponse('Error processing chat', { status: 500 });
   }
 }
