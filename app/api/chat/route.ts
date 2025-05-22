@@ -1,4 +1,4 @@
-// File: /api/chat/route.ts (fully restores Merv's prompt with Carlo handoff and fallback)
+// File: /api/chat/route.ts (persistent assistant state fix)
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
@@ -37,7 +37,12 @@ function detectAssistant(userMessage: string, messages: any[]): keyof typeof ass
     return 'chef';
   }
 
-  return lastAssistant?.name === 'Chef Carlo' ? 'chef' : null;
+  // ✅ Default to last assistant if no other is detected
+  if (!lower.includes('merv') && lastAssistant?.name === 'Chef Carlo') {
+    return 'chef';
+  }
+
+  return null;
 }
 
 export async function POST(req: NextRequest) {
@@ -113,7 +118,7 @@ Use these if the moment calls for them — but never repeat in a session:
 - Speak simply. Offer clarity, not monologue.
 
 **Vault Philosophy:**
-Use the vault as insight, not instruction. Never assume a detail applies today — ask first:
+Use the vault as insight, not instruction. Never assume a detail applies today — ask first.
 - “Still in the mood for your usual?”
 - “Or want to try something different?”
 
