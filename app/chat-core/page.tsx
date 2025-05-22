@@ -1,10 +1,12 @@
-// File: /app/chat-core/page.tsx (updated to match backend message format)
+// File: /app/chat-core/page.tsx (with assistant memory + dropdown switching)
 
 'use client';
 
 import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
+
+const ASSISTANTS = ['Merv', 'Chef Carlo'];
 
 export default function ChatCorePage() {
   const { user, isLoading } = useUser();
@@ -13,6 +15,12 @@ export default function ChatCorePage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const [activeAssistant, setActiveAssistant] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('activeAssistant') || 'Merv';
+    }
+    return 'Merv';
+  });
 
   const chatKey = user ? `trainyourai_chat_${user.sub}` : null;
 
@@ -39,6 +47,12 @@ export default function ChatCorePage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('activeAssistant', activeAssistant);
+    }
+  }, [activeAssistant]);
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -52,14 +66,12 @@ export default function ChatCorePage() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [...messages, newMessage] }),
+        body: JSON.stringify({ messages: [...messages, newMessage], activeAssistant }),
       });
 
-      if (!res.ok) throw new Error('Failed to get assistant response');
-
       const reply = await res.json();
-
       setMessages((prev) => [...prev, reply]);
+      if (reply.name) setActiveAssistant(reply.name);
     } catch (err) {
       console.error('Chat error:', err);
     } finally {
@@ -76,12 +88,22 @@ export default function ChatCorePage() {
     <main className="flex flex-col h-screen bg-white text-black">
       <div className="flex justify-between items-center p-4 border-b bg-gray-50 shadow-sm">
         <h1 className="text-xl font-bold">Your AI Assistant</h1>
-        <div className="flex gap-4">
+        <div className="flex gap-4 items-center">
+          <label className="text-sm text-gray-600">Assistant:</label>
+          <select
+            value={activeAssistant}
+            onChange={(e) => setActiveAssistant(e.target.value)}
+            className="text-sm bg-white border border-gray-300 rounded px-2 py-1"
+          >
+            {ASSISTANTS.map((name) => (
+              <option key={name}>{name}</option>
+            ))}
+          </select>
           <button
             onClick={() => router.push('/dashboard')}
             className="text-sm text-blue-600 hover:underline"
           >
-            Go to Dashboard
+            Dashboard
           </button>
           <button
             onClick={clearChat}
@@ -102,7 +124,7 @@ export default function ChatCorePage() {
         {messages.map((m, i) => (
           <div
             key={i}
-            className={`p-3 rounded-xl max-w-2xl ${
+            className={`p-3 rounded-xl max-w-2xl whitespace-pre-wrap ${
               m.role === 'user' ? 'bg-blue-200 self-end' : 'bg-gray-100 self-start'
             }`}
           >

@@ -1,4 +1,4 @@
-// File: /api/chat/route.ts (FULL Merv profile restored + manual handoff message only)
+// File: /api/chat/route.ts (backend reads persistent assistant state)
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,22 +10,13 @@ import { assistants } from '@/assistants';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-function detectAssistant(userMessage: string): keyof typeof assistants | null {
-  const lower = userMessage.toLowerCase();
-
-  if (lower.includes('chef carlo')) return 'chef';
-  if (lower.includes('merv')) return null;
-
-  return null;
-}
-
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession(req, NextResponse.next());
     const userId = session?.user?.sub;
     if (!userId) return new NextResponse('Unauthorized', { status: 401 });
 
-    const { messages } = await req.json();
+    const { messages, activeAssistant } = await req.json();
     const userMessage = messages[messages.length - 1]?.content || '';
 
     const { data: vault } = await supabase
@@ -92,24 +83,17 @@ Use these if the moment calls for them — but never repeat in a session:
 - Speak simply. Offer clarity, not monologue.
 
 **Vault Philosophy:**
-Use the vault as insight, not instruction. Never assume a detail applies today — ask first:
+Use the vault as insight, not instruction. Never assume a detail applies today — ask first.
 - “Still in the mood for your usual?”
 - “Or want to try something different?”
-
-**Handoff Policy (Temporary):**
-If the user needs help with food or recipes, do NOT automatically switch to Chef Carlo. Instead, say:
-"I can bring in Chef Carlo if you'd like. Just type 'Chef Carlo' and he'll take it from there."
-
-Likewise, if Chef is active and the user wants to come back to you, they can simply type "Merv" to switch back.
 
 You're not neutral. You're thoughtful.
 You're not soft. You're steady.
 You're not fake. You're Merv.
 So act like it.
-`.trim();
+    `.trim();
 
-    const selectedAssistantId = detectAssistant(userMessage);
-    const selectedAssistant = selectedAssistantId ? assistants[selectedAssistantId] : null;
+    const selectedAssistant = activeAssistant && activeAssistant !== 'Merv' ? assistants[activeAssistant.toLowerCase().replace(' ', '')] : null;
 
     const systemPrompt = selectedAssistant
       ? selectedAssistant.systemPrompt(vault)
