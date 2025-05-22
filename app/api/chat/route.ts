@@ -1,4 +1,4 @@
-// File: /api/chat/route.ts (adds assistant memory persistence)
+// File: /api/chat/route.ts (with prompt safety check and restored Merv personality)
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
@@ -26,8 +26,14 @@ function detectAssistant(userMessage: string, messages: any[]): keyof typeof ass
     return null;
   }
 
-  const lastAssistant = messages.slice().reverse().find(m => m.role === 'assistant' && m.name);
-  return lastAssistant?.name === 'Chef Carlo' ? 'chef' : null;
+  const lastAssistant = messages.slice().reverse().find(
+    m => m.role === 'assistant' && typeof m.name === 'string' && m.name.trim().length > 0
+  );
+
+  if (lastAssistant?.name === 'Chef Carlo') return 'chef';
+  if (lastAssistant?.name === 'Merv') return null;
+
+  return null;
 }
 
 export async function POST(req: NextRequest) {
@@ -52,9 +58,6 @@ export async function POST(req: NextRequest) {
     const familiarity = vault.familiarity_score || 0;
     const vaultSummary = generateVaultSummary(vault);
 
-    const selectedAssistantId = detectAssistant(userMessage, messages);
-    const selectedAssistant = selectedAssistantId ? assistants[selectedAssistantId] : null;
-
     const mervPrompt = `
 User Profile Summary (use this to guide your tone, examples, and depth):
 ${vaultSummary}
@@ -63,24 +66,36 @@ Familiarity Score: ${familiarity}
 
 ---
 
-You are Merv — the lead assistant and anchor voice of this platform.
+You are Merv — the lead assistant and anchor voice of this platform. You are confident, emotionally grounded, and sharp. Your tone is modeled after Barack Obama — not behind a podium, but off the record. Relaxed, real, warm, and unfiltered.
+
+You’ve eaten street food in Bangkok, heard stories in Dublin pubs, and watched sunrises over the Andes. You don’t speak from Google — you speak from memory.
+
+You taught communication, mediated conflict for the federal government, and ran a consulting firm. You retired early at 52. Now 55, you’re here because people still need steady voices and sharp perspective.
 
 **Vault Philosophy:**
-You do not *default to* vault data like diet or cuisine. Instead, ask the user:
-- “Want to stay with your usual, or try something new?”
-- “Still feeling high-protein tonight, or going comfort?”
-Never assume or repeat vault data unless the user confirms.
+You do not default to vault data. Use it when appropriate, and always ask first:
+- “Still in the mood for your usual?”
+- “Or want to try something off-script tonight?”
 
 **Handoff Policy:**
-You do not give food suggestions or recipes. If the topic clearly relates to dinner, cooking, meals, or food — hand off to Chef Carlo. Example line:
-"Let me bring in Chef Carlo — you'll like his style."
+You don’t give recipes. If food is mentioned, refer to Chef Carlo with warmth:
+- “Let me bring in Chef Carlo — you’ll like his style.”
 
-So act like it.
-    `.trim();
+Stay thoughtful. Stay steady. Stay Merv.
+`.trim();
+
+    const selectedAssistantId = detectAssistant(userMessage, messages);
+    const selectedAssistant = selectedAssistantId ? assistants[selectedAssistantId] : null;
 
     const systemPrompt = selectedAssistant
       ? selectedAssistant.systemPrompt(vault)
       : mervPrompt;
+
+    // ✅ Safety check
+    if (!systemPrompt || systemPrompt.length < 100) {
+      console.error('[CHAT ERROR] Missing or invalid system prompt');
+      return new NextResponse('Assistant prompt failed', { status: 500 });
+    }
 
     const assistantName = selectedAssistant?.name || 'Merv';
 
