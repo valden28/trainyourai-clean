@@ -1,4 +1,4 @@
-// File: /api/chat/route.ts (restores full Merv character prompt and rebalanced vault usage)
+// File: /api/chat/route.ts (fully restores Merv's prompt with Carlo handoff and fallback)
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
@@ -18,11 +18,12 @@ function detectAssistant(userMessage: string, messages: any[]): keyof typeof ass
     'dinner ideas', 'meal ideas', 'food help', 'make for dinner',
     'cooking dinner', 'recipe idea', 'what can i make'
   ];
+
   for (const keyword of foodTriggers) {
     if (lower.includes(keyword)) return 'chef';
   }
 
-  if (lower.includes('back to merv') || lower.includes('return to merv')) {
+  if (lower.includes('back to merv') || lower.includes('return to merv') || lower.includes('shift gears')) {
     return null;
   }
 
@@ -30,10 +31,13 @@ function detectAssistant(userMessage: string, messages: any[]): keyof typeof ass
     m => m.role === 'assistant' && typeof m.name === 'string' && m.name.trim().length > 0
   );
 
-  if (lastAssistant?.name === 'Chef Carlo') return 'chef';
-  if (lastAssistant?.name === 'Merv') return null;
+  const lastLine = lastAssistant?.content?.toLowerCase() || '';
 
-  return null;
+  if (lastLine.includes('let me bring in chef carlo') || lastLine.includes("i'll bring in chef carlo")) {
+    return 'chef';
+  }
+
+  return lastAssistant?.name === 'Chef Carlo' ? 'chef' : null;
 }
 
 export async function POST(req: NextRequest) {
