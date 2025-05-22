@@ -1,4 +1,4 @@
-// File: /api/chat/route.ts (patched keyword logic and tone check)
+// File: /api/chat/route.ts (adds assistant memory persistence)
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,16 +10,14 @@ import { assistants } from '@/assistants';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-function detectAssistant(userMessage: string): keyof typeof assistants | null {
+function detectAssistant(userMessage: string, messages: any[]): keyof typeof assistants | null {
   const lower = userMessage.toLowerCase();
 
-  // Food-related keywords to trigger Chef Carlo
   const foodTriggers = [
     'chef carlo', 'cook tonight', 'what to cook', 'what should i cook',
     'dinner ideas', 'meal ideas', 'food help', 'make for dinner',
     'cooking dinner', 'recipe idea', 'what can i make'
   ];
-
   for (const keyword of foodTriggers) {
     if (lower.includes(keyword)) return 'chef';
   }
@@ -28,7 +26,8 @@ function detectAssistant(userMessage: string): keyof typeof assistants | null {
     return null;
   }
 
-  return null;
+  const lastAssistant = messages.slice().reverse().find(m => m.role === 'assistant' && m.name);
+  return lastAssistant?.name === 'Chef Carlo' ? 'chef' : null;
 }
 
 export async function POST(req: NextRequest) {
@@ -53,7 +52,7 @@ export async function POST(req: NextRequest) {
     const familiarity = vault.familiarity_score || 0;
     const vaultSummary = generateVaultSummary(vault);
 
-    const selectedAssistantId = detectAssistant(userMessage);
+    const selectedAssistantId = detectAssistant(userMessage, messages);
     const selectedAssistant = selectedAssistantId ? assistants[selectedAssistantId] : null;
 
     const mervPrompt = `
