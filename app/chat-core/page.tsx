@@ -12,7 +12,6 @@ export default function ChatCorePage() {
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [assistantName, setAssistantName] = useState('Merv');
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const chatKey = user ? `trainyourai_chat_${user.sub}` : null;
@@ -56,15 +55,25 @@ export default function ChatCorePage() {
         body: JSON.stringify({ messages: [...messages, newMessage] }),
       });
 
-      const reply = await res.text();
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let full = '';
 
-      if (reply.toLowerCase().includes('chef carlo')) {
-        setAssistantName('Chef Carlo');
-      } else if (input.toLowerCase().includes('back to merv') || input.toLowerCase().includes('return to merv')) {
-        setAssistantName('Merv');
+      while (reader) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        full += chunk;
+        const parts = chunk.split('}\n').filter(Boolean);
+        for (const p of parts) {
+          try {
+            const { name, text } = JSON.parse(p + '}');
+            setMessages((prev) => [...prev, { role: 'assistant', name, content: text }]);
+          } catch (e) {
+            console.error('JSON parse error:', e);
+          }
+        }
       }
-
-      setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
     } catch (err) {
       console.error('Chat error:', err);
     } finally {
@@ -75,7 +84,6 @@ export default function ChatCorePage() {
   const clearChat = () => {
     if (chatKey) localStorage.removeItem(chatKey);
     setMessages([]);
-    setAssistantName('Merv');
   };
 
   return (
@@ -112,7 +120,7 @@ export default function ChatCorePage() {
               m.role === 'user' ? 'bg-blue-200 self-end' : 'bg-gray-100 self-start'
             }`}
           >
-            <strong>{m.role === 'user' ? 'You' : assistantName}:</strong> {m.content}
+            <strong>{m.role === 'user' ? 'You' : m.name || 'Assistant'}:</strong> {m.content}
           </div>
         ))}
         <div ref={bottomRef} />

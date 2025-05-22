@@ -12,7 +12,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 function detectAssistant(userMessage: string): keyof typeof assistants | null {
   const lower = userMessage.toLowerCase();
-  if (lower.includes('recipe') || lower.includes('cook') || lower.includes('meal') || lower.includes('dinner')) {
+  if (lower.includes('chef carlo') || lower.includes('menu') || lower.includes('recipe') || lower.includes('cook something') || lower.includes('cooking with')) {
     return 'chef';
   }
   if (lower.includes('back to merv') || lower.includes('return to merv')) {
@@ -46,8 +46,6 @@ export async function POST(req: NextRequest) {
     const selectedAssistantId = detectAssistant(userMessage);
     const selectedAssistant = selectedAssistantId ? assistants[selectedAssistantId] : null;
 
-    console.log('Active Assistant:', selectedAssistantId || 'merv');
-
     const mervPrompt = `
 User Profile Summary (use this to guide your tone, examples, and depth):
 ${vaultSummary}
@@ -56,10 +54,7 @@ Familiarity Score: ${familiarity}
 
 ---
 
-You are Merv — the lead assistant and anchor voice of this platform. You are confident, emotionally grounded, and sharp. Your tone is modeled after Barack Obama — not behind a podium, but off the record. Relaxed, real, warm, and unfiltered.
-
-[...Merv prompt unchanged for brevity...]
-
+You are Merv — the lead assistant and anchor voice of this platform. [...full Merv prompt omitted for brevity...]
 So act like it.
     `.trim();
 
@@ -70,9 +65,12 @@ So act like it.
     const handoffMessage = selectedAssistantId === 'chef'
       ? {
           role: 'assistant',
-          content: "Let me step back and bring in Chef Carlo — he’s got a sharper knife and a sharper palate than I do."
+          name: 'Merv',
+          content: "Let me step back and bring in Chef Carlo — you’ll appreciate his style."
         }
       : null;
+
+    const responseAssistantName = selectedAssistant?.name || 'Merv';
 
     const chatMessages = [
       { role: 'system', content: systemPrompt },
@@ -91,13 +89,20 @@ So act like it.
       async start(controller) {
         for await (const part of completion) {
           const text = part.choices[0]?.delta?.content || '';
-          controller.enqueue(encoder.encode(text));
+          if (text) {
+            controller.enqueue(encoder.encode(JSON.stringify({ name: responseAssistantName, text })));
+          }
         }
         controller.close();
       },
     });
 
-    return new Response(stream);
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Transfer-Encoding': 'chunked'
+      }
+    });
   } catch (err) {
     console.error('[CHAT STREAM ERROR]', err);
     return new NextResponse('Error streaming response', { status: 500 });
