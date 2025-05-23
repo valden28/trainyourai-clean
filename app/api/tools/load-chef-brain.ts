@@ -18,7 +18,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-async function embedAndUpload(filePath, source) {
+async function embedAndUpload(filePath: string, source: string) {
   const fullText = fs.readFileSync(filePath, 'utf-8');
   const chunks = fullText.match(/[^\n]{100,1000}(\n|$)/g) || [];
 
