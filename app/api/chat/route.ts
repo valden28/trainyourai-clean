@@ -1,4 +1,4 @@
-// File: /api/chat/route.ts (fixed type guard for assistant routing)
+// File: /api/chat/route.ts (add Carlo override triggers during Merv sessions)
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     if (!userId) return new NextResponse('Unauthorized', { status: 401 });
 
     const { messages, activeAssistant } = await req.json();
-    const userMessage = messages[messages.length - 1]?.content || '';
+    const userMessage = messages[messages.length - 1]?.content.toLowerCase() || '';
 
     const { data: vault } = await supabase
       .from('vaults_test')
@@ -93,10 +93,12 @@ You're not fake. You're Merv.
 So act like it.
     `.trim();
 
+    // Manual override if user asks for Chef Carlo by name
+    const chefTriggers = ['chef carlo', 'bring in the chef', 'let carlo help', 'ask carlo'];
+    const triggerChef = chefTriggers.some(trigger => userMessage.includes(trigger));
+
     const safeKey = activeAssistant?.toLowerCase().replace(' ', '') as keyof typeof assistants;
-    const selectedAssistant = activeAssistant && activeAssistant !== 'Merv' && assistants[safeKey]
-      ? assistants[safeKey]
-      : null;
+    const selectedAssistant = (activeAssistant && activeAssistant !== 'Merv' && assistants[safeKey]) || (triggerChef ? assistants.chef : null);
 
     const systemPrompt = selectedAssistant
       ? selectedAssistant.systemPrompt(vault)
