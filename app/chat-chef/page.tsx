@@ -1,4 +1,4 @@
-// File: /app/chat-chef/page.tsx (Chef Carlo thread with return to Merv fix)
+// File: /app/chat-chef/page.tsx (Verified multi-turn chat fix for Chef Carlo)
 
 'use client';
 
@@ -44,7 +44,8 @@ export default function ChatChefPage() {
     if (!input.trim()) return;
 
     const newMessage = { role: 'user', content: input };
-    setMessages((prev) => [...prev, newMessage]);
+    const updatedMessages = [...messages, newMessage];
+    setMessages(updatedMessages);
     setInput('');
     setLoading(true);
 
@@ -52,7 +53,7 @@ export default function ChatChefPage() {
       const res = await fetch('/api/chat-chef', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [...messages, newMessage] }),
+        body: JSON.stringify({ messages: updatedMessages }),
       });
 
       const reply = await res.json();
