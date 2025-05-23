@@ -1,4 +1,4 @@
-// File: /app/api/chat-chef/route.ts (Fix: thread-aware Chef Carlo, real multi-turn support)
+// File: /app/api/chat-chef/route.ts (Diagnostic version — logs message array to Vercel logs)
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
     if (!userId) return new NextResponse('Unauthorized', { status: 401 });
 
     const { messages } = await req.json();
+    console.log('[CHEF DEBUG] Incoming messages:', JSON.stringify(messages, null, 2));
 
     const { data: vault } = await supabase
       .from('vaults_test')
@@ -29,12 +30,14 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = isFirstTurn
       ? chefCarlo.systemPrompt(vault)
-      : 'You are Chef Carlo — continue the conversation naturally. Ask what the user is working with, clarify preferences, then suggest options. Do not reintroduce yourself.';
+      : 'You are Chef Carlo — continue the conversation naturally. Do not reintroduce yourself. Respond like a culinary partner who remembers the previous message.';
 
     const fullMessages = [
       { role: 'system', content: systemPrompt },
       ...messages
     ];
+
+    console.log('[CHEF DEBUG] Full prompt being sent to OpenAI:', JSON.stringify(fullMessages, null, 2));
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
@@ -48,6 +51,8 @@ export async function POST(req: NextRequest) {
       name: 'Chef Carlo',
       content: reply,
     };
+
+    console.log('[CHEF DEBUG] Final assistant message:', JSON.stringify(finalMessage, null, 2));
 
     return NextResponse.json(finalMessage);
   } catch (err) {
