@@ -1,4 +1,4 @@
-const fs = require('fs');
+const files = fs.readdirSync(folder).filter((f: string) => f.endsWith('.txt'));
 const path = require('path');
 const dotenv = require('dotenv');
 const { createClient } = require('@supabase/supabase-js');
