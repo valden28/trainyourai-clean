@@ -1,4 +1,4 @@
-// File: /api/chat/route.ts (add Carlo override triggers during Merv sessions)
+// File: /api/chat/route.ts (final patch: true handoff, state persistence, no ghosts)
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,6 +10,14 @@ import { assistants } from '@/assistants';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
+function shouldTriggerChef(message: string): boolean {
+  const lower = message.toLowerCase();
+  return [
+    'cook', 'cooking', 'recipe', 'dinner', 'lunch', 'meal',
+    'what should i make', 'what should i cook', 'what are we eating'
+  ].some((phrase) => lower.includes(phrase));
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession(req, NextResponse.next());
@@ -17,7 +25,7 @@ export async function POST(req: NextRequest) {
     if (!userId) return new NextResponse('Unauthorized', { status: 401 });
 
     const { messages, activeAssistant } = await req.json();
-    const userMessage = messages[messages.length - 1]?.content.toLowerCase() || '';
+    const userMessage = messages[messages.length - 1]?.content || '';
 
     const { data: vault } = await supabase
       .from('vaults_test')
@@ -93,12 +101,18 @@ You're not fake. You're Merv.
 So act like it.
     `.trim();
 
-    // Manual override if user asks for Chef Carlo by name
-    const chefTriggers = ['chef carlo', 'bring in the chef', 'let carlo help', 'ask carlo'];
-    const triggerChef = chefTriggers.some(trigger => userMessage.includes(trigger));
+    let finalAssistant = activeAssistant;
+    const lowerMsg = userMessage.toLowerCase();
+    const triggerChef = shouldTriggerChef(lowerMsg);
 
-    const safeKey = activeAssistant?.toLowerCase().replace(' ', '') as keyof typeof assistants;
-    const selectedAssistant = (activeAssistant && activeAssistant !== 'Merv' && assistants[safeKey]) || (triggerChef ? assistants.chef : null);
+    if (activeAssistant === 'Merv' && triggerChef) {
+      finalAssistant = 'chef';
+    }
+
+    const safeKey = finalAssistant?.toLowerCase().replace(' ', '') as keyof typeof assistants;
+    const selectedAssistant = finalAssistant && finalAssistant !== 'Merv' && assistants[safeKey]
+      ? assistants[safeKey]
+      : null;
 
     const systemPrompt = selectedAssistant
       ? selectedAssistant.systemPrompt(vault)
