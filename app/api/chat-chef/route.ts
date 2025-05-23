@@ -1,4 +1,4 @@
-// File: /app/api/chat-chef/route.ts (Final pre-brain patch: full message array, natural continuity)
+// File: /app/api/chat-chef/route.ts (Fix: thread-aware Chef Carlo, real multi-turn support)
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
@@ -25,7 +25,11 @@ export async function POST(req: NextRequest) {
 
     if (!vault) return new NextResponse('Vault not found', { status: 404 });
 
-    const systemPrompt = chefCarlo.systemPrompt(vault);
+    const isFirstTurn = messages.filter((m: any) => m.role === 'user').length <= 1;
+
+    const systemPrompt = isFirstTurn
+      ? chefCarlo.systemPrompt(vault)
+      : 'You are Chef Carlo — continue the conversation naturally. Ask what the user is working with, clarify preferences, then suggest options. Do not reintroduce yourself.';
 
     const fullMessages = [
       { role: 'system', content: systemPrompt },
