@@ -1,4 +1,4 @@
-// File: /api/chat/route.ts (backend reads persistent assistant state)
+// File: /api/chat/route.ts (fixed type guard for assistant routing)
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
@@ -93,7 +93,10 @@ You're not fake. You're Merv.
 So act like it.
     `.trim();
 
-    const selectedAssistant = activeAssistant && activeAssistant !== 'Merv' ? assistants[activeAssistant.toLowerCase().replace(' ', '')] : null;
+    const safeKey = activeAssistant?.toLowerCase().replace(' ', '') as keyof typeof assistants;
+    const selectedAssistant = activeAssistant && activeAssistant !== 'Merv' && assistants[safeKey]
+      ? assistants[safeKey]
+      : null;
 
     const systemPrompt = selectedAssistant
       ? selectedAssistant.systemPrompt(vault)
