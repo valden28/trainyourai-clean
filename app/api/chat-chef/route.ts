@@ -1,4 +1,4 @@
-// File: /app/api/chat-chef/route.ts (force replies to come from Chef Carlo only)
+// File: /app/api/chat-chef/route.ts (Final pre-brain patch: full message array, natural continuity)
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
@@ -27,12 +27,14 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = chefCarlo.systemPrompt(vault);
 
+    const fullMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messages
+    ];
+
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...messages
-      ]
+      messages: fullMessages
     });
 
     const reply = completion.choices[0]?.message?.content || '';
