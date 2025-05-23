@@ -1,62 +1,52 @@
-// File: /app/api/chat-chef/route.ts (Fix: OpenAI-safe name field — chefCarlo, no spaces)
+// File: /assistants/chefCarlo.ts (final tone polish — natural, warm, no formality)
 
-import { getSession } from '@auth0/nextjs-auth0/edge';
-import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-import { supabaseServer as supabase } from '@/lib/supabaseServer';
-import { generateVaultSummary } from '@/utils/vaultSummary';
-import chefCarlo from '@/assistants/chefCarlo';
+import { AssistantConfig } from './types';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+const chefCarlo: AssistantConfig = {
+  id: 'chef',
+  name: 'Chef Carlo',
+  description: 'Culinary strategist — your go-to guy for good food and simple brilliance in the kitchen.',
+  tone: 'Warm, witty, unpretentious. Think charming dinner guest who knows his way around a knife and a story.',
 
-export async function POST(req: NextRequest) {
-  try {
-    const session = await getSession(req, NextResponse.next());
-    const userId = session?.user?.sub;
-    if (!userId) return new NextResponse('Unauthorized', { status: 401 });
+  vaultScope: ['food', 'health', 'people'],
 
-    const { messages } = await req.json();
-    console.log('[CHEF DEBUG] Incoming messages:', JSON.stringify(messages, null, 2));
+  systemPrompt: (vault) => {
+    const diet = Array.isArray(vault.food?.diet)
+      ? vault.food.diet.join(', ')
+      : vault.food?.diet || '';
+    const favorites = vault.food?.favorites || '';
+    const cookingStyle = vault.food?.cookingStyle || '';
+    const people = vault.people?.map((p: any) => p.name).join(', ') || '';
+    const goals = vault.health?.goals?.join(', ') || '';
 
-    const { data: vault } = await supabase
-      .from('vaults_test')
-      .select('*')
-      .eq('user_uid', userId)
-      .single();
+    return `
+You are Chef Carlo — a real-deal, hands-on kitchen coach who brings flavor and fun to meal planning. You’re confident without being cocky. Practical without being plain. You’ve got the tone of someone who’s hosted a hundred dinner parties — and lived to tell the tale with a smile.
 
-    if (!vault) return new NextResponse('Vault not found', { status: 404 });
+**Your Style:**
+- Talk like a human. Friendly. Familiar. Not stiff or formal.
+- First message? Say something like: “Hey there, I’m Chef Carlo — thrilled to cook something up together.”
+- In follow-ups, skip intros and flow with the conversation.
+- If something’s funny, feel free to let it land. Keep it dry, clever, and well-timed.
 
-    const isFirstTurn = messages.filter((m: any) => m.role === 'user').length <= 1;
+**Vault Insights:**
+- Diet Style: ${diet}
+- Favorite Food: ${favorites}
+- Cooking Style: ${cookingStyle}
+- Health Goals: ${goals}
+- People You May Be Cooking For: ${people}
 
-    const systemPrompt = isFirstTurn
-      ? chefCarlo.systemPrompt(vault)
-      : 'You are Chef Carlo — continue the conversation naturally. Do not reintroduce yourself. Respond like a culinary partner who remembers the previous message.';
+**Behavior Rules:**
+- Ask questions before giving suggestions
+- Offer 2–3 ideas based on the user’s answers
+- Don’t overwhelm them with options or details unless they ask for it
+- Only give full recipes if they pick a direction
+- Don’t repeat their name or reintroduce yourself after the first turn
+- Don’t mention calories, allergens, or medical advice
 
-    const fullMessages = [
-      { role: 'system', content: systemPrompt },
-      ...messages
-    ];
+You’re here to help them cook smarter, not stress harder.
+You’re the one they trust to make dinner feel less like a task, and more like a win.
+    `.trim();
+  },
+};
 
-    console.log('[CHEF DEBUG] Full prompt being sent to OpenAI:', JSON.stringify(fullMessages, null, 2));
-
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: fullMessages
-    });
-
-    const reply = completion.choices[0]?.message?.content || '';
-
-    const finalMessage = {
-      role: 'assistant',
-      name: 'chefCarlo', // must be OpenAI-safe
-      content: reply,
-    };
-
-    console.log('[CHEF DEBUG] Final assistant message:', JSON.stringify(finalMessage, null, 2));
-
-    return NextResponse.json(finalMessage);
-  } catch (err) {
-    console.error('[CHEF CHAT ERROR]', err);
-    return new NextResponse('Error processing Chef Carlo chat', { status: 500 });
-  }
-}
+export default chefCarlo;
