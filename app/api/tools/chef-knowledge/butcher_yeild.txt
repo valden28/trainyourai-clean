@@ -1,0 +1,71 @@
+﻿the butcher’s yield test
+The purpose of a butcher’s yield test is to find the accurate costs of fabricated meats, fish, and poultry. 
+this done to determine the amount of usable meat and trim from a particular fabrication and to calculate the value of all edible cuts, including not only the portion of meat served to the guest but also the value of bones used for stock and of trim used for ground meat, pates, soups, or other dishes.
+
+
+Determine the As-Purchased Cost (APC).
+As-purchased weight x As-purchased price per lb = APC
+EXAMPLE:
+28 lb x $1.30/lb = $36.40 (APC)
+2. Fabricate the meat.
+EXAMPLE:
+trimmed # 103 beef rib roast to # 109 beef rib (roast-ready)
+3. Determine the total trim weight and total trim value.
+= Trim value (fat)
+= Trim value (bones) = Trim v alue (trim) Total trim value
+Fat trim weight x + Bones trim weight x + Usab le trim weig ht x Total trim weight
+Market price per lb Market price per lb Market price per lb
+
+
+
+
+EXAMPLE:
+3 lb Fat x SO.lO/lb
++ 4 lb Bones x $0.30/lb
++ 5 lb Usable trim x $1.30/lb
+12 lb Total trim weight
+= $0.30 = $ 1.20 = $6.50
+= $8.00 Total trim value
+4. Determine the New Fabricated Weight (NFW).
+As-purchased weight - Total trim weight = NFW
+EXAMPLE:
+28 lb As-purchased weight - 12 lb Total trim weight = 16 lb (NFW)
+5. Determine the New Fabricated Cost (NFC).
+APC - Total trim value = NFC
+EXAMPLE:
+$36.40-$8.00 = $28.40 (NFC)
+6. Determine the New Fabricated Price per Pound (NFPP).
+NFC
+NFW
+= NFPP
+EXAMPLE:
+= S1.77/lb (NFPP)
+7. Determine the Cost Factor (CF).
+_NFPP _ s
+As-purchased price per pound
+EXAMPLE:
+SI.30/lb
+8. Determine the yield percent.
+NFW v . . ,
+- - = Yield percent
+As-purchased weight
+EXAMPLE:
+16 - =0.57 = 57% (Yield percent) 281b
+
+
+Determine the number of portions of final product from the fabrication. NFW x 16 oz = Total number of ounces
+Total number of ounces Portion size (in oz)
+= Number of portions
+EXAMPLE:
+How many 12-oz portions can be obtained from 16 lb of trimmed meat? 16 lb x 16 oz = 256 oz
+256 oz _ 2 i 33 (21 f u n portions)
+12 oz
+10. Determine the cost per portion.
+NFPP r *
+= Cost of 1 oz
+16 oz
+Cost of 1 oz x Portion size = Cost per portion EXAMPLE:
+What is the cost of one 12-oz portion?
+$ 1.77/l b _ 0 1106 (cost of 1 oz; = 11.06 cents/oz)
+16 oz
+0.1106 x 12 oz = $1.33 (cost per portion)

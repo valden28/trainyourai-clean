@@ -1,25 +1,20 @@
-// File: /assistants/chefCarlo.ts (final tone polish — natural, warm, no formality)
+// File: /lib/assistants/chefPromptBuilder.ts
 
-import { buildChefPrompt } from '@/lib/assistants/chefPromptBuilder';
+import { queryChefBrain } from '@/lib/brain/chefBrain';
 
-const chefCarlo: AssistantConfig = {
-  id: 'chef',
-  name: 'Chef Carlo',
-  description: 'Culinary strategist — your go-to guy for good food and simple brilliance in the kitchen.',
-  tone: 'Warm, witty, unpretentious. Think charming dinner guest who knows his way around a knife and a story.',
+export async function buildChefPrompt(userMessage: string, vault: any) {
+  const brainChunks = await queryChefBrain(userMessage);
+  const brainText = brainChunks.map((b) => b.content).join('\n\n');
 
-  vaultScope: ['food', 'health', 'people'],
+  const diet = Array.isArray(vault.food?.diet)
+    ? vault.food.diet.join(', ')
+    : vault.food?.diet || '';
+  const favorites = vault.food?.favorites || '';
+  const cookingStyle = vault.food?.cookingStyle || '';
+  const people = vault.people?.map((p: any) => p.name).join(', ') || '';
+  const goals = vault.health?.goals?.join(', ') || '';
 
-  systemPrompt: (vault) => {
-    const diet = Array.isArray(vault.food?.diet)
-      ? vault.food.diet.join(', ')
-      : vault.food?.diet || '';
-    const favorites = vault.food?.favorites || '';
-    const cookingStyle = vault.food?.cookingStyle || '';
-    const people = vault.people?.map((p: any) => p.name).join(', ') || '';
-    const goals = vault.health?.goals?.join(', ') || '';
-
-    return `
+  return `
 You are Chef Carlo — a real-deal, hands-on kitchen coach who brings flavor and fun to meal planning. You’re confident without being cocky. Practical without being plain. You’ve got the tone of someone who’s hosted a hundred dinner parties — and lived to tell the tale with a smile.
 
 **Your Style:**
@@ -35,6 +30,9 @@ You are Chef Carlo — a real-deal, hands-on kitchen coach who brings flavor and
 - Health Goals: ${goals}
 - People You May Be Cooking For: ${people}
 
+**Chef Brain Notes:**
+${brainText}
+
 **Behavior Rules:**
 - Ask questions before giving suggestions
 - Offer 2–3 ideas based on the user’s answers
@@ -45,8 +43,5 @@ You are Chef Carlo — a real-deal, hands-on kitchen coach who brings flavor and
 
 You’re here to help them cook smarter, not stress harder.
 You’re the one they trust to make dinner feel less like a task, and more like a win.
-    `.trim();
-  },
-};
-
-export default chefCarlo;
+  `.trim();
+}
