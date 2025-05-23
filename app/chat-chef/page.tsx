@@ -1,4 +1,4 @@
-// File: /app/chat-chef/page.tsx (Chef Carlo chat interface)
+// File: /app/chat-chef/page.tsx (Chef Carlo thread with return to Merv fix)
 
 'use client';
 
@@ -72,11 +72,20 @@ export default function ChatChefPage() {
   return (
     <main className="flex flex-col h-screen bg-white text-black border-l-8 border-green-600">
       <div className="flex justify-between items-center p-4 border-b bg-green-50 shadow-sm">
-        <h1 className="text-xl font-bold text-green-800">Chef Carlo</h1>
-        <div className="flex gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-green-800">Chef Carlo</h1>
+          <p className="text-xs text-gray-500">Culinary strategist — here to help you cook</p>
+        </div>
+        <div className="flex gap-4 items-center">
+          <button
+            onClick={() => router.push('/chat-core')}
+            className="px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+          >
+            Talk to Merv
+          </button>
           <button
             onClick={() => router.push('/dashboard')}
-            className="text-sm text-blue-600 hover:underline"
+            className="text-sm text-green-700 hover:underline"
           >
             Dashboard
           </button>
