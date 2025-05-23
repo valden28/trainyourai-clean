@@ -1,4 +1,4 @@
-// File: /app/chat-core/page.tsx (with manual thread switch for Chef Carlo)
+// File: /app/chat-chef/page.tsx (Chef Carlo chat interface)
 
 'use client';
 
@@ -6,7 +6,7 @@ import { useUser } from '@auth0/nextjs-auth0/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 
-export default function ChatCorePage() {
+export default function ChatChefPage() {
   const { user, isLoading } = useUser();
   const router = useRouter();
   const [messages, setMessages] = useState<any[]>([]);
@@ -14,7 +14,7 @@ export default function ChatCorePage() {
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  const chatKey = user ? `trainyourai_chat_merv` : null;
+  const chatKey = user ? `trainyourai_chat_chef` : null;
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -49,16 +49,16 @@ export default function ChatCorePage() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetch('/api/chat-chef', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [...messages, newMessage], activeAssistant: 'Merv' }),
+        body: JSON.stringify({ messages: [...messages, newMessage] }),
       });
 
       const reply = await res.json();
       setMessages((prev) => [...prev, reply]);
     } catch (err) {
-      console.error('Chat error:', err);
+      console.error('Chef chat error:', err);
     } finally {
       setLoading(false);
     }
@@ -70,19 +70,10 @@ export default function ChatCorePage() {
   };
 
   return (
-    <main className="flex flex-col h-screen bg-white text-black border-l-8 border-blue-600">
-      <div className="flex justify-between items-center p-4 border-b bg-blue-50 shadow-sm">
-        <div>
-          <h1 className="text-xl font-bold text-blue-800">Merv</h1>
-          <p className="text-xs text-gray-500">Lead assistant — recommends experts</p>
-        </div>
-        <div className="flex gap-4 items-center">
-          <button
-            onClick={() => router.push('/chat-chef')}
-            className="text-sm text-green-600 hover:underline"
-          >
-            Talk to Chef Carlo
-          </button>
+    <main className="flex flex-col h-screen bg-white text-black border-l-8 border-green-600">
+      <div className="flex justify-between items-center p-4 border-b bg-green-50 shadow-sm">
+        <h1 className="text-xl font-bold text-green-800">Chef Carlo</h1>
+        <div className="flex gap-4">
           <button
             onClick={() => router.push('/dashboard')}
             className="text-sm text-blue-600 hover:underline"
@@ -109,7 +100,7 @@ export default function ChatCorePage() {
           <div
             key={i}
             className={`p-3 rounded-xl max-w-2xl whitespace-pre-wrap ${
-              m.role === 'user' ? 'bg-blue-200 self-end' : 'bg-blue-100 self-start'
+              m.role === 'user' ? 'bg-blue-200 self-end' : 'bg-green-100 self-start'
             }`}
           >
             <strong>{m.role === 'user' ? 'You' : m.name || 'Assistant'}:</strong> {m.content}
@@ -128,7 +119,7 @@ export default function ChatCorePage() {
         <button
           type="submit"
           disabled={loading}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
+          className="px-4 py-2 bg-green-600 text-white rounded-lg disabled:opacity-50"
         >
           Send
         </button>
