@@ -1,4 +1,4 @@
-// File: /app/api/chat-chef/route.ts (Diagnostic version — logs message array to Vercel logs)
+// File: /app/api/chat-chef/route.ts (Fix: OpenAI-safe name field — chefCarlo, no spaces)
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     const finalMessage = {
       role: 'assistant',
-      name: 'Chef Carlo',
+      name: 'chefCarlo', // must be OpenAI-safe
       content: reply,
     };
 
