@@ -1,4 +1,4 @@
-// File: /api/chat/route.ts (final patch: true handoff, state persistence, no ghosts)
+// File: /app/api/chat/route.ts (Final version: locked to Merv only)
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
@@ -6,17 +6,8 @@ import OpenAI from 'openai';
 import { updateFamiliarityScore } from '@/utils/familiarity';
 import { supabaseServer as supabase } from '@/lib/supabaseServer';
 import { generateVaultSummary } from '@/utils/vaultSummary';
-import { assistants } from '@/assistants';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-
-function shouldTriggerChef(message: string): boolean {
-  const lower = message.toLowerCase();
-  return [
-    'cook', 'cooking', 'recipe', 'dinner', 'lunch', 'meal',
-    'what should i make', 'what should i cook', 'what are we eating'
-  ].some((phrase) => lower.includes(phrase));
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,7 +15,7 @@ export async function POST(req: NextRequest) {
     const userId = session?.user?.sub;
     if (!userId) return new NextResponse('Unauthorized', { status: 401 });
 
-    const { messages, activeAssistant } = await req.json();
+    const { messages } = await req.json();
     const userMessage = messages[messages.length - 1]?.content || '';
 
     const { data: vault } = await supabase
@@ -101,24 +92,8 @@ You're not fake. You're Merv.
 So act like it.
     `.trim();
 
-    let finalAssistant = activeAssistant;
-    const lowerMsg = userMessage.toLowerCase();
-    const triggerChef = shouldTriggerChef(lowerMsg);
-
-    if (activeAssistant === 'Merv' && triggerChef) {
-      finalAssistant = 'chef';
-    }
-
-    const safeKey = finalAssistant?.toLowerCase().replace(' ', '') as keyof typeof assistants;
-    const selectedAssistant = finalAssistant && finalAssistant !== 'Merv' && assistants[safeKey]
-      ? assistants[safeKey]
-      : null;
-
-    const systemPrompt = selectedAssistant
-      ? selectedAssistant.systemPrompt(vault)
-      : mervPrompt;
-
-    const assistantName = selectedAssistant?.name || 'Merv';
+    const assistantName = 'Merv';
+    const systemPrompt = mervPrompt;
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
@@ -138,7 +113,7 @@ So act like it.
 
     return NextResponse.json(finalMessage);
   } catch (err) {
-    console.error('[CHAT ROUTE ERROR]', err);
-    return new NextResponse('Error processing chat', { status: 500 });
+    console.error('[MERV CHAT ERROR]', err);
+    return new NextResponse('Error processing Merv chat', { status: 500 });
   }
 }
