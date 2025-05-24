@@ -4,7 +4,7 @@ import { queryChefBrain } from '@/lib/brain/chefBrain';
 
 export async function buildChefPrompt(userMessage: string, vault: any) {
   const brainChunks = await queryChefBrain(userMessage);
-  const brainText = brainChunks.map((b) => b.content).join('\n\n');
+  const brainText = brainChunks.map((b: { content: string }) => b.content).join('\n\n');
 
   const diet = Array.isArray(vault.food?.diet)
     ? vault.food.diet.join(', ')
