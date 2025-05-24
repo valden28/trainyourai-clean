@@ -1,4 +1,4 @@
-// File: /app/api/chat-chef/route.ts (Fixed: full memory loop, async prompt, clean return)
+// File: /app/api/chat-chef/route.ts (Diagnostic version: logging everything)
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     if (!userId) return new NextResponse('Unauthorized', { status: 401 });
 
     const { messages } = await req.json();
-    const userMessage = messages[messages.length - 1]?.content || '';
+    const userMessage = messages[messages.length - 1]?.content || '[Empty]';
 
     const { data: vault } = await supabase
       .from('vaults_test')
@@ -27,6 +27,9 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = await buildChefPrompt(userMessage, vault);
 
+    console.log('[CHEF DEBUG] Incoming messages:', JSON.stringify(messages, null, 2));
+    console.log('[CHEF DEBUG] System Prompt:', systemPrompt);
+
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -35,7 +38,8 @@ export async function POST(req: NextRequest) {
       ]
     });
 
-    const reply = completion.choices[0]?.message?.content || '';
+    const reply = completion.choices[0]?.message?.content || '[No reply]';
+    console.log('[CHEF DEBUG] OpenAI Reply:', reply);
 
     return NextResponse.json({
       role: 'assistant',
