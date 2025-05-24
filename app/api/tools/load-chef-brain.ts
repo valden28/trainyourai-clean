@@ -1,22 +1,18 @@
-const files = fs.readdirSync(folder).filter((f: string) => f.endsWith('.txt'));
-const path = require('path');
-const dotenv = require('dotenv');
-const { createClient } = require('@supabase/supabase-js');
-const OpenAI = require('openai');
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
+import OpenAI from 'openai';
 
 dotenv.config();
 
-// Validate env
-if (!process.env.OPENAI_API_KEY || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error('Missing environment variables. Please check .env');
-}
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+// ...rest of your code continues here
 
 async function embedAndUpload(filePath: string, source: string) {
   const fullText = fs.readFileSync(filePath, 'utf-8');
