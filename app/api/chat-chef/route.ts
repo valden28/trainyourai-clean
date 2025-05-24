@@ -1,3 +1,5 @@
+// File: /app/api/chat-chef/route.ts (Fixed: full memory loop, async prompt, clean return)
+
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
@@ -41,7 +43,7 @@ export async function POST(req: NextRequest) {
       content: reply
     });
   } catch (err) {
-    console.error('[CHEF CARLO CHAT ERROR]', err);
+    console.error('[CHEF CHAT ERROR]', err);
     return new NextResponse('Error processing Chef Carlo chat', { status: 500 });
   }
 }
