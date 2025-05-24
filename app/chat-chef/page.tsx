@@ -44,10 +44,18 @@ export default function ChatChefPage() {
     if (!input.trim()) return;
 
     const newMessage = { role: 'user', content: input };
-    const updatedMessages = [...messages, newMessage];
-    setMessages(updatedMessages);
-    setInput('');
-    setLoading(true);
+
+// Sanitize assistant names to avoid OpenAI rejection
+const safeHistory = messages.map((msg) =>
+  msg.role === 'assistant'
+    ? { ...msg, name: 'chefCarlo' } // must be lowercase, no spaces
+    : msg
+);
+
+const updatedMessages = [...safeHistory, newMessage];
+setMessages(updatedMessages);
+setInput('');
+setLoading(true);
 
     try {
       const res = await fetch('/api/chat-chef', {
