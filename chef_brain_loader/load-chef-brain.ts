@@ -12,16 +12,17 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// ...rest of your code continues here
-
 async function embedAndUpload(filePath: string, source: string) {
   const fullText = fs.readFileSync(filePath, 'utf-8');
   const chunks = fullText.match(/[^\n]{100,1000}(\n|$)/g) || [];
 
   for (const chunk of chunks) {
+    const trimmed = chunk.trim();
+    if (!trimmed) continue;
+
     const embeddingRes = await openai.embeddings.create({
       model: 'text-embedding-ada-002',
-      input: chunk.trim()
+      input: trimmed
     });
 
     const embedding = embeddingRes.data[0].embedding;
@@ -30,7 +31,7 @@ async function embedAndUpload(filePath: string, source: string) {
       assistant_id: 'chef',
       topic: path.basename(filePath, '.txt'),
       source,
-      content: chunk.trim(),
+      content: trimmed,
       embedding
     });
 
@@ -43,12 +44,16 @@ async function embedAndUpload(filePath: string, source: string) {
 }
 
 async function run() {
-  const folder = path.join(__dirname, 'chef-knowledge');
+  const folder = path.resolve(__dirname, '../chef-knowledge');
+
+  console.log('[DEBUG] __dirname:', __dirname);
+  console.log('[DEBUG] Resolved folder path:', folder);
+
   if (!fs.existsSync(folder)) {
     throw new Error('chef-knowledge folder not found.');
   }
 
-  const files = fs.readdirSync(folder).filter(f => f.endsWith('.txt'));
+  const files = fs.readdirSync(folder).filter((f) => f.endsWith('.txt'));
 
   for (const file of files) {
     const filePath = path.join(folder, file);
@@ -58,4 +63,6 @@ async function run() {
   console.log('All files processed.');
 }
 
-run();
+run().catch((err) => {
+  console.error('[LOAD SCRIPT ERROR]', err);
+});

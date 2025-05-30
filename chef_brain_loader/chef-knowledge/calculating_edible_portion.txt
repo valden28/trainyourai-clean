@@ -1,0 +1,26 @@
+﻿CALCULATING EDIBLE PORTION QUANTITY (EPQ) 
+Using Yield Percent
+.example, 
+ you have a case of fresh green beans that weighs 20 pounds and you need to know how many 4-ounce servings are in the case, what you need to do first is determine the yield percent for green beans, either by referring to a list of yield percent values or by performing a yield test. Once you know the yield percent, you can compute the weight of the green beans after trimming.
+
+
+APQx Yield percent = EPQ
+
+
+EXAMPLE:
+20 lb green beans (APQ) x 0.88 (Yield percent) =
+17.6 lb green beans (EPQ)
+
+
+The edible portion quantity (EPQ) would be 17.6 pounds. The second step would be to compute how many 4-ounce servings there are in 17.6 pounds. If necessary, convert the portion size (here, 4 ounces) to the same unit of measure as the edible portion quantity (here,
+1 pound). 
+
+
+There are 16 ounces in 1 pound; 1 portion is equal to l A (or 0.25) pound.
+--= Number of servings
+Portion size
+
+
+EXAMPLE:
+17.6 lb green beans (EPQ) =70 4 servings 0.25 lb serving size
+You would be able to obtain seventy full servings from the case of green beans. You should round down any partial number of portions since it would not be plausible to serve a partial portion to a guest.

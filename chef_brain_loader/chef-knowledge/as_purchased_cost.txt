@@ -1,0 +1,18 @@
+﻿CALCULATING AS-PURCHASED COST (APC)
+Most food items purchased from suppliers are packed and priced by wholesale bulk sizes such as by the crate, case, bag, carton, and so on. 
+
+
+kitchen production, the packed amount is not always used for the same purpose and may often be broken down and used for several items. 
+
+
+to allocate the proper prices to each recipe, it is necessary to convert purchase pack prices to unit prices, which are expressed as price per pound, each, by the dozen, by the quart, and the like.
+
+
+If you know the cost of a pack with many units, calculate the cost per unit by dividing the as-purchased cost of the pack by the number of units in the pack.
+APC
+——-= APC per unit
+Number of units
+
+
+If you know the unit price of an item, you can determine the total cost by multiplying the as-purchased cost (APC) per unit by the number of units.
+APC per unit x Number of units = Total APC

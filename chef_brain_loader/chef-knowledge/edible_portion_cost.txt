@@ -1,0 +1,14 @@
+﻿CALCULATING EDIBLE PORTION COST
+
+
+recipes often assume ingredients are ready to cook, so when it comes to costing a recipe, the edible portion cost (EPC) per unit can be calculated from the as-purchased cost (APC) per unit, as long as the edible portion is expressed in the same unit of mea¬ sure as the cost unit.
+
+
+Yield percent
+EXAMPLE:
+$0.106/oz carrots (APC) 0.75 (Yield % for tourneed carrots)
+$0.141/oz tourneed carrots (EPC)
+EPQx EPC = Total cost
+
+
+ 4oz tourneed carrots (EPQ) x $0.141/oz toumeed carrots (EPC) = $0,564 per serving (total cost)

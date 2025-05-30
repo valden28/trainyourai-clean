@@ -1,0 +1,17 @@
+﻿CALCULATING THE AS-PURCHASED QUANTITY (APQ) Using Yield Percent
+Because many recipes assume the ingredients listed are ready to cook, it is necessary to consider the trim loss when purchasing items. In this case, the edible portion quantity must be converted to the as-purchased quantity that when trimmed will give the desired edible por¬ tion quantity. The yield percent is used as a tool when ordering.
+Yield percent
+
+
+Example: A recipe requires 20 pounds of cleaned shredded cabbage. The yield percent for cabbage is 79 percent. When the 20 pounds is divided by 79 percent (0.79), the result equals 25.3 pounds, which will be the minimum amount to purchase.
+Generally, the as-purchased quantity obtained by this method is rounded up, since the yield percent is an estimate. Some chefs increase the figure by an additional 10 percent to account for human error as well.
+
+
+not all foods have a loss
+processed or refined foods have a 100 percent yield, such as sugar, flour, or dried spices. 
+
+
+Other foods have a yield percent that depends on how they are served. If, for example, the ingredient is to be served by the piece (half a cantaloupe), or if a recipe calls for it by count (15 strawberries), the yield percent is not considered; the correct number of items must be purchased in order to create the correct number of servings. 
+
+
+However, if you are making a fruit salad and you know you need 2 ounces of cubed melon and 1 ounce of sliced strawberries per serving, you must consider the yield percent when ordering.

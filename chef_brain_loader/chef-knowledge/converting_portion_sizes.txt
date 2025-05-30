@@ -1,0 +1,66 @@
+﻿CONVERTING PORTION SIZES
+Sometimes it will happen that you also need to modify the portion size of a recipe. For instance, say you have a soup recipe that makes four 8-ounce portions, but you need to make enough to have forty 6-ounce portions.
+
+
+To make the conversion:
+1. Determine the total original yield and the total de¬ sired yield of the recipe.
+Number of portions x Portion size = Total yield
+
+
+EXAMPLE:
+4 x 8 fl oz = 32 fl oz (total original yield)
+40 x 6 fl oz = 240 fl oz (total desired yield)
+
+
+2. Determine the recipe conversion factor and modify the recipe as described above.
+
+
+240 fl oz _ .
+——■— = 7.5 (Recipe Conversion Factor)
+32 fl oz
+
+
+ important to remember that weight is measured in ounces, but volume is measured in fluid ounces. 
+
+
+A standard volume measuring cup is equal to 8 fluid ounces, but the contents of the cup may not always weigh 8 ounces. 
+
+
+One cup (8 fluid ounces) of cornflakes weighs only 1 ounce, but one cup (8 fluid ounces) of peanut butter weighs 9 ounces. 
+
+
+Water is the only substance for which it can be safely assumed that 1 fluid ounce equals 1 ounce. 
+
+
+all other ingredients, when the amount is expressed in ounces, weigh it; when the amount is expressed in fluid ounces, measure it with an accurate liquid (or volume) measuring tool.
+
+
+
+
+CONVERTING VOLUME MEASURES TO WEIGHT
+You can calculate and record the information yourself as follows:
+
+
+1. Prepare the ingredients as directed by the recipe— sift flour, chop nuts, mince garlic, grate cheeses, and so forth.
+
+
+2. Set the measuring device on the scale and reset the scale to zero (known as tore).
+3. Fill the measuring device correctly. For liquids, use graduated measuring cups or pitchers and fill to the desired level. To be sure that you have mea¬ sured accurately, bend down until the level mark on the measure is at your eye level. The measuring utensil must be sitting on a level surface for an ac¬ curate measurement. Use nested measuring tools for dry ingredients measured by volume. Overfill the measure, then scrape away the excess as you level off the measure.
+
+
+4. Return the filled measuring tool to the scale and record the weight in either grams or ounces on your standardized recipe.
+
+
+CONVERTING BETWEEN U.S. AND METRIC MEASUREMENT SYSTEMS
+
+
+The metric system, used throughout most of the world, is a decimal system, meaning that it is based on multiples of 10. 
+
+
+The gram is the basic unit of weight, the liter is the basic unit of volume, and the meter is the basic unit of length. Prefixes added to the basic units indicate larger or smaller units. For instance, a kilogram is 1000 grams, a milliliter is Mooo liter, and a centimeter is Vioo meter.
+
+
+The U.S. system, familiar to most Americans, uses ounces and pounds to measure weight, and teaspoons, tablespoons, fluid ounces, cups, pints, quarts, and gal¬ lons to measure volume. Unlike the metric system, the U.S. system is not based on multiples of a particular number, so it is not as simple to increase or decrease quantities. Instead, either the equivalencies of the different units of measure must be memorized or a chart must be kept handy (see page 1166).
+
+
+Most modern measuring equipment is capable of measuring in both U.S. and metric units. If, however, a recipe is written in a system of measurement for which you do not have the proper measuring equipment, you will need to convert to the other system.

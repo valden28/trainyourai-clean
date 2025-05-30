@@ -1,9 +1,12 @@
 {
-  "compilerOptions": 
+  "compilerOptions": {
     "target": "es2017",
     "module": "commonjs",
     "esModuleInterop": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
-  }
+    "moduleResolution": "node",
+    "outDir": "./dist",
+    "strict": true
+  },
+  "include": ["./load-chef-brain.ts"], 
+  "exclude": ["dist"]
+}

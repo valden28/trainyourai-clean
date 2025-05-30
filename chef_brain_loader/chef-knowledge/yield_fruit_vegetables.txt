@@ -1,0 +1,33 @@
+﻿CALCULATING THE YIELD OF FRESH FRUITS AND VEGETABLES 
+
+
+Determining Yield Percent
+
+
+First, record the as-purchased quantity (APQ) from the invoice, or weigh the item before trimming or cutting.
+
+
+EXAMPLE:
+
+
+APQ= 5 lb (= 80 oz) carrots
+Trim the item and cut as desired, saving trim and ed¬ ible portion quantity in separate containers. Weigh each separately and record their weights on a costing form:
+As-Purchased Quantity (APQ) - Trim loss = Edible
+Portion Quantity (EPQ)
+
+
+EXAMPLE:
+80 oz carrots (APQ) - 8.8 oz carrot trim = 71.2 oz
+sliced carrots
+Next, divide the EPQ by the APQ:
+Edible Portion Q uantity = Yie(d percent
+As-Purchased Quantity
+
+
+EXAMPLE:
+71.2 oz sliced carrots (EPQ) _ q qq 80 oz carrots (APQ)
+To convert the decimal to a percent, multiply by
+100: Yield percent = 89%
+
+
+NOTE: For more information on any of the above culinary math topics, refer to Math for the Professional Kitchen by Laura Dreesen, Michael Nothnagel, and Susan Wysocki.

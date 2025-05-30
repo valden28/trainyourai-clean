@@ -1,0 +1,368 @@
+﻿food science basics 
+
+
+
+
+There are dozens of scientific principles at work dur¬ 
+ing the cooking process. As an introduction to the topic 
+of food science, this section provides an overview of 
+the most basic of these principles. For more informa¬ 
+tion on any of the following subjects, refer to Readings 
+and Resources (page 1185) for a list of food science 
+references. 
+
+
+HEATTRANSFER 
+
+
+Cooking is the act of applying heat to foods to prepare 
+them for eating. When foods are cooked, changes in fla¬ 
+vor, texture, aroma, color, and nutritional content occur 
+during the process. 
+
+
+There are three ways that heat is transferred to 
+foods. Conduction is the direct transfer of heat between 
+adjacent molecules. An example of conduction is cook¬ 
+ing on a flattop range. Heat is transferred from the mol¬ 
+ecules of the hot range surface to the molecules of the 
+adjacent pan bottom, then from the pan bottom to the 
+pan sides and the food contained within the pan. The pan 
+must be in direct contact with the range for conduction 
+to occur. 
+
+
+Some materials are better conductors of heat than 
+others. Generally, most metals are good conductors, 
+while gases (air), liquids, and nonmetallic solids (glass, 
+ceramic) are not. Because it relies on direct contact, 
+conduction is a relatively slow method of heat transfer, 
+but the slow, direct transfer of heat between adjacent 
+molecules is what allows a food to be cooked from the 
+outside in, resulting in a completely cooked exterior 
+with a moist and juicy interior. 
+
+
+Convection is the transfer of heat through gases or 
+liquids. When either of these substances is heated, the 
+
+
+
+
+portion of the gas or liquid closest to the heat source 
+warms first and becomes less dense, causing it to rise 
+and be replaced by cooler, denser portions of the gas or 
+liquid. Convection, therefore, is a combination of con¬ 
+duction and mixing. 
+
+
+Convection occurs both naturally and through me¬ 
+chanical means. Natural convection is at work in a pot of 
+water placed on the stove to boil. Conduction transfers 
+heat from the stove to the pot to the water molecules in 
+contact with the interior of the pot. As these water mol¬ 
+ecules heat up, convection causes them to move away 
+and be replaced by cooler molecules. This continual 
+movement results in convection currents within the 
+water. If a potato is added to the water, the convection 
+currents transfer heat to the surface of the potato, at 
+which point conduction takes over to transfer heat to 
+the interior of the potato. 
+
+
+Mechanical convection occurs when stirring or a fan 
+is used to speed and equalize heat distribution. When 
+you stir a thick sauce to heat it faster and keep it from 
+scorching on the bottom of the pan, you are creating me¬ 
+chanical convection. Convection ovens use fans to rap¬ 
+idly circulate hot air, allowing them to cook foods more 
+quickly and evenly than conventional ovens. (Natural 
+convection occurs in conventional ovens as air in contact 
+with the heating element circulates, but the majority 
+of heat transfer in a conventional oven is the result of 
+infrared radiation.) 
+
+
+Radiation is the transfer of energy through waves 
+of electromagnetic energy that travel rapidly through 
+space. Radiation does not require direct contact be¬ 
+tween the energy source and food. When the waves 
+traveling through space strike matter and are ab¬ 
+sorbed, they cause molecules in the matter to vibrate 
+
+
+
+
+SIX BASIC PRINCIPLES OF FOOD SCIENCE 
+
+
+I Understanding how food reacts under certain conditions is essential to becoming a profes¬ 
+
+
+sional chef. From creating a flavorful dish to developing an innovative shortcut, chefs face 
+challenges every day. The six basic principles of food science are as follows: 
+
+
+Caramelization Maillard reaction 
+
+
+Gelatinization Denaturation 
+
+
+Coagulation Emulsification 
+
+
+
+
+chapters » THE BASICS OF NUTRITION AND FOOD SCIENCE 
+
+
+
+
+27 
+
+
+
+
+
+
+
+
+more rapidly, increasing the temperature. Two types 
+of radiation are important in the kitchen: infrared and 
+microwave. 
+
+
+Sources of infrared radiation include the glowing 
+coals of a charcoal grill or the glowing coils of an elec¬ 
+tric toaster, broiler, or oven. Waves of radiant energy 
+travel in all directions from these heat sources. Foods 
+and cookware that absorb the energy waves are heated. 
+Dark, dull, or rough surfaces absorb radiant energy bet¬ 
+ter than light-colored, polished, or smooth surfaces. 
+Transparent glass permits the transfer of radiant en¬ 
+ergy, so conventional oven temperatures should be low¬ 
+ered by approximately 25°F/14°C from convection oven 
+settings to offset the additional energy transfer that 
+occurs when using glass baking dishes. 
+
+
+Microwave radiation, produced by microwave ovens, 
+transfers energy through short high-frequency waves. 
+When these microwaves are absorbed by food, they 
+cause the food molecules to vibrate faster, creating 
+heat. Microwave radiation cooks food much faster than 
+infrared radiation because it penetrates foods several 
+inches deep, whereas infrared is mainly absorbed at the 
+surface. Depending on their composition, foods react 
+differently to microwaves. Foods with high moisture, 
+sugar, or fat content absorb microwaves best and heat 
+up more readily. 
+
+
+Microwave cooking has a few drawbacks, however. It 
+is best suited to cooking small batches of foods. Meats 
+cooked in a microwave oven lose greater amounts of 
+moisture and easily become dry. Microwave ovens also 
+
+
+
+
+cannot brown foods, and metal cannot be used in them 
+because it reflects the microwaves, which can cause 
+fires and damage the oven. 
+
+
+EFFECTS OF HEAT ON SUGARS AND 
+STARCHES: Caramelization, Maillard Reaction, 
+and Gelation 
+
+
+As discussed earlier in this chapter, carbohydrates come 
+in various forms, and each form reacts differently when 
+exposed to heat. The two forms of carbohydrates (sim¬ 
+ple and complex) that are of interest from a basic food 
+science perspective are sugar and starch. 
+
+
+When exposed to heat, sugar will at first melt into 
+a thick syrup. As its temperature continues to rise, 
+the sugar syrup changes color from clear to light yel¬ 
+low to a progressively deepening brown. This browning 
+process is called caramelization. It is a complicated 
+chemical reaction, and in addition to color change, it 
+also causes the flavor of the sugar to evolve and take on 
+the rich complexity that we know to be characteristic 
+of caramel. Different types of sugar caramelize at dif¬ 
+ferent temperatures. Granulated white sugar melts at 
+320°F/160°C and begins to caramelize at 338°F/170°C. 
+
+
+In foods that are not primarily sugar or starch, a 
+different reaction, known as the Maillard reaction , is 
+responsible for browning. This reaction involves sugars 
+and amino acids (the building blocks of protein). When 
+heated, these components react and produce numerous 
+chemical by-products, resulting in a brown color and 
+intense flavor and aroma. It is this reaction that gives 
+
+
+
+
+INDUCTION COOKING 
+
+
+
+
+Induction cooking is a relatively new cook¬ 
+ing method that transfers heat through 
+a specially designed cooktop made of a 
+smooth ceramic material over an induc¬ 
+tion coil. The induction coil creates a 
+magnetic current that causes a metal pan 
+on the cooktop to heat up quickly, yet the 
+cooktop itself remains cool. Heat is then 
+transferred to the food in the pan through 
+conduction. Cookware used for induction 
+cooking must be flat on the bottom for 
+
+
+
+
+good contact with the cooktop, and it must 
+be made of ferrous (iron-containing) metal 
+such as cast iron, magnetic stainless steel, 
+or enamel over steel. Cookware made of 
+other materials will not heat up on these 
+cooktops. Induction cooking offers the ad¬ 
+vantages of rapid heating and easy cleanup 
+because there are no nooks on the smooth 
+surface of the cooktop in which spilled 
+foods can get stuck, nor does spilled food 
+cook on the cool surface. 
+
+
+
+
+28 
+
+
+
+
+THE CULINARY PROFESSIONAL 
+
+
+
+
+
+
+
+
+coffee, chocolate, baked goods, dark beer, and roasted 
+meats and nuts much of their rich flavor and color. 
+
+
+Though the Maillard reaction can happen at room 
+temperature, both caramelization and the Maillard 
+reaction typically require relatively high heat (above 
+300°F/149°C) to occur rapidly enough to make an ap¬ 
+preciable difference in foods. Because water cannot be 
+heated above 212°F/100°C unless it is under pressure, 
+foods cooked with moist heat (boiling, steaming, poach¬ 
+ing, stewing) will not brown. Foods cooked using dry- 
+heat methods (sauteing, grilling, or roasting) will brown. 
+It is for this reason that many stewed and braised dishes 
+begin with an initial browning of ingredients before liq¬ 
+uid is added. 
+
+
+Starch, a complex carbohydrate, has powerful thick¬ 
+ening properties. When starch is combined with water 
+or another liquid and heated, individual starch granules 
+absorb the liquid and swell. This process, known as gela¬ 
+tion, is what causes the liquid to thicken. Gelation occurs 
+at different temperatures for different types of starch. 
+As a general rule of thumb, root-based starches (potato 
+and arrowroot, for instance) thicken at lower tempera¬ 
+tures and break down more quickly, whereas cereal- 
+
+
+
+
+based starches (corn and wheat, for example) thicken 
+at higher temperatures and break down more slowly. 
+High levels of sugar or acid can inhibit gelation, while the 
+presence of salt can promote it. 
+
+
+DENATURING PROTEINS 
+
+
+At the molecular level, natural proteins are shaped like 
+coils or springs. When natural proteins are exposed to 
+heat, salt, or acid, they denature—that is, their coils 
+unwind. When proteins denature, they tend to bond to¬ 
+gether (coagulate) and form solid clumps. An example of 
+this is a cooked egg white, which changes from a trans¬ 
+parent fluid to an opaque solid. As proteins coagulate, 
+they lose some of their capacity to hold water, which is 
+why protein-rich foods give off moisture as they cook, 
+even if they are steamed or poached. Fortunately, some 
+heat-induced denaturation is reversible through cool¬ 
+ing. This is why roasted foods should be allowed to rest 
+before carving; as the temperature falls, some of the 
+water (“juice") that was forced into spaces between the 
+proteins is reabsorbed and the food becomes moister. 
+Denatured proteins are easier to digest than natural 
+proteins. 
+
+
+
+
+EGG STRUCTURE AND USES 
+
+
+
+
+The egg is composed of two main parts, the 
+white and the yolk. Various membranes help 
+keep the yolk suspended at the center of 
+the white and help prevent contamination 
+or weight loss through evaporation. Whole 
+eggs, as well as whites and yolks separately, 
+play a number of important culinary roles. 
+Whole eggs are used as the main compo¬ 
+nent of many breakfast dishes and can be 
+prepared by scrambling, frying, poaching, 
+or baking, or in custards. In baked goods, 
+whole eggs are used as a glaze and to add 
+nourishment, flavor, and color. 
+
+
+The egg white consists almost exclu¬ 
+sively of water and a protein called albu¬ 
+men. Its ability to form a relatively stable 
+foam is crucial to the development of 
+
+
+
+
+proper structure in many items such as 
+angel food cakes, souffles, and meringues. 
+Egg whites are a key ingredient in clarify¬ 
+ing stocks and broths to produce con¬ 
+somme. They may also be used as a binder 
+in some forcemeats, especially mousselines 
+made from fish, poultry, or vegetables. 
+
+
+The yolk contains protein, a significant 
+amount of fat, and a natural emulsifier 
+called lecithin. The yolk also has the ability 
+to foam. This function, plus its ability to 
+form emulsions, makes egg yolks crucial 
+to the preparation of such items as may¬ 
+onnaise, hollandaise sauce, and genoise 
+(sponge cake). Yolks also provide addi¬ 
+tional richness to food, as when they are 
+included as a liaison in sauces or soups.

@@ -1,0 +1,961 @@
+﻿food and 
+kitchen safety 
+
+
+
+
+The importance of food and kitchen safety cannot be overemphasized. 
+Few things are as detrimental to a foodservice establishment as an 
+officially noted outbreak of a food-borne illness causejfby poor sanitary 
+practices. In addition to providing a sanitary atmospjpre and adhering 
+to procedures for safe food handling, it is also important to ensure 
+a safe working environment. This chapter covers Me causes of food- 
+borne illnesses and prevention procedures, ancMpudes checklists 
+to help the staff achieve sanitary and safe kit^pn conditions 
+
+
+CHAPTER 4 
+
+
+
+
+
+
+
+
+
+
+food-borne illness 
+
+
+
+
+Foods can serve as carriers for many different illnesses. 
+The most common symptoms of food-borne illnesses 
+include abdominal cramps, nausea, vomiting, and diar¬ 
+rhea, possibly accompanied by fever. These symptoms 
+may appear within a few hours after consumption of the 
+affected food, although in some cases several days may 
+elapse before onset. In order for a food-borne illness to 
+be declared an official outbreak, it must involve two or 
+more people who have eaten the same food, and health 
+officials must confirm it. 
+
+
+Food-borne illnesses are caused by adulterated 
+foods (foods unfit for human consumption). The sever¬ 
+ity of the illness depends on the amount of adulterated 
+food ingested and, to a great extent, the individual's sus¬ 
+ceptibility. Children, the elderly, and anyone whose im¬ 
+mune system is already under siege generally will have 
+much more difficulty than a healthy adult in combating a 
+food-borne illness. 
+
+
+The source of the contamination affecting the 
+food supply can be chemical, physical, or biological. 
+Insecticides and cleaning compounds are examples of 
+chemical contaminants that may accidentally find their 
+way into foods. Physical contaminants include bits of 
+glass, rodent hairs, and paint chips. Careless food han¬ 
+dling can mean that even an earring or a plastic bandage 
+could fall into the food and result in illness or injury. 
+
+
+Biological contaminants account for the majority 
+of food-borne illnesses. These include naturally oc¬ 
+curring poisons, known as toxins, found in certain wild 
+mushrooms, rhubarb leaves, green potatoes, and other 
+plants. The predominant biological agents, however, are 
+disease-causing microorganisms known as pathogens, 
+which are responsible for up to 95 percent of all food- 
+borne illnesses. Microorganisms of many kinds are 
+present virtually everywhere, and most are helpful or 
+harmless, if not essential; only about 1 percent of micro¬ 
+organisms are actually pathogenic. 
+
+
+Food-borne illnesses caused by biological con¬ 
+taminants fall into two subcategories: intoxication and 
+infection. Intoxication occurs when a person consumes 
+food containing toxins from bacteria, molds, or certain 
+plants and animals. Once in the body, these toxins act as 
+poison. Botulism is an example of an intoxication. 
+
+
+In the case of an infection, the food eaten by an indi¬ 
+vidual contains large numbers of living pathogens. These 
+pathogens multiply in the body and generally attack the 
+gastrointestinal lining. Salmonellosis is an example of 
+
+
+
+
+an infection. Some food-borne illnesses have character¬ 
+istics of both an intoxication and an infection. E. coli is 
+an agent that causes such an illness. 
+
+
+FOOD PATHOGENS 
+
+
+The specific types of pathogens responsible for food- 
+borne illnesses are fungi, viruses, parasites, and bac¬ 
+teria. Fungi, which include molds and yeast, are more 
+adaptable than other microorganisms and have a high 
+tolerance for acidic conditions. They are more often re¬ 
+sponsible for food spoilage than for food-borne illness. 
+Beneficial fungi are important to the food industry in 
+the production of cheese, bread, wine, and beer. 
+
+
+Viruses do not actually multiply in food, but if 
+through poor sanitation practice a virus contaminates 
+food, consumption of that food may result in illness. 
+Infectious hepatitis A, caused by eating shellfish har¬ 
+vested from polluted waters (an illegal practice) or poor 
+hand-washing practices after using the restroom, is an 
+example. Once in the body, a virus invades a cell (called 
+the host cell ) and essentially reprograms it to produce 
+more copies of the virus. The copies leave the dead host 
+cell behind and invade still more cells. The best defenses 
+against food-borne viruses are good personal hygiene 
+and obtaining shellfish from certified waters. 
+
+
+Parasites are pathogens that feed on and take shel¬ 
+ter in another organism, called a host. The host receives 
+no benefit from the parasite and, in fact, suffers harm or 
+even death as a result. Amebas and various worms such 
+as Trichinella spiralis, which is associated with pork, are 
+among the parasites that contaminate foods. Different 
+parasites reproduce in different ways. One example is 
+the parasitic worm that exists in larval stage in muscle 
+meats. Once consumed, its life cycle and reproductive 
+cycle continue. When the larvae reach adult stage, the 
+fertilized females release more eggs, which hatch and 
+travel to the muscle tissue of the host, and the cycle 
+continues. 
+
+
+Bacteria are responsible for a significant percent¬ 
+age of biologically caused food-borne illnesses. In order 
+to better protect food during storage, preparation, and 
+service, it is important to understand the classifications 
+and patterns of bacterial growth. Among the differ¬ 
+ent conventions for the classification of bacteria, the 
+most relevant to chefs are their requirement for oxygen 
+(aerobic/anaerobic/facultative), their effects on people 
+
+
+
+
+32 
+
+
+
+
+THE CULINARY PROFESSIONAL 
+
+
+
+
+(pathogenic/undesirable/beneficial/benign), and their 
+spore-forming abilities. Aerobic bacteria require the 
+presence of oxygen to grow. Anaerobic bacteria do not 
+require oxygen and may even die when exposed to it. 
+Facultative bacteria are able to function with or without 
+oxygen. It is also important to know at which tempera¬ 
+ture bacteria grow best. Certain bacteria are able to 
+form endospores, which serve as a means of protection 
+against adverse circumstances such as high tempera¬ 
+ture or dehydration. Endospores allow an individual 
+bacterium to resume its life cycle if favorable conditions 
+should recur. 
+
+
+Bacteria require three basic conditions for growth 
+and reproduction: a protein source, readily available 
+moisture, and time. The higher the amount of protein in 
+a food, the greater its potential as a carrier of a food- 
+borne illness. The amount of moisture available in a 
+food is measured on the water activity (Aw) scale. This 
+scale runs from 0 to 1, with 1 representing the Aw of 
+water. Foods with a water activity above 0.85 support 
+bacterial growth. A food's relative acidity or alkalinity 
+is measured on a scale known as pH. A moderate pH—a 
+value between 4.6 and 10 on a scale that ranges from 1 
+to 14—is best for bacterial growth, and most foods fall 
+within that range. Adding highly acidic ingredients, such 
+as vinegar or citrus juice, to a food can lower its pH and 
+extend its shelf life. 
+
+
+Many foods provide the three conditions necessary 
+for bacterial growth and are therefore considered to 
+be potentially hazardous. Meats, poultry, seafood, tofu, 
+and dairy products (with the exception of some hard 
+cheeses) are all categorized as potentially hazardous 
+foods. Foods do not necessarily have to be animal based 
+to contain protein, however; vegetables and grains also 
+contain protein. Cooked rice, beans, pasta, and potatoes 
+are therefore also potentially hazardous foods. There 
+are also other unlikely candidates that are ripe for bac¬ 
+terial growth such as sliced melons, sprouts, and garlic- 
+and-oil mixtures. 
+
+
+Food that contains pathogens in great enough num¬ 
+bers to cause illness may still look and smell normal. 
+Disease-causing microorganisms are too small to be 
+seen with the naked eye, so it is usually impossible to 
+ascertain visually that food is adulterated. Because the 
+microorganisms—particularly the bacteria—that cause 
+food-borne illness are different from the ones that 
+cause food to spoil, food may be adulterated and still 
+have no “off'odor. 
+
+
+
+
+Although cooking food will destroy many of the 
+microorganisms present, careless food handling after 
+cooking can reintroduce pathogens that will grow even 
+more quickly without competition for food and space 
+from the microorganisms that cause spoilage. Although 
+shortcuts and carelessness do not always result in food- 
+borne illness, inattention to detail increases the risk of 
+creating an outbreak that may cause serious illness or 
+even death. The various kinds of expenses related to an 
+outbreak of food-borne illness, such as negative public¬ 
+ity and loss of prestige, are blows from which many res¬ 
+taurants can never recover. 
+
+
+AVOIDING CROSS CONTAMINATION 
+
+
+Many food-borne illnesses are a result of unsanitary 
+handling procedures in the kitchen. Cross contamination 
+occurs when disease-causing elements or harmful sub¬ 
+stances are transferred from one contaminated surface 
+to another. 
+
+
+Excellent personal hygiene is one of the best de¬ 
+fenses against cross contamination. An employee who 
+reports for work with a contagious illness or an infected 
+cut on the hand puts every customer at risk. Any time 
+the hands come in contact with a possible source of con¬ 
+tamination (the face, hair, eyes, and mouth) they must be 
+thoroughly washed before continuing any work. 
+
+
+Food is at greatest risk of cross contamination dur¬ 
+ing the preparation stage. Ideally, separate work areas 
+and cutting boards should be used for raw and cooked 
+foods. Equipment and cutting boards should always be 
+cleaned and thoroughly sanitized between uses. 
+
+
+All food must be stored carefully to prevent contact 
+between raw and cooked items. Place drip pans beneath 
+raw foods. Do not handle ready-to-eat foods with bare 
+hands. Instead, use suitable utensils or single-use food- 
+handling gloves. 
+
+
+
+
+
+
+chapter 4 » FOOD AND KITCHEN SAFETY 
+
+
+
+
+33 
+
+
+
+
+PROPER HAND WASHING 
+
+
+
+
+To reduce the chances of cross contamina¬ 
+tion, wash your hands often and correctly. 
+Hands and forearms should be washed us¬ 
+ing soap and no°F/43°C water for no less 
+than twenty seconds. Be sure to wash your 
+
+
+
+
+hands at the beginning of each shift and 
+each new task, after handling raw foods, 
+after going to the bathroom, sneezing, 
+coughing, and so forth, and after handling 
+any nonfood item. 
+
+
+
+
+KEEPING FOODS OUTOFTHE 
+DANGER ZONE 
+
+
+An important weapon against pathogens is the ob¬ 
+servance of strict time and temperature controls. 
+Generally, the disease-causing microorganisms found in 
+foods, with the exception of E. coli 0157:H7, need to be 
+present in significant quantities in order to make some¬ 
+one ill. Once pathogens have established themselves in 
+a food source, they will either thrive or be destroyed, 
+depending upon how long foods are in the danger zone. 
+
+
+There are pathogens that can live at all temperature 
+ranges. For most of those capable of causingfood-borne 
+illness, the friendliest environment provides tempera¬ 
+tures within a range of 41° to 135°F/5° to 57°C—the 
+danger zone. Most pathogens are either destroyed or 
+will not reproduce at temperatures above 135°F/57°C. 
+Storing food at temperatures below 41°F/5°C will slow 
+or interrupt the cycle of reproduction. (It should also be 
+noted that intoxicating pathogens may be destroyed 
+during cooking, but any toxins they have produced are 
+still there.) 
+
+
+When conditions are favorable, bacteria can repro¬ 
+duce at an astonishing rate. Therefore, controlling the 
+time during which foods remain in the danger zone is 
+critical to the prevention of food-borne illness. Foods 
+left in the danger zone for a period longer than four 
+hours are considered adulterated. Additionally, the 
+four-hour period is cumulative, meaning that the meter 
+continues running every time the food enters the danger 
+zone. Once the four-hour period has been exceeded, 
+heating or cooling cannot recover foods. 
+
+
+receive and store foods safely 
+
+
+It is not unheard of for foods to be delivered to a food- 
+service operation already contaminated. To prevent 
+this from happening to you, inspect all goods to be sure 
+
+
+
+
+they arrive in sanitary conditions. Check the ambient 
+temperature inside the delivery truck to see that it is 
+correct. Check the temperature of the product as well as 
+the expiration dates. Verify that foods have the required 
+government inspection and certification stamps or tags. 
+Randomly sample items and reject any goods that do 
+not meet your standards. Move the items immediately 
+into proper storage conditions. 
+
+
+Refrigeration and freezer units should be main¬ 
+tained on a regular schedule and equipped with ther¬ 
+mometers to ascertain that the temperature remains 
+within a safe range. Although in most cases chilling will 
+not actually kill pathogens, it does drastically slow down 
+reproduction. In general, refrigerators should be kept 
+between 36° and 40°F/2° and 4°C, but quality is better 
+maintained if certain foods can be stored at these spe¬ 
+cific temperatures: 
+
+
+Meat and poultry: 32° to 36°F/0° to 2°C 
+
+
+Fish and shellfish: 30° to 34°F/-1° to 1°C 
+
+
+Eggs: 38° to 40°F/3° to 4°C 
+
+
+Dairy products: 36° to 40°F/2° to 4°C 
+
+
+Produce: 40° to 45°F/4°to 7°C 
+
+
+Separate refrigerators for each of the above cat¬ 
+egories are ideal, but if necessary, a single unit can be 
+
+
+
+
+
+
+Danger zone icon Time and temperature icon 
+
+
+
+
+34 
+
+
+
+
+THE CULINARY PROFESSIONAL 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+divided into sections. The front of the unit will be the 
+warmest area, the back the coldest. Before storing food 
+in the refrigerator, it should be properly cooled, stored 
+in clean containers, wrapped, and labeled clearly with 
+the contents and date. Store raw products below and 
+away from cooked foods to prevent cross contamination 
+by dripping. Use the principle of "first in, first out" (FIFO) 
+when arranging food, so that older items are in the front. 
+
+
+Dry storage is used for foods such as canned goods, 
+spices, condiments, cereals, and staples such as flour 
+and sugar, as well as for some fruits and vegetables that 
+do not require refrigeration and have low perishability. 
+As with all storage, the area must be clean, with proper 
+ventilation and air circulation. Cleaning supplies should 
+be stored in a separate place. 
+
+
+hold cooked or ready-to-serve 
+foods safely 
+
+
+Keep hot foods hot and cold foods cold. Use hot-holding 
+equipment (steam tables, double boilers, bain-maries, 
+heated cabinets or drawers, chafing dishes, etc.) to keep 
+foods at or above 135°F/57°C. Do not use hot-holding 
+equipment for cooking or reheating. Use cold-holding 
+equipment (ice or refrigeration) to keep cold foods at or 
+below a temperature of 41°F/5°C. 
+
+
+cool foods safely 
+
+
+One of the leading causes of food-borne illness is 
+improperly cooled food. Cooked foods that are to be 
+stored need to be cooled to below 41°F/5°C as quickly 
+as possible. This should be completed within four hours, 
+
+
+
+
+unless you use the two-stage cooling method. In the 
+first stage of this method, foods must be cooled to 
+70°F/21°C within two hours. In the second stage, foods 
+must reach 41°F/5°C or below within an additional four 
+hours, for a total cooling time of six hours. According 
+to FDA guidelines, using the two-stage method quickly 
+moves the food through the part of the danger zone 
+where bacteria grow most rapidly. 
+
+
+The proper way to cool hot liquids is to place them 
+in a metal container in an ice water bath that reaches 
+the same level as the liquid inside the container. Stir the 
+liquid in the container frequently so that the warmer 
+liquid at the center mixes with the cooler liquid at the 
+outer edges of the container, bringing down the overall 
+temperature more rapidly. 
+
+
+Semisolid and solid foods should be refrigerated in 
+a single layer in shallow containers to allow greater sur¬ 
+face exposure to the cold air. For the same reason, large 
+cuts of meat or other foods should be cut into smaller 
+portions, cooled to room temperature, and wrapped be¬ 
+fore refrigerating. 
+
+
+reheat foods safely 
+
+
+When foods are prepared ahead and then reheated, they 
+should move through the danger zone as rapidly as pos¬ 
+sible and be reheated to at least 165°F/74°C for a mini¬ 
+mum of fifteen seconds. As long as all proper cooling 
+and reheating procedures are followed each time, foods 
+may be cooled and reheated more than once. 
+
+
+Food should be brought to the proper temperature 
+over direct heat (burner, flattop, grill, or conventional 
+
+
+
+
+SAFE HANDLING OF EGGS 
+
+
+
+
+Today’s consumer is well aware of the po¬ 
+tential for food-borne illness through eggs. 
+Therefore, we will look at basic rules for safe 
+handling of eggs and foods containing eggs. 
+
+
+» All eggs in the shell should be free from 
+cracks, leaks, and obvious holes. 
+
+
+» Raw egg yolks are a potentially hazardous 
+food, due to the possible presence of Sal¬ 
+monella enteritidis bacteria. Salmonella 
+bacteria are killed when the eggs are held 
+
+
+
+
+at a temperature of at least 140°F/6 o°C for 
+a minimum of^Vi minutes. The bacteria 
+are also killed instantly at i6o°F/yi°C. 
+Fried eggs or poached eggs with runny 
+yolks should be prepared only at customer 
+request. 
+
+
+» Any food containing eggs must be kept at 
+safe temperatures throughout handling, 
+cooking, and storage. Cooling and reheat - 
+ing must be done quickly. 
+
+
+
+
+chapter 4 » FOOD AND KITCHEN SAFETY 
+
+
+
+
+35 
+
+
+
+
+
+
+
+
+oven) or in a microwave oven. Do not use hot-holding 
+equipment for cooking or reheating. A steam table will 
+adequately hold reheated foods above 135°F/57°C, but 
+it will not bring foods out of the danger zone quickly 
+enough. Instant-read thermometers should always be 
+used to check temperatures. 
+
+
+thaw frozen foods safely 
+
+
+Frozen foods may be thawed safely in several ways. 
+Never thaw food at room temperature. The best (though 
+slowest) method is to allow the food to thaw under re¬ 
+frigeration. The food should still be wrapped and should 
+be placed in a shallow container on a bottom shelf to 
+prevent possible cross contamination. 
+
+
+If there is not time to thaw foods in the refrigerator, 
+covered or wrapped food may be placed in a container 
+under running water of approximately 70°F/21°C or 
+below. Use a stream of water strong enough to circulate 
+the water around the food. 
+
+
+Individual portions that are to be cooked immedi¬ 
+ately may be thawed in a microwave oven. Liquids, small 
+items, and individual portions may even be cooked with¬ 
+out thawing, but larger pieces that are cooked while still 
+frozen become overcooked on the outside before they 
+are thoroughly done throughout. 
+
+
+HAZARD ANALYSIS CRITICAL CONTROL 
+POINTS (HACCP) 
+
+
+HACCP stands for Hazard Analysis Critical Control 
+Points, which is a scientific state-of-the-art food safety 
+program originally developed for astronauts. HACCP 
+takes a systematic approach to the conditions that are 
+responsible for most food-borne illnesses. It is preven¬ 
+tive in nature, anticipating how food safety problems 
+are most likely to occur and taking steps to prevent 
+them from occurring. The types of hazards of concern 
+are biological, chemical, and physical. Biological hazards 
+are typically microbiological, which include bacteria, 
+viruses, and parasites. Chemical hazards can be found in 
+the sanitation products used in the kitchen and physical 
+hazards include glass, wood, stones, or other foreign 
+objects. 
+
+
+The HACCP system has been adopted by both food 
+processors and restaurants, as well as by the FDA and 
+U5DA. At this time, there are no particular mandates 
+that all foodservice establishments must use HACCP. 
+However, instituting such a plan may prove advanta¬ 
+geous on many levels. The heart of HACCP is contained 
+in the following seven principles: 
+
+
+
+
+1. ASSESS THE HAZARDS. The first step in a HACCP 
+program begins with a hazard analysis of the menu 
+item or recipe. The process must be looked at by 
+designing a flowchart that covers every step in the 
+period from “dock to dish." 
+
+
+2. IDENTIFYTHE CRITICAL CONTROL POINTS.The 
+next decision to make, after you have established 
+a flow diagram and identified potential hazards, 
+is to identify the critical control points (CCPs). A 
+critical control point is the place in the utilization 
+of the food at which you have the ability to prevent, 
+eliminate, or reduce an existing hazard or to pre¬ 
+vent or minimize the likelihood that a hazard will 
+occur. To quote the 1999 FDA Food Code, a critical 
+control point is “a point or procedure in a specific 
+food system where loss of control may result in an 
+unacceptable health risk." One of the most difficult 
+aspects of putting together a HACCP program is not 
+to overidentify these critical control points. 
+
+
+3. ESTABLISH CRITICAL LIMITS AND CONTROL 
+MEASURES. Critical limits are generally standards 
+for each critical control point; control measures 
+are what you can do ahead of time to facilitate the 
+achievement of your critical limit. Many limits have 
+already been established by local health depart¬ 
+ments. For example, an established critical limit 
+for the cooking step in preparing chicken is a final 
+internal temperature of 165°F/74°C. If you were to 
+hold this chicken on the line before actual service, it 
+would have to be kept at 140°F/60°C to prevent the 
+growth of pathogenic organisms. Holding would be 
+another critical step in this process. 
+
+
+4. ESTABLISH PROCEDURES FOR MONITORING 
+CCPs. Critical limits for each CCP have to be estab¬ 
+lished to identify what is to be monitored. You must 
+also establish how the CCP will be monitored and 
+who will do it. Monitoring helps improve the system 
+by forcing identification of problems or faults at 
+particular points in the process. This allows for more 
+control or improvement in the system. 
+
+
+5. ESTABLISH CORRECTIVE ACTION PLANS. A plan of 
+action must be identified to deal with a deviation or 
+substandard level that occurs for a step in the pro¬ 
+cess. Specific corrective actions must be developed 
+for each CCP, because each food item and its prepa¬ 
+ration can vary greatly from one kitchen to the next. 
+
+
+
+
+36 
+
+
+
+
+THE CULINARY PROFESSIONAL 
+
+
+
+
+6. SET UP A RECORD-KEEPING SYSTEM. Keep docu¬ 
+mentation on hand to demonstrate whether the sys¬ 
+tem is working. Recording events at CCPs ensures that 
+critical limits are met and preventive monitoring is 
+occurring. Documentation typically consists of time/ 
+temperature logs, checklists, and sanitation forms. 
+
+
+7. DEVELOP A VERIFICATION SYSTEM. This step es¬ 
+tablishes procedures to ensure that the HACCP plan 
+is working correctly. If procedures are not being 
+followed, make the necessary modifications to the 
+system so that they are. 
+
+
+SERVING FOODS SAFELY 
+
+
+The potential to transmit food-borne illness does not 
+end when the food leaves the kitchen. Restaurant serv¬ 
+ers should also be instructed in good hygiene and safe 
+food-handling practices. Hands should be properly 
+washed after using the restroom, eating, smoking, 
+touching one's face or hair, and handling money, dirty 
+dishes, or soiled table linens. When setting tables, never 
+
+
+
+
+touch the parts of flatware that come in contact with 
+food, and handle glassware by the stems or bases only. 
+Carry plates, glasses, and flatware in such a way that 
+food contact surfaces are not touched. Serve all foods 
+using the proper utensils. 
+
+
+CLEANING AND SANITIZING 
+
+
+Cleaning refers to the removal of soil or food par¬ 
+ticles, whereas sanitizing involves using moist heat or 
+chemical agents to kill pathogenic microorganisms. For 
+equipment that cannot be immersed in a sink, or for 
+equipment such as knives and cutting boards employed 
+during food preparation, use a wiping cloth soaked in a 
+double-strength sanitizing solution to clean and sanitize 
+between uses. Iodine, chlorine, or quaternary ammonium 
+compounds are all common sanitizing agents. 
+
+
+Small equipment, tools, pots, and tableware should 
+be run through a ware-washing machine or washed 
+manually in a three-compartment sink. After sanitizing, 
+equipment and tableware should be allowed to air-dry 
+
+
+
+
+FOOD ALLERGIES 
+
+
+
+
+The way your body reacts when you eat a 
+food to which you are truly allergic can be 
+dramatic or even dangerous. An allergic 
+reaction to a food may also occur rapidly. 
+The skin may become itchy and develop 
+hives or welts. Some people experience 
+swelling of their throats or tongues. Severe 
+reactions require immediate medical 
+attention. 
+
+
+A true food allergy is nothing to fool 
+around with. As a chef, you can’t assume 
+that a request for “no garlic” indicates an 
+unevolved pedate or an unreasonable food 
+dislike. For the individual suffering from a 
+food allergy, even the merest hint of garlic 
+in his or her soup can set off a reaction. 
+
+
+People who suffer from an allergy 
+will ask about the menu in regard to the 
+food(s) that they cannot eat. It is impor¬ 
+tant that you and your staff know the 
+ingredients used in a dish. As of January 
+2006 all packaged foods that contain 
+
+
+
+
+major food allergens must identify them 
+on the label, so you must be certain that 
+you have read the label on prepared foods 
+thoroughly. 
+
+
+It is also important to realize that de¬ 
+pending on an individual’s sensitivity, even 
+the very small amount of allergen left on 
+a piece of equipment and transferred to a 
+food could be enough to set off a reaction. 
+
+
+Some of the most common food aller¬ 
+gies are to the following: 
+
+
+» Peanuts 
+» Tree nuts 
+» Milk 
+» Eggs 
+» Wheat 
+» Soy 
+» Fish 
+» Shellfish 
+
+
+
+
+chapter 4 » FOOD AND KITCHEN SAFETY 
+
+
+
+
+37 
+
+
+
+
+
+
+
+
+completely, because using paper or cloth toweling could 
+result in cross contamination. 
+
+
+Careful sanitation procedures, proper handling of 
+foods, and a well-maintained facility all work together 
+
+
+kitchen safety 
+
+
+In addition to the precautions necessary to guard 
+against food-borne illness, care must also be taken to 
+avoid accidents to staff and guests. The following 
+safety measures should be practiced. 
+
+
+HEALTH AND HYGIENE 
+
+
+Maintain good general health with regular checkups. Do 
+not handle food when ill. Keep any burn or break in the 
+skin covered with a clean, waterproof bandage. Cover 
+your face with a tissue when coughing or sneezing and 
+wash hands afterward. 
+
+
+Keep hair clean and neat, and contain it if necessary. 
+Keep fingernails short and well maintained, with no pol¬ 
+ish. Keep hands away from hair and face when working 
+with food. 
+
+
+FIRE SAFETY 
+
+
+It takes only a few seconds for a simple flare-up to turn 
+into a full-scale fire. Grease fires, electrical fires, or even 
+a waste container full of paper catching fire when a match 
+is carelessly tossed into it are easy to imagine in any busy 
+kitchen. A comprehensive fire safety plan should be in 
+place and a standard part of all employee training. 
+
+
+The first step to take to avoid fires is to make sure 
+that the entire staff is fully aware of potential fire dan¬ 
+gers. Be sure that all equipment is up to code. Frayed or 
+exposed wires and faulty plugs can all too easily be the 
+cause of a fire. Overburdened outlets are another com¬ 
+mon culprit. 
+
+
+Have fire extinguishers in easily accessible areas. 
+Proper maintenance of extinguishers and timely inspec¬ 
+tions by your local fire department are vital. The exits 
+from all areas of the building should be easy to find, 
+clear of any obstructions, and fully operational. 
+
+
+Thorough training is essential. Everyone should 
+know what to do in case of a fire. Your guests rely on you 
+
+
+
+
+to prevent a pest infestation. Take the necessary steps 
+to prohibit the potential harboring of various pathogens 
+caused by pests. 
+
+
+
+
+and your staff for guidance. Instruct your kitchen staff 
+in the correct way to handle a grill fire and grease fire. 
+(Above all, make sure everyone knows never to try to put 
+out a grease, chemical, or electrical fire by throwing wa¬ 
+ter on the flames.) Everyone should know where the fire 
+department number is posted. 
+
+
+DRESSING FOR SAFETY 
+
+
+The various parts of the typical chefs uniform play im¬ 
+portant roles in keeping workers safe as they operate in 
+a potentially dangerous environment. The chefs jacket, 
+for instance, is double-breasted to create a two-layer 
+cloth barrier over the chest to protect against steam 
+burns, splashes, and spills. (The design also allows the 
+jacket to be rebuttoned on the opposite side to cover 
+any spills.) The sleeves of the jacket are long to cover as 
+much of the arm as possible. Pants should be worn with¬ 
+out cuffs, which can trap hot liquids and debris. 
+
+
+Be it a tall white toque or a favorite baseball cap, 
+chefs wear hats to contain their hair and prevent it from 
+falling into the food. Hats also help absorb sweat from 
+overheated brows. Neckerchiefs serve a similar sweat- 
+absorbing role. 
+
+
+The apron is worn only to protect the jacket and 
+pants from excessive staining. Side towels are used to 
+protect their hands when working with hot pans, dishes, 
+or other equipment. Side towels used to lift hot items 
+must be dry in order to provide protection. 
+
+
+Hard leather shoes with slip-resistant soles are rec¬ 
+ommended because of the protection they offer and the 
+support they give feet. 
+
+
+Jackets, pants, aprons, side towels, and shoes can 
+harbor bacteria, molds, and parasites. Use hot water, a 
+good detergent, and a sanitizer, such as borax or chlo¬ 
+rine bleach, to remove grime.
