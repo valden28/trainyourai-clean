@@ -5,7 +5,7 @@ import { listRecipesFromDb } from './db/listRecipesFromDb'
 import { shareRecipeWithUser } from './shareRecipeWithUser'
 import { resolveContactName } from '@/lib/contacts/resolveContactName'
 import { getMostRecentRecipe } from './db/getMostRecentRecipe'
-import supabase from '@/lib/supabaseServer'
+import { supabase } from '@/lib/supabaseServer'
 export async function handleChefIntent({
   sender_uid,
   receiver_uid,
