@@ -8,9 +8,9 @@ export default function Header({ session }: { session: any }) {
   const pathname = usePathname()
   const user = session?.user
 
-  const assistant = pathname.includes('chef')
+  const assistant = pathname?.includes('chef')
     ? 'Chef Carlo'
-    : pathname.includes('core')
+    : pathname?.includes('core')
     ? 'Core Assistant'
     : 'Merv'
 
