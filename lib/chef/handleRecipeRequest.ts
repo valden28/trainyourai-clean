@@ -52,27 +52,28 @@ export async function handleRecipeRequest({
 
   const match = await getRecipeFromDb(owner_uid, recipe)
 
-if (!match) {
-  console.warn(`❌ Recipe not found in vault for ${owner_uid}:`, recipe)
-  return { status: 'not_found' }
+  if (!match) {
+    console.warn(`❌ Recipe not found in vault for ${owner_uid}:`, recipe)
+    return { status: 'not_found' }
+  }
+
+  const recipeText = [
+    `🍽️ ${match.title}`,
+    '',
+    '🧂 Ingredients:',
+    ...match.ingredients.map(i => `- ${i}`),
+    '',
+    '👨‍🍳 Instructions:',
+    ...match.instructions.map((step, i) => `${i + 1}. ${step}`)
+  ].join('\n')
+
+  await sendMervMessage(
+    owner_uid,
+    requester_uid,
+    recipeText,
+    'recipe',
+    'chef'
+  )
+
+  return { status: 'sent' }
 }
-
-const recipeText = [
-  `🍽️ ${match.title}`,
-  '',
-  '🧂 Ingredients:',
-  ...match.ingredients.map(i => `- ${i}`),
-  '',
-  '👨‍🍳 Instructions:',
-  ...match.instructions.map((step, i) => `${i + 1}. ${step}`)
-].join('\n')
-
-await sendMervMessage(
-  owner_uid,
-  requester_uid,
-  recipeText,
-  'recipe',
-  'chef'
-)
-
-return { status: 'sent' }
