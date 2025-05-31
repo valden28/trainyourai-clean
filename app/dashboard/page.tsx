@@ -13,12 +13,14 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // ✅ Redirect if no valid user
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/api/auth/login')
+    if (!isLoading && (!user || !user.sub || typeof user.sub !== 'string')) {
+      router.push('/')
     }
   }, [user, isLoading, router])
 
+  // ✅ Fetch vault + create if needed
   useEffect(() => {
     const fetchVault = async () => {
       try {
@@ -37,7 +39,7 @@ export default function DashboardPage() {
       }
     }
 
-    if (user?.sub) {
+    if (user?.sub && typeof user.sub === 'string') {
       createUserVaultIfMissing(user.sub)
       fetchVault()
     }

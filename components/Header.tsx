@@ -16,26 +16,33 @@ export default function Header() {
     : 'Merv'
 
   return (
-    <header className="fixed top-0 w-full z-50 bg-white border-b shadow-sm">
-      <div className="flex items-center justify-between px-4 py-2 max-w-4xl mx-auto">
+    <header className="fixed top-0 w-full z-50 bg-gray-100 border-b shadow-sm">
+      <div className="flex items-center justify-between px-4 py-2 max-w-5xl mx-auto">
         <div>
-          <Link href="/dashboard" className="font-bold text-lg">
-            TrainYourAI · <span className="text-blue-600">{assistant}</span>
+          <Link href="/dashboard" className="font-bold text-lg text-gray-800">
+            TrainYourAI · <span className="text-blue-700">{assistant}</span>
           </Link>
         </div>
 
         <div className="flex items-center gap-4">
-          {user && (
+          {user ? (
             <>
-              <span className="text-sm text-gray-700">{user.name || 'User'}</span>
-              <span className="text-green-500 text-xs">🟢 Vault Connected</span>
+              <span className="text-sm text-gray-800">{user.name || 'User'}</span>
+              <span className="text-green-600 text-xs font-medium">🟢 Vault Connected</span>
               <button
                 onClick={() => signOut({ callbackUrl: '/' })}
-                className="text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
+                className="text-sm bg-gray-800 text-white px-3 py-1 rounded hover:bg-black"
               >
                 Log out
               </button>
             </>
+          ) : (
+            <Link
+              href="/api/auth/login"
+              className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+            >
+              Log in
+            </Link>
           )}
         </div>
       </div>
