@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { signOut } from 'next-auth/react'
+<a href="/api/auth/logout">Log out</a>
 import { useUser } from '@auth0/nextjs-auth0/client'
 
 export default function Header() {
