@@ -1,5 +1,3 @@
-// File: /app/chat-core/page.tsx (with manual thread switch for Chef Carlo)
-
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
@@ -11,19 +9,16 @@ export default function ChatCorePage() {
   const [messages, setMessages] = useState<any[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  const bottomRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    if (!user || !user.sub) return
-    fetchMessages()
+    if (user?.sub) {
+      fetchMessages()
+    }
   }, [user])
 
   useEffect(() => {
-    scrollToBottom()
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   const fetchMessages = async () => {
@@ -56,7 +51,7 @@ export default function ChatCorePage() {
           receiver_uid: user?.sub,
           message: input.trim(),
           category: 'general',
-          assistant: 'chef'
+          assistant: 'merv' // ✅ Fixed assistant name
         })
       })
 
@@ -64,7 +59,10 @@ export default function ChatCorePage() {
       if (!res.ok) {
         toast.error(data.error || 'Failed to send')
       } else {
-        setMessages((prev) => [...prev, { message: input, sender_uid: user?.sub, status: 'sent' }])
+        setMessages((prev) => [
+          ...prev,
+          { message: input, sender_uid: user?.sub, status: 'sent' }
+        ])
         setInput('')
         fetchMessages()
       }
@@ -76,46 +74,66 @@ export default function ChatCorePage() {
   }
 
   return (
-    <div className="min-h-screen p-6 bg-white text-black flex flex-col">
+    <main className="min-h-screen flex flex-col bg-white text-black">
       <Toaster position="top-right" />
-      <h1 className="text-2xl font-bold mb-4">Your Merv</h1>
 
-      <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+      <div className="flex justify-between items-center p-4 border-b bg-blue-50 shadow-sm">
+        <div>
+          <h1 className="text-xl font-bold text-blue-800">Your Merv</h1>
+          <p className="text-xs text-gray-500">General AI assistant — fast, versatile, personalized</p>
+        </div>
+        <div className="flex gap-4 items-center">
+          <a href="/chat-chef" className="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700">
+            Talk to Chef
+          </a>
+          <a href="/dashboard" className="text-sm text-blue-700 hover:underline">
+            Dashboard
+          </a>
+          <a href="/api/auth/logout" className="text-sm text-gray-600 hover:underline">
+            Log Out
+          </a>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg, i) => (
           <div
             key={i}
-            className={`max-w-lg px-4 py-2 rounded shadow ${
+            className={`p-3 rounded-xl max-w-2xl whitespace-pre-wrap ${
               msg.sender_uid === user?.sub
-                ? 'bg-green-100 text-right ml-auto'
-                : 'bg-gray-100 text-left'
+                ? 'bg-green-100 self-end text-right ml-auto'
+                : 'bg-gray-100 self-start'
             }`}
           >
-            <p>{msg.message}</p>
-            <p className="text-xs text-gray-500 mt-1">
-              {msg.category || 'general'} • {msg.status}
-            </p>
+            {msg.message}
+            <div className="text-xs text-gray-400 mt-1">{msg.category} • {msg.status}</div>
           </div>
         ))}
-        <div ref={messagesEndRef} />
+        <div ref={bottomRef} />
       </div>
 
-      <div className="flex items-center gap-2">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          sendMessage()
+        }}
+        className="flex p-4 border-t bg-white"
+      >
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
           placeholder="Ask your Merv something..."
-          className="flex-1 px-3 py-2 border rounded text-black"
+          className="flex-grow p-3 rounded-lg border border-gray-300 mr-2"
         />
         <button
-          onClick={sendMessage}
+          type="submit"
           disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
         >
           Send
         </button>
-      </div>
-    </div>
+      </form>
+    </main>
   )
 }

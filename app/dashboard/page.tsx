@@ -47,7 +47,8 @@ export default function DashboardPage() {
 
   const handleStart = () => router.push('/onboarding')
   const handleTone = () => router.push('/tonesync')
-  const handleChat = () => router.push('/chat-core')
+  const handleChat = () => router.push('/chat')
+  const handleSettings = () => router.push('/settings')
 
   const isComplete =
     vault &&
@@ -161,6 +162,20 @@ export default function DashboardPage() {
                 className="mt-2 bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700"
               >
                 {missing('tonesync') ? 'Start' : 'Recalibrate'}
+              </button>
+            </div>
+
+            <div className="bg-gray-100 p-4 rounded shadow">
+              <h2 className="font-semibold mb-2">Vault Settings</h2>
+              <p className="text-sm text-gray-700">
+                Manage what’s inside your vault and see what’s connected.
+                More controls and assistant tools coming soon.
+              </p>
+              <button
+                onClick={handleSettings}
+                className="mt-2 bg-gray-700 text-white px-3 py-1 rounded hover:bg-gray-800"
+              >
+                Open Vault Settings
               </button>
             </div>
           </div>
