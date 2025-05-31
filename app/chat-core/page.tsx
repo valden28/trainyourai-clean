@@ -1,138 +1,121 @@
 // File: /app/chat-core/page.tsx (with manual thread switch for Chef Carlo)
 
-'use client';
+'use client'
 
-import { useUser } from '@auth0/nextjs-auth0/client';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react'
+import { useUser } from '@auth0/nextjs-auth0/client'
+import toast, { Toaster } from 'react-hot-toast'
 
 export default function ChatCorePage() {
-  const { user, isLoading } = useUser();
-  const router = useRouter();
-  const [messages, setMessages] = useState<any[]>([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const { user, isLoading } = useUser()
+  const [messages, setMessages] = useState<any[]>([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  const chatKey = user ? `trainyourai_chat_merv` : null;
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/');
+    if (!user || !user.sub) return
+    fetchMessages()
+  }, [user])
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
+  const fetchMessages = async () => {
+    try {
+      const uid = encodeURIComponent(user?.sub || '')
+      const res = await fetch(`/api/merv-messages/fetch?uid=${uid}`)
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to load messages')
+        return
+      }
+
+      setMessages(data.messages || [])
+    } catch (err: any) {
+      toast.error('❌ Error: ' + err.message)
     }
-  }, [user, isLoading, router]);
+  }
 
-  useEffect(() => {
-    if (chatKey) {
-      const saved = localStorage.getItem(chatKey);
-      if (saved) setMessages(JSON.parse(saved));
-    }
-  }, [chatKey]);
-
-  useEffect(() => {
-    if (chatKey) {
-      localStorage.setItem(chatKey, JSON.stringify(messages));
-    }
-  }, [messages, chatKey]);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-
-    const newMessage = { role: 'user', content: input };
-    setMessages((prev) => [...prev, newMessage]);
-    setInput('');
-    setLoading(true);
+  const sendMessage = async () => {
+    if (!input.trim()) return
+    setLoading(true)
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetch('/api/merv-messages/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [...messages, newMessage], activeAssistant: 'Merv' }),
-      });
+        body: JSON.stringify({
+          sender_uid: user?.sub,
+          receiver_uid: user?.sub,
+          message: input.trim(),
+          category: 'general',
+          assistant: 'chef'
+        })
+      })
 
-      const reply = await res.json();
-      setMessages((prev) => [...prev, reply]);
-    } catch (err) {
-      console.error('Chat error:', err);
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to send')
+      } else {
+        setMessages((prev) => [...prev, { message: input, sender_uid: user?.sub, status: 'sent' }])
+        setInput('')
+        fetchMessages()
+      }
+    } catch (err: any) {
+      toast.error('❌ Error: ' + err.message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
-
-  const clearChat = () => {
-    if (chatKey) localStorage.removeItem(chatKey);
-    setMessages([]);
-  };
+  }
 
   return (
-    <main className="flex flex-col h-screen bg-white text-black border-l-8 border-blue-600">
-      <div className="flex justify-between items-center p-4 border-b bg-blue-50 shadow-sm">
-        <div>
-          <h1 className="text-xl font-bold text-blue-800">Merv</h1>
-          <p className="text-xs text-gray-500">Lead assistant — recommends experts</p>
-        </div>
-        <div className="flex gap-4 items-center">
-          <button
-            onClick={() => router.push('/chat-chef')}
-            className="text-sm text-green-600 hover:underline"
-          >
-            Talk to Chef Carlo
-          </button>
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="text-sm text-blue-600 hover:underline"
-          >
-            Dashboard
-          </button>
-          <button
-            onClick={clearChat}
-            className="text-sm text-red-500 hover:underline"
-          >
-            Clear Chat
-          </button>
-          <a
-            href="/api/auth/logout"
-            className="text-sm text-gray-600 hover:underline"
-          >
-            Log Out
-          </a>
-        </div>
-      </div>
+    <div className="min-h-screen p-6 bg-white text-black flex flex-col">
+      <Toaster position="top-right" />
+      <h1 className="text-2xl font-bold mb-4">Your Merv</h1>
 
-      <div className="flex-grow overflow-y-auto p-4 space-y-4">
-        {messages.map((m, i) => (
+      <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+        {messages.map((msg, i) => (
           <div
             key={i}
-            className={`p-3 rounded-xl max-w-2xl whitespace-pre-wrap ${
-              m.role === 'user' ? 'bg-blue-200 self-end' : 'bg-blue-100 self-start'
+            className={`max-w-lg px-4 py-2 rounded shadow ${
+              msg.sender_uid === user?.sub
+                ? 'bg-green-100 text-right ml-auto'
+                : 'bg-gray-100 text-left'
             }`}
           >
-            <strong>{m.role === 'user' ? 'You' : m.name || 'Assistant'}:</strong> {m.content}
+            <p>{msg.message}</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {msg.category || 'general'} • {msg.status}
+            </p>
           </div>
         ))}
-        <div ref={bottomRef} />
+        <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSend} className="flex p-4 border-t bg-white">
+      <div className="flex items-center gap-2">
         <input
+          type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your message..."
-          className="flex-grow p-3 rounded-lg border border-gray-300 mr-2"
+          onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+          placeholder="Ask your Merv something..."
+          className="flex-1 px-3 py-2 border rounded text-black"
         />
         <button
-          type="submit"
+          onClick={sendMessage}
           disabled={loading}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
+          className="bg-blue-600 text-white px-4 py-2 rounded"
         >
           Send
         </button>
-      </form>
-    </main>
-  );
+      </div>
+    </div>
+  )
 }

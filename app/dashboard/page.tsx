@@ -1,57 +1,59 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import { useUser } from '@auth0/nextjs-auth0/client';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react'
+import { useUser } from '@auth0/nextjs-auth0/client'
+import { useRouter } from 'next/navigation'
+import { createUserVaultIfMissing } from '@/lib/vault/createUserVaultIfMissing'
 
 export default function DashboardPage() {
-  const { user, isLoading } = useUser();
-  const router = useRouter();
+  const { user, isLoading } = useUser()
+  const router = useRouter()
 
-  const [vault, setVault] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [vault, setVault] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push('/api/auth/login');
+      router.push('/api/auth/login')
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, router])
 
   useEffect(() => {
     const fetchVault = async () => {
       try {
-        const res = await fetch('/api/vault');
-        const json = await res.json();
+        const res = await fetch('/api/vault')
+        const json = await res.json()
 
         if (!res.ok) {
-          setError(json.error || 'Unknown error');
+          setError(json.error || 'Unknown error')
         } else {
-          setVault(json);
+          setVault(json)
         }
       } catch (err: any) {
-        setError(err.message);
+        setError(err.message)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
-
-    if (user) {
-      fetchVault();
     }
-  }, [user]);
 
-  const missing = (field: string) => !vault?.[field];
+    if (user?.sub) {
+      createUserVaultIfMissing(user.sub)
+      fetchVault()
+    }
+  }, [user])
 
-  const handleStart = () => router.push('/onboarding');
-  const handleTone = () => router.push('/tonesync');
-  const handleChat = () => router.push('/chat-core');
+  const missing = (field: string) => !vault?.[field]
+
+  const handleStart = () => router.push('/onboarding')
+  const handleTone = () => router.push('/tonesync')
+  const handleChat = () => router.push('/chat-core')
 
   const isComplete =
     vault &&
     vault.innerview &&
     vault.tonesync &&
-    vault.skillsync;
+    vault.skillsync
 
   return (
     <div className="min-h-screen bg-white text-black p-6">
@@ -64,7 +66,10 @@ export default function DashboardPage() {
         <>
           <div
             className="mb-6 p-4 rounded shadow-md border-l-8 flex justify-between items-center"
-            style={{ borderColor: isComplete ? '#22c55e' : '#ef4444', backgroundColor: '#f9fafb' }}
+            style={{
+              borderColor: isComplete ? '#22c55e' : '#ef4444',
+              backgroundColor: '#f9fafb'
+            }}
           >
             <div>
               <p className="font-semibold text-lg">
@@ -134,7 +139,8 @@ export default function DashboardPage() {
             <div className="bg-gray-100 p-4 rounded shadow">
               <h2 className="font-semibold mb-2">InnerView</h2>
               <p className="text-sm text-gray-700">
-                Tell me who you are — your story, values, and what you care about. This is where your assistant learns to think like someone who truly knows you.
+                Tell me who you are — your story, values, and what you care about.
+                This is where your assistant learns to think like someone who truly knows you.
               </p>
               <button
                 onClick={handleStart}
@@ -147,7 +153,8 @@ export default function DashboardPage() {
             <div className="bg-gray-100 p-4 rounded shadow">
               <h2 className="font-semibold mb-2">ToneSync</h2>
               <p className="text-sm text-gray-700">
-                Choose how I speak — region, rhythm, language, and cultural flavor. I’ll adjust my tone to feel like someone you’d actually talk to.
+                Choose how I speak — region, rhythm, language, and cultural flavor.
+                I’ll adjust my tone to feel like someone you’d actually talk to.
               </p>
               <button
                 onClick={handleTone}
@@ -160,5 +167,5 @@ export default function DashboardPage() {
         </>
       )}
     </div>
-  );
+  )
 }
