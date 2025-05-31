@@ -2,7 +2,7 @@
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import { updateFamiliarityScore } from '@/utils/familiarity';
-import { supabaseServer as supabase } from '@/lib/supabaseServer';
+import { supabase } from '@/lib/supabaseServer';
 
 export async function POST(req: NextRequest) {
   try {

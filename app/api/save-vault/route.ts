@@ -1,7 +1,8 @@
 // app/api/save-vault/route.ts
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer as supabase } from '@/lib/supabaseServer';
+import { supabase } from '@/lib/supabaseServer';
+;
 
 export async function POST(req: NextRequest) {
   try {

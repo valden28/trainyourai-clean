@@ -1,6 +1,6 @@
 // app/api/save-innerview/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer as supabase } from '@/lib/supabaseServer';
+import { supabase } from '@/lib/supabaseServer';
 
 export async function POST(req: NextRequest) {
   try {

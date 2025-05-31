@@ -3,7 +3,7 @@
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { supabaseServer as supabase } from '@/lib/supabaseServer';
+import { supabase } from '@/lib/supabaseServer';
 import { buildChefPrompt } from '@/lib/assistants/chefPromptBuilder';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       role: 'assistant',
-      name: 'Chef Carlo',
+      name: 'chefCarlo',
       content: reply
     });
   } catch (err) {

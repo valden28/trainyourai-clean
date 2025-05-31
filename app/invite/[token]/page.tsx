@@ -1,16 +1,18 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import toast, { Toaster } from 'react-hot-toast'
 
-export default function InvitePage({ params }: { params: { token: string } }) {
-  const token = params.token
+export default function InvitePage() {
+  const params = useParams()
+  const searchParams = useSearchParams()
+  const token = params?.token as string
+  const linked_uid = searchParams.get('uid') || ''
+
   const [invite, setInvite] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [accepted, setAccepted] = useState(false)
-  const searchParams = useSearchParams()
-  const linked_uid = searchParams.get('uid') || '' // Pass this in manually for now
 
   useEffect(() => {
     const fetchInvite = async () => {
@@ -30,7 +32,7 @@ export default function InvitePage({ params }: { params: { token: string } }) {
       }
     }
 
-    fetchInvite()
+    if (token) fetchInvite()
   }, [token])
 
   const handleAccept = async () => {

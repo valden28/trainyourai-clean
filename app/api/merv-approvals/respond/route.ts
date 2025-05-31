@@ -32,13 +32,15 @@ export async function POST(req: NextRequest) {
       ? `✅ Approved: ${recipeName} is now available.`
       : `❌ Request for ${recipeName} was denied.`
 
-  const messageResult = await sendMervMessage(
-    data.owner_uid,      // from Dave
-    data.requester_uid,  // to Den
+  const result = await sendMervMessage(
+    data.owner_uid,
+    data.requester_uid,
     responseMessage,
-    'recipe',
+    'food',
     'chef'
   )
 
-  return NextResponse.json({ success: true, message: messageResult })
+  console.log('✅ Approval response message sent:', result)
+
+  return NextResponse.json({ success: true, message: result })
 }
