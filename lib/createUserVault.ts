@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseServer'
+import { supabase } from '@/lib/supabaseClient'
 
 export async function createUserVaultIfMissing(user_uid: string) {
   const { data, error } = await supabase
