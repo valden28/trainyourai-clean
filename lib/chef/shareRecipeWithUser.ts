@@ -31,27 +31,27 @@ export async function shareRecipeWithUser({
 
   // 🔁 Check if already shared
   const { data: existing, error: checkError } = await supabase
-  .from('merv_permissions')
-  .select('id')
-  .eq('owner_uid', owner_uid)
-  .eq('allowed_uid', target_uid)
-  .eq('assistant', 'chef')
-  .eq('resource', resource)
+    .from('merv_permissions')
+    .select('id')
+    .eq('owner_uid', owner_uid)
+    .eq('allowed_uid', target_uid)
+    .eq('assistant', 'chef')
+    .eq('resource', resource)
 
-if (checkError) {
-  console.error('❌ Supabase check error:', checkError.message)
-  return {
-    success: false,
-    message: `❌ Could not verify sharing history: ${checkError.message}`
+  if (checkError) {
+    console.error('❌ Supabase check error:', checkError.message)
+    return {
+      success: false,
+      message: `❌ Could not verify sharing history: ${checkError.message}`
+    }
   }
-}
 
-if (existing && existing.length > 0) {
-  return {
-    success: true,
-    message: `⚠️ You’ve already shared "${data.title}" with this person.`
+  if (existing && existing.length > 0) {
+    return {
+      success: true,
+      message: `⚠️ You’ve already shared "${data.title}" with this person.`
+    }
   }
-}
 
   // 👥 Insert new permission
   const { error: insertError } = await supabase.from('merv_permissions').insert({
@@ -75,10 +75,10 @@ if (existing && existing.length > 0) {
     `📬 ${data.title}`,
     '',
     '🧂 Ingredients:',
-    ...data.ingredients.map(i => `- ${i}`),
+    ...data.ingredients.map((i: string) => `- ${i}`),
     '',
     '👨‍🍳 Instructions:',
-    ...data.instructions.map((step, i) => `${i + 1}. ${step}`)
+    ...data.instructions.map((step: string, i: number) => `${i + 1}. ${step}`)
   ].join('\n')
 
   await sendMervMessage(owner_uid, target_uid, recipeText, 'recipe', 'chef')

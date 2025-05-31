@@ -1,12 +1,20 @@
 import { supabase } from '@/lib/supabaseServer'
 
+type MervCategory =
+  | "general"
+  | "calendar"
+  | "food"
+  | "travel"
+  | "vault_response"
+  | "recipe"
+
 export async function sendMervMessage(
   sender_uid: string,
   receiver_uid: string,
   message: string,
-  category: 'general' | 'calendar' | 'food' | 'travel' = 'general',
-  assistant: string = ''
-) {
+  category: MervCategory,
+  assistant: string
+){
   const { data, error } = await supabase
     .from('merv_messages')
     .insert({

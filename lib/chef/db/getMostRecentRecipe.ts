@@ -15,13 +15,14 @@ export async function getMostRecentRecipe(user_uid: string) {
     return null
   }
 
-  const valid = data.find(msg => msg.message?.trim().startsWith('📬'))
+  const valid = data.find((msg: any) => msg.message?.trim().startsWith('📬'))
   if (!valid) return null
 
   const lines = valid.message.split('\n')
   const title = lines[0]?.replace('📬', '').trim() || 'Untitled'
-  const ingIndex = lines.findIndex(l => l.includes('🧂'))
-  const instrIndex = lines.findIndex(l => l.includes('👨‍🍳'))
+
+  const ingIndex = lines.findIndex((l: string) => l.includes('🧂'))
+  const instrIndex = lines.findIndex((l: string) => l.includes('👨‍🍳'))
 
   const ingredients = lines.slice(ingIndex + 1, instrIndex).filter(Boolean)
   const instructions = lines.slice(instrIndex + 1).filter(Boolean)

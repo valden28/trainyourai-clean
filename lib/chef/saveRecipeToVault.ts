@@ -1,14 +1,22 @@
 import { recipeVault } from '@/lib/vault/vault.recipes'
 
-// 🔧 This will mutate the vault in-memory (for dev/testing only)
-export function saveRecipeToVault(user_uid: string, recipe: {
-  key: string
-  title: string
-  aliases?: string[]
-  ingredients: string[]
-  instructions: string[]
-}): boolean {
-  if (!user_uid || !recipe.key || !recipe.ingredients || !recipe.instructions) {
+// 🔧 This mutates the in-memory vault (for dev/testing only)
+export function saveRecipeToVault(
+  user_uid: string,
+  recipe: {
+    key: string
+    title: string
+    aliases?: string[]
+    ingredients: string[]
+    instructions: string[]
+  }
+): boolean {
+  if (
+    !user_uid ||
+    !recipe.key ||
+    !Array.isArray(recipe.ingredients) ||
+    !Array.isArray(recipe.instructions)
+  ) {
     return false
   }
 

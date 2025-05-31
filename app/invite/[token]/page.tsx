@@ -7,8 +7,9 @@ import toast, { Toaster } from 'react-hot-toast'
 export default function InvitePage() {
   const params = useParams()
   const searchParams = useSearchParams()
+
   const token = params?.token as string
-  const linked_uid = searchParams.get('uid') || ''
+  const linked_uid = searchParams?.get('uid') ?? ''
 
   const [invite, setInvite] = useState<any>(null)
   const [loading, setLoading] = useState(true)

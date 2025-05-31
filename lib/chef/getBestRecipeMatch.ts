@@ -1,6 +1,9 @@
 import { supabase } from '@/lib/supabaseServer'
 
-export async function getBestRecipeMatch(user_uid: string, query: string): Promise<{ key: string, data: any } | null> {
+export async function getBestRecipeMatch(
+  user_uid: string,
+  query: string
+): Promise<{ key: string; data: any } | null> {
   const { data, error } = await supabase
     .from('recipes_vault')
     .select('*')
@@ -13,16 +16,18 @@ export async function getBestRecipeMatch(user_uid: string, query: string): Promi
 
   const input = query.toLowerCase().replace(/[^a-z0-9]/gi, '')
 
-  const match = data.find((r) => {
+  const match = data.find((r: any) => {
     const key = r.key?.toLowerCase().replace(/[^a-z0-9]/gi, '')
     const title = r.title?.toLowerCase().replace(/[^a-z0-9]/gi, '')
-    const aliases = (r.aliases || []).map((a: string) => a.toLowerCase().replace(/[^a-z0-9]/gi, ''))
+    const aliases = (r.aliases || []).map((a: string) =>
+      a.toLowerCase().replace(/[^a-z0-9]/gi, '')
+    )
 
     return (
       key === input ||
       key.includes(input) ||
       title.includes(input) ||
-      aliases.some(alias => alias.includes(input))
+      aliases.some((alias: string) => alias.includes(input))
     )
   })
 

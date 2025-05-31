@@ -61,10 +61,10 @@ export async function handleRecipeRequest({
     `🍽️ ${match.title}`,
     '',
     '🧂 Ingredients:',
-    ...match.ingredients.map(i => `- ${i}`),
+    ...match.ingredients.map((i: string) => `- ${i}`),
     '',
     '👨‍🍳 Instructions:',
-    ...match.instructions.map((step, i) => `${i + 1}. ${step}`)
+    ...match.instructions.map((step: string, i: number) => `${i + 1}. ${step}`)
   ].join('\n')
 
   await sendMervMessage(

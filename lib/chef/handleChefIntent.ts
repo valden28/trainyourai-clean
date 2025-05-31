@@ -1,11 +1,11 @@
 import { sendMervMessage } from '@/lib/mervLink/sendMessage'
 import { saveRecipeToDb } from './db/saveRecipeToDb'
-import { getRecipeFromDb } from './db/getRecipeFromDb'
+import { getMostRecentRecipe } from './db/getMostRecentRecipe'
 import { listRecipesFromDb } from './db/listRecipesFromDb'
 import { shareRecipeWithUser } from './shareRecipeWithUser'
 import { resolveContactName } from '@/lib/contacts/resolveContactName'
-import { getMostRecentRecipe } from './db/getMostRecentRecipe'
 import { supabase } from '@/lib/supabaseServer'
+
 export async function handleChefIntent({
   sender_uid,
   receiver_uid,
@@ -16,10 +16,9 @@ export async function handleChefIntent({
   message: string
 }) {
   console.log('🧠 Incoming chef intent message:', message)
-
   const lower = message.toLowerCase()
 
-  // 💾 Save recipe just received
+  // 💾 Save recent recipe
   if (lower.startsWith('save this') && lower.includes('to my vault')) {
     const recent = await getMostRecentRecipe(sender_uid)
 
@@ -40,7 +39,7 @@ export async function handleChefIntent({
     return { status: saved }
   }
 
-  // 📝 Save command
+  // 📝 Save under custom title
   if (lower.startsWith('save this as')) {
     const title = message.replace(/^save this as/i, '').trim()
     const key = title.toLowerCase().replace(/\s+/g, '')
@@ -53,10 +52,11 @@ export async function handleChefIntent({
       instructions: ['[user-defined]']
     })
 
-    const msg =
-      result === 'saved' ? `✅ Saved “${title}” to your vault.` :
-      result === 'duplicate' ? `⚠️ You’ve already saved “${title}.”` :
-      `❌ Something went wrong while saving.`
+    const msg = result === 'saved'
+      ? `✅ Saved “${title}” to your vault.`
+      : result === 'duplicate'
+        ? `⚠️ You’ve already saved “${title}.”`
+        : `❌ Something went wrong while saving.`
 
     await sendMervMessage(receiver_uid, sender_uid, msg, 'vault_response', 'chef')
     return { status: result }
@@ -77,18 +77,14 @@ export async function handleChefIntent({
     return { status: 'listed' }
   }
 
-  // 📜 Shared history query (Den only for now)
+  // 📜 Shared history (Den-only)
   if (sender_uid !== 'auth0|6825cc5ba058089b86c4edc0') {
     await sendMervMessage(receiver_uid, sender_uid, '⚠️ Only Den can view sharing history for now.', 'vault_response', 'chef')
     return { status: 'unauthorized' }
   }
 
   if (lower.startsWith('what have i shared with')) {
-    const name = message
-      .replace(/^what have i shared with/i, '')
-      .replace(/[?.,!]$/, '')
-      .trim()
-
+    const name = message.replace(/^what have i shared with/i, '').replace(/[?.,!]$/, '').trim()
     const resolve = await resolveContactName(sender_uid, name)
 
     if (!resolve.success) {
@@ -129,7 +125,7 @@ export async function handleChefIntent({
     return { status: 'listed' }
   }
 
-  // 📤 Share command — multi-format match
+  // 📤 Share via intent (e.g. "send ravioli to Dave")
   const shareMatch = message.match(/(?:send|share)\s+(.+?)\s+(?:to|with)\s+(.+)/i)
     || message.match(/(?:send|share)\s+(\w+)\s+my\s+(.+)/i)
 
@@ -137,9 +133,6 @@ export async function handleChefIntent({
     const [_, nameRaw, recipeRaw] = shareMatch
     const name = nameRaw?.trim()
     const recipeName = recipeRaw?.replace(/recipe/i, '').trim()
-
-    console.log('👤 Parsed name:', name)
-    console.log('📦 Parsed recipe name:', recipeName)
 
     if (!name || !recipeName) {
       await sendMervMessage(receiver_uid, sender_uid, '❌ Could not parse recipe or recipient.', 'vault_response', 'chef')
@@ -156,8 +149,6 @@ export async function handleChefIntent({
       await sendMervMessage(receiver_uid, sender_uid, fallback, 'vault_response', 'chef')
       return { status: 'error' }
     }
-
-    console.log('✅ Sharing', recipeName, 'from', sender_uid, 'to', resolve.uid)
 
     const result = await shareRecipeWithUser({
       owner_uid: sender_uid,

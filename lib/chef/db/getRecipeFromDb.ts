@@ -22,7 +22,9 @@ export async function getRecipeFromDb(user_uid: string, query: string) {
   if (titleMatch) return titleMatch
 
   // Third: match in aliases[]
-  return data.find(r =>
-    (r.aliases || []).some(alias => alias.toLowerCase().includes(q))
-  ) || null
+  return data.find(r => {
+    return (r.aliases || []).some((alias: string) => {
+      return alias.toLowerCase().includes(q)
+    })
+  }) || null
 }
