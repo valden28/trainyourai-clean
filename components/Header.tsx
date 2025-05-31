@@ -3,10 +3,11 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { signOut } from 'next-auth/react'
+import { useUser } from '@auth0/nextjs-auth0/client'
 
-export default function Header({ session }: { session: any }) {
+export default function Header() {
+  const { user } = useUser()
   const pathname = usePathname()
-  const user = session?.user
 
   const assistant = pathname?.includes('chef')
     ? 'Chef Carlo'
