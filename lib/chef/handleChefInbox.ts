@@ -73,12 +73,13 @@ export async function handleChefInbox(message: {
     return { status: result.success ? 'shared' : 'error' }
   }
 
-  /// 🧠 Fallback to natural intent handler
-console.log('🧾 Intent sender:', sender_uid)
-console.log('🧾 Intent receiver:', receiver_uid)
+  // 🧠 Fallback to natural intent handler
+  console.log('🧾 Intent sender:', sender_uid)
+  console.log('🧾 Intent receiver:', receiver_uid)
 
-return await handleChefIntent({
-  sender_uid,
-  receiver_uid,
-  message: content
-})
+  return await handleChefIntent({
+    sender_uid,
+    receiver_uid,
+    message: content
+  })
+}
