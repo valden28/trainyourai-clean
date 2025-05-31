@@ -1,4 +1,4 @@
-import { getSession } from '@auth0/nextjs-auth0'
+
 import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import { updateFamiliarityScore } from '@/utils/familiarity'
