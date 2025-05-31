@@ -1,8 +1,6 @@
 // /api/merv-messages/send/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { handleChefInbox } from '@/lib/chef/handleChefInbox'
-import { handleCalendarInbox } from '@/lib/calendar/handleCalendarInbox' // stub for future
-import { handleMervIntent } from '@/lib/mervLink/handleMervIntent'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()

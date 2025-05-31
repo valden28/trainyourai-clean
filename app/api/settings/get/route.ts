@@ -23,27 +23,35 @@ export default function SettingsPage() {
     setLoading(true)
     try {
       const res = await fetch(`/api/settings/get?uid=${encodeURIComponent(uid)}`)
+      if (!res.ok) throw new Error('Fetch failed')
       const data = await res.json()
       setAutoShare(data.autoShare || { recipes: false, calendar: false })
       setAccessList(data.accessList || [])
-    } catch (err: any) {
-      toast.error('Failed to load settings')
+    } catch (err) {
+      toast.error('⚠️ Failed to load settings')
     } finally {
       setLoading(false)
     }
   }
 
   const saveAutoShare = async () => {
-    const res = await fetch('/api/settings/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        uid: user?.sub,
-        autoShare
+    try {
+      const res = await fetch('/api/settings/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: user?.sub,
+          autoShare
+        })
       })
-    })
-    if (res.ok) toast.success('Auto-share settings saved')
-    else toast.error('Save failed')
+      if (res.ok) {
+        toast.success('✅ Auto-share settings saved')
+      } else {
+        toast.error('❌ Save failed')
+      }
+    } catch (err) {
+      toast.error('❌ Network error while saving')
+    }
   }
 
   return (
@@ -60,7 +68,9 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 checked={autoShare.recipes}
-                onChange={(e) => setAutoShare({ ...autoShare, recipes: e.target.checked })}
+                onChange={(e) =>
+                  setAutoShare((prev) => ({ ...prev, recipes: e.target.checked }))
+                }
                 className="mr-2"
               />
               Share my recipes automatically with approved users
@@ -69,14 +79,16 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 checked={autoShare.calendar}
-                onChange={(e) => setAutoShare({ ...autoShare, calendar: e.target.checked })}
+                onChange={(e) =>
+                  setAutoShare((prev) => ({ ...prev, calendar: e.target.checked }))
+                }
                 className="mr-2"
               />
               Allow my calendar to be viewed or scheduled by trusted users
             </label>
             <button
               onClick={saveAutoShare}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded"
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
             >
               Save Settings
             </button>
@@ -84,10 +96,13 @@ export default function SettingsPage() {
 
           <div className="bg-gray-100 p-4 rounded shadow max-w-xl">
             <h2 className="text-lg font-semibold mb-2">People with Access</h2>
-            {accessList.length === 0 && <p className="text-sm text-gray-600">None yet.</p>}
+            {accessList.length === 0 && (
+              <p className="text-sm text-gray-600">None yet.</p>
+            )}
             {accessList.map((entry, i) => (
               <div key={i} className="text-sm mb-2">
-                <strong>{entry.name}</strong> — access to: {entry.resource.replace('recipes.', '')}
+                <strong>{entry.name || entry.allowed_uid}</strong> — access to:{' '}
+                {entry.resource?.replace('recipes.', '') || 'unknown'}
               </div>
             ))}
           </div>
