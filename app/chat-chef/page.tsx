@@ -1,82 +1,90 @@
-// File: /app/chat-chef/page.tsx (Verified multi-turn chat fix for Chef Carlo)
+'use client'
 
-'use client';
-
-import { useUser } from '@auth0/nextjs-auth0/client';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState, useRef } from 'react';
+import { useUser } from '@auth0/nextjs-auth0/client'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState, useRef } from 'react'
 
 export default function ChatChefPage() {
-  const { user, isLoading } = useUser();
-  const router = useRouter();
-  const [messages, setMessages] = useState<any[]>([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const { user, isLoading } = useUser()
+  const router = useRouter()
+  const [messages, setMessages] = useState<any[]>([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const bottomRef = useRef<HTMLDivElement | null>(null)
 
-  const chatKey = user ? `trainyourai_chat_chef` : null;
+  // ✅ Prevent crash on bad user.sub
+  if (!isLoading && (!user?.sub || typeof user.sub !== 'string')) {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-8 text-center text-red-600 bg-white">
+        <p className="text-lg font-semibold">
+          ⚠️ Invalid user session. Please log out and log back in.
+        </p>
+      </main>
+    )
+  }
+
+  const chatKey = user?.sub ? `trainyourai_chat_chef_${user.sub}` : null
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push('/');
+      router.push('/')
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, router])
 
   useEffect(() => {
     if (chatKey) {
-      const saved = localStorage.getItem(chatKey);
-      if (saved) setMessages(JSON.parse(saved));
+      const saved = localStorage.getItem(chatKey)
+      if (saved) setMessages(JSON.parse(saved))
     }
-  }, [chatKey]);
+  }, [chatKey])
 
   useEffect(() => {
     if (chatKey) {
-      localStorage.setItem(chatKey, JSON.stringify(messages));
+      localStorage.setItem(chatKey, JSON.stringify(messages))
     }
-  }, [messages, chatKey]);
+  }, [messages, chatKey])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
+    e.preventDefault()
+    if (!input.trim()) return
 
-    const newMessage = { role: 'user', content: input };
+    const newMessage = { role: 'user', content: input }
 
-// Sanitize assistant names to avoid OpenAI rejection
-const safeHistory = messages.map((msg) =>
-  msg.role === 'assistant'
-    ? { ...msg, name: 'chefCarlo' } // must be lowercase, no spaces
-    : msg
-);
+    const safeHistory = messages.map((msg) =>
+      msg.role === 'assistant'
+        ? { ...msg, name: 'chefCarlo' }
+        : msg
+    )
 
-const updatedMessages = [...safeHistory, newMessage];
-setMessages(updatedMessages);
-setInput('');
-setLoading(true);
+    const updatedMessages = [...safeHistory, newMessage]
+    setMessages(updatedMessages)
+    setInput('')
+    setLoading(true)
 
     try {
       const res = await fetch('/api/chat-chef', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: updatedMessages }),
-      });
+      })
 
-      const reply = await res.json();
-      setMessages((prev) => [...prev, reply]);
+      const reply = await res.json()
+      setMessages((prev) => [...prev, reply])
     } catch (err) {
-      console.error('Chef chat error:', err);
+      console.error('Chef chat error:', err)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const clearChat = () => {
-    if (chatKey) localStorage.removeItem(chatKey);
-    setMessages([]);
-  };
+    if (chatKey) localStorage.removeItem(chatKey)
+    setMessages([])
+  }
 
   return (
     <main className="flex flex-col h-screen bg-white text-black border-l-8 border-green-600">
@@ -143,5 +151,5 @@ setLoading(true);
         </button>
       </form>
     </main>
-  );
+  )
 }

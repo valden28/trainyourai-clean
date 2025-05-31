@@ -11,6 +11,17 @@ export default function ChatCorePage() {
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement | null>(null)
 
+  // ✅ Early exit if user.sub is invalid
+  if (!isLoading && (!user?.sub || typeof user.sub !== 'string')) {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-8 text-center text-red-600 bg-white">
+        <p className="text-lg font-semibold">
+          ⚠️ Your account is missing a valid ID. Please log out and log back in.
+        </p>
+      </main>
+    )
+  }
+
   useEffect(() => {
     if (user?.sub) {
       fetchMessages()
@@ -51,7 +62,7 @@ export default function ChatCorePage() {
           receiver_uid: user?.sub,
           message: input.trim(),
           category: 'general',
-          assistant: 'merv' // ✅ Fixed assistant name
+          assistant: 'merv'
         })
       })
 
@@ -80,16 +91,27 @@ export default function ChatCorePage() {
       <div className="flex justify-between items-center p-4 border-b bg-blue-50 shadow-sm">
         <div>
           <h1 className="text-xl font-bold text-blue-800">Your Merv</h1>
-          <p className="text-xs text-gray-500">General AI assistant — fast, versatile, personalized</p>
+          <p className="text-xs text-gray-500">
+            General AI assistant — fast, versatile, personalized
+          </p>
         </div>
         <div className="flex gap-4 items-center">
-          <a href="/chat-chef" className="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700">
+          <a
+            href="/chat-chef"
+            className="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700"
+          >
             Talk to Chef
           </a>
-          <a href="/dashboard" className="text-sm text-blue-700 hover:underline">
+          <a
+            href="/dashboard"
+            className="text-sm text-blue-700 hover:underline"
+          >
             Dashboard
           </a>
-          <a href="/api/auth/logout" className="text-sm text-gray-600 hover:underline">
+          <a
+            href="/api/auth/logout"
+            className="text-sm text-gray-600 hover:underline"
+          >
             Log Out
           </a>
         </div>
@@ -106,7 +128,9 @@ export default function ChatCorePage() {
             }`}
           >
             {msg.message}
-            <div className="text-xs text-gray-400 mt-1">{msg.category} • {msg.status}</div>
+            <div className="text-xs text-gray-400 mt-1">
+              {msg.category} • {msg.status}
+            </div>
           </div>
         ))}
         <div ref={bottomRef} />
