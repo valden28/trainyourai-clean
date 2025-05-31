@@ -2,7 +2,6 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-<a href="/api/auth/logout">Log out</a>
 import { useUser } from '@auth0/nextjs-auth0/client'
 
 export default function Header() {
@@ -29,12 +28,12 @@ export default function Header() {
             <>
               <span className="text-sm text-gray-800">{user.name || 'User'}</span>
               <span className="text-green-600 text-xs font-medium">🟢 Vault Connected</span>
-              <button
-                onClick={() => signOut({ callbackUrl: '/' })}
+              <a
+                href="/api/auth/logout"
                 className="text-sm bg-gray-800 text-white px-3 py-1 rounded hover:bg-black"
               >
                 Log out
-              </button>
+              </a>
             </>
           ) : (
             <Link
