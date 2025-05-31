@@ -1,35 +1,33 @@
-// File: /app/api/chat/route.ts (Merv now recommends Chef Carlo for cooking questions)
+import { getSession } from '@auth0/nextjs-auth0'
+import { NextRequest, NextResponse } from 'next/server'
+import OpenAI from 'openai'
+import { updateFamiliarityScore } from '@/utils/familiarity'
+import { supabase } from '@/lib/supabaseServer'
+import { generateVaultSummary } from '@/utils/vaultSummary'
 
-import { getSession } from '@auth0/nextjs-auth0/edge';
-import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-import { updateFamiliarityScore } from '@/utils/familiarity';
-import { supabase } from '@/lib/supabaseServer';
-import { generateVaultSummary } from '@/utils/vaultSummary';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession(req, NextResponse.next());
-    const userId = session?.user?.sub;
-    if (!userId) return new NextResponse('Unauthorized', { status: 401 });
+    const session = await getSession(req)
+    const userId = session?.user?.sub
+    if (!userId) return new NextResponse('Unauthorized', { status: 401 })
 
-    const { messages } = await req.json();
-    const userMessage = messages[messages.length - 1]?.content || '';
+    const { messages } = await req.json()
+    const userMessage = messages[messages.length - 1]?.content || ''
 
     const { data: vault } = await supabase
       .from('vaults_test')
       .select('*')
       .eq('user_uid', userId)
-      .single();
+      .single()
 
-    if (!vault) return new NextResponse('Vault not found', { status: 404 });
+    if (!vault) return new NextResponse('Vault not found', { status: 404 })
 
-    await updateFamiliarityScore(userId);
+    await updateFamiliarityScore(userId)
 
-    const familiarity = vault.familiarity_score || 0;
-    const vaultSummary = generateVaultSummary(vault);
+    const familiarity = vault.familiarity_score || 0
+    const vaultSummary = generateVaultSummary(vault)
 
     const mervPrompt = `
 User Profile Summary (use this to guide your tone, examples, and depth):
@@ -96,30 +94,29 @@ You're not neutral. You're thoughtful.
 You're not soft. You're steady.
 You're not fake. You're Merv.
 So act like it.
-    `.trim();
+    `.trim()
 
-    const assistantName = 'Merv';
-    const systemPrompt = mervPrompt;
+    const assistantName = 'Merv'
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: mervPrompt },
         ...messages
       ]
-    });
+    })
 
-    const reply = completion.choices[0]?.message?.content || '';
+    const reply = completion.choices[0]?.message?.content || ''
 
     const finalMessage = {
       role: 'assistant',
       name: assistantName,
-      content: reply,
-    };
+      content: reply
+    }
 
-    return NextResponse.json(finalMessage);
+    return NextResponse.json(finalMessage)
   } catch (err) {
-    console.error('[MERV CHAT ERROR]', err);
-    return new NextResponse('Error processing Merv chat', { status: 500 });
+    console.error('[MERV CHAT ERROR]', err)
+    return new NextResponse('Error processing Merv chat', { status: 500 })
   }
 }

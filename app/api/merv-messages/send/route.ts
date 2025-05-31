@@ -1,3 +1,5 @@
+// /app/api/merv-messages/send/route.ts
+
 import { NextRequest, NextResponse } from 'next/server'
 import { sendMervMessage } from '@/lib/mervLink/sendMessage'
 import { handleIncomingMervMessage } from '@/lib/mervLink/handleIncomingMervMessage'
@@ -8,8 +10,7 @@ export async function POST(req: NextRequest) {
     receiver_uid,
     message,
     category,
-    assistant,
-    resource
+    assistant
   } = await req.json()
 
   if (!sender_uid || !receiver_uid || !message || !category || !assistant) {
@@ -23,8 +24,7 @@ export async function POST(req: NextRequest) {
       receiver_uid,
       message,
       category,
-      assistant,
-      resource
+      assistant
     )
 
     // Step 2: Immediately route the message if it's internal (simulates instant delivery)
@@ -33,12 +33,12 @@ export async function POST(req: NextRequest) {
       receiver_uid,
       message,
       category,
-      assistant,
-      resource
+      assistant
     })
 
     return NextResponse.json({ success: true, saved: result, handled: routingResult })
   } catch (err: any) {
+    console.error('❌ Merv message send failed:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
