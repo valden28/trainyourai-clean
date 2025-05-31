@@ -7,15 +7,26 @@ export async function createUserVaultIfMissing(user_uid: string) {
     .eq('user_uid', user_uid)
     .maybeSingle()
 
+  if (error) {
+    console.error('❌ Vault lookup failed:', error.message)
+    return
+  }
+
   if (!data) {
     const { error: insertError } = await supabase
       .from('vaults_test')
-      .insert({ user_uid })
+      .insert({
+        user_uid,
+        // You can prefill other fields here later, like:
+        // innerview: {}, tonesync: {}, skillsync: {}, auto_share: {}
+      })
 
     if (insertError) {
       console.error('❌ Failed to create vault for user:', insertError.message)
     } else {
       console.log(`✅ Vault created for ${user_uid}`)
     }
+  } else {
+    console.log(`ℹ️ Vault already exists for ${user_uid}`)
   }
 }

@@ -49,9 +49,9 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen p-6 bg-white text-black">
       <h1 className="text-2xl font-bold mb-6">Privacy & Sharing Settings</h1>
-
+  
       {loading && <p>Loading...</p>}
-
+  
       {!loading && (
         <>
           <div className="bg-gray-100 p-4 rounded shadow max-w-xl mb-6">
@@ -81,10 +81,12 @@ export default function SettingsPage() {
               Save Settings
             </button>
           </div>
-
+  
           <div className="bg-gray-100 p-4 rounded shadow max-w-xl">
             <h2 className="text-lg font-semibold mb-2">People with Access</h2>
-            {accessList.length === 0 && <p className="text-sm text-gray-600">None yet.</p>}
+            {accessList.length === 0 && (
+              <p className="text-sm text-gray-600">None yet.</p>
+            )}
             {accessList.map((entry, i) => (
               <div key={i} className="text-sm mb-2">
                 <strong>{entry.name}</strong> — access to: {entry.resource.replace('recipes.', '')}
