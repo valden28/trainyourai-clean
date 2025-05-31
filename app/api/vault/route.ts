@@ -1,32 +1,31 @@
 // File: /app/api/vault/route.ts (cleaned version — no invalid imports)
 
-import { getSession } from '@auth0/nextjs-auth0/edge';
-import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer as supabase } from '@/lib/supabaseServer';
+import { NextResponse } from 'next/server'
+import { getSession } from '@auth0/nextjs-auth0'
+import { supabase } from '@/lib/supabaseServer'
+import { createUserVaultIfMissing } from '@/lib/vault/createUserVaultIfMissing'
 
-export async function GET(req: NextRequest) {
-  try {
-    const session = await getSession(req, NextResponse.next());
-    const userId = session?.user?.sub;
+export async function GET() {
+  const session = await getSession()
 
-    if (!userId) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    const { data: vault, error } = await supabase
-      .from('vaults_test')
-      .select('*')
-      .eq('user_uid', userId)
-      .single();
-
-    if (error || !vault) {
-      console.error('[VAULT FETCH ERROR]', error);
-      return new NextResponse('Vault not found', { status: 404 });
-    }
-
-    return NextResponse.json(vault);
-  } catch (err) {
-    console.error('[VAULT ROUTE ERROR]', err);
-    return new NextResponse('Unexpected error in vault route', { status: 500 });
+  const uid = session?.user?.sub
+  if (!uid) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  // ✅ Ensure the vault exists
+  await createUserVaultIfMissing(uid)
+
+  // ✅ Fetch the vault safely without `.single()`
+  const { data, error } = await supabase
+    .from('vaults_test')
+    .select('*')
+    .eq('user_uid', uid)
+    .limit(1)
+
+  if (error || !data?.length) {
+    return NextResponse.json({ error: 'Vault not found or fetch error' }, { status: 500 })
+  }
+
+  return NextResponse.json(data[0])
 }
