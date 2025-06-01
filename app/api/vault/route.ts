@@ -17,22 +17,24 @@ export async function GET() {
     return new NextResponse("Unauthorized", { status: 401 })
   }
 
-  // ✅ Use maybeSingle to avoid 500s
-  const { data: vault, error } = await supabase
+  const { data, error } = await supabase
     .from("vaults_test")
     .select("*")
     .eq("user_uid", uid)
-    .maybeSingle()
+    .limit(1)
 
   if (error) {
-    console.error(`❌ Vault fetch error for ${uid}:`, error.message)
-    return new NextResponse("Vault fetch error", { status: 500 })
+    console.error(`❌ Supabase error for ${uid}:`, error.message)
+    return new NextResponse("Vault lookup failed", { status: 500 })
   }
 
+  const vault = data?.[0] || null
+
   if (!vault) {
-    console.log(`ℹ️ Vault not found for ${uid}. Returning null.`)
+    console.log(`ℹ️ No vault found for ${uid}`)
     return NextResponse.json({ vault: null }, { status: 200 })
   }
 
+  console.log(`✅ Vault loaded for ${uid}`)
   return NextResponse.json({ vault })
 }
