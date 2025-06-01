@@ -1,6 +1,11 @@
 import { supabase } from '@/lib/supabaseClient'
 
 export async function createUserVaultIfMissing(user_uid: string) {
+  if (!user_uid || typeof user_uid !== 'string') {
+    console.error('❌ Invalid user_uid:', user_uid)
+    return { status: 'invalid_user' }
+  }
+
   const { data, error } = await supabase
     .from('vaults_test')
     .select('user_uid')
@@ -9,24 +14,27 @@ export async function createUserVaultIfMissing(user_uid: string) {
 
   if (error) {
     console.error('❌ Vault lookup failed:', error.message)
-    return
+    return { status: 'error', error: error.message }
   }
 
-  if (!data) {
-    const { error: insertError } = await supabase
-      .from('vaults_test')
-      .insert({
-        user_uid,
-        // You can prefill other fields here later, like:
-        // innerview: {}, tonesync: {}, skillsync: {}, auto_share: {}
-      })
-
-    if (insertError) {
-      console.error('❌ Failed to create vault for user:', insertError.message)
-    } else {
-      console.log(`✅ Vault created for ${user_uid}`)
-    }
-  } else {
+  if (data) {
     console.log(`ℹ️ Vault already exists for ${user_uid}`)
+    return { status: 'exists' }
   }
+
+  const { error: insertError } = await supabase
+    .from('vaults_test')
+    .insert({
+      user_uid,
+      // Optional: prefill other fields later
+      // innerview: {}, tonesync: {}, skillsync: {}
+    })
+
+  if (insertError) {
+    console.error('❌ Failed to create vault for user:', insertError.message)
+    return { status: 'insert_error', error: insertError.message }
+  }
+
+  console.log(`✅ Vault created for ${user_uid}`)
+  return { status: 'created' }
 }

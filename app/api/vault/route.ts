@@ -23,8 +23,10 @@ export async function GET() {
     .eq("user_uid", uid)
     .single()
 
+  // ✅ Return safely if vault not found
   if (error || !vault) {
-    return new NextResponse("Vault not found", { status: 404 })
+    console.warn(`ℹ️ Vault not found for ${uid}. Returning null.`)
+    return NextResponse.json({ vault: null }, { status: 200 })
   }
 
   return NextResponse.json({ vault })
