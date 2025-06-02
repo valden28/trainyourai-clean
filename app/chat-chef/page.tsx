@@ -12,21 +12,13 @@ export default function ChatChefPage() {
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement | null>(null)
 
-  // ✅ Prevent crash on bad user.sub
-  if (!isLoading && (!user?.sub || typeof user.sub !== 'string')) {
-    return (
-      <main className="min-h-screen flex items-center justify-center p-8 text-center text-red-600 bg-white">
-        <p className="text-lg font-semibold">
-          ⚠️ Invalid user session. Please log out and log back in.
-        </p>
-      </main>
-    )
-  }
-
+  const [invalidUser, setInvalidUser] = useState(false)
   const chatKey = user?.sub ? `trainyourai_chat_chef_${user.sub}` : null
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && (!user?.sub || typeof user.sub !== 'string')) {
+      setInvalidUser(true)
+    } else if (!isLoading && !user) {
       router.push('/')
     }
   }, [user, isLoading, router])
@@ -55,9 +47,7 @@ export default function ChatChefPage() {
     const newMessage = { role: 'user', content: input }
 
     const safeHistory = messages.map((msg) =>
-      msg.role === 'assistant'
-        ? { ...msg, name: 'chefCarlo' }
-        : msg
+      msg.role === 'assistant' ? { ...msg, name: 'chefCarlo' } : msg
     )
 
     const updatedMessages = [...safeHistory, newMessage]
@@ -84,6 +74,16 @@ export default function ChatChefPage() {
   const clearChat = () => {
     if (chatKey) localStorage.removeItem(chatKey)
     setMessages([])
+  }
+
+  if (invalidUser) {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-8 text-center text-red-600 bg-white">
+        <p className="text-lg font-semibold">
+          ⚠️ Invalid user session. Please log out and log back in.
+        </p>
+      </main>
+    )
   }
 
   return (
