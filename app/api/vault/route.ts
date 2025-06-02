@@ -1,59 +1,17 @@
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
-import { NextResponse } from "next/server"
-import { supabase } from "@/lib/supabaseServer"
+import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
+    // 🔍 Static test payload (this should always work)
+    const testData = {
+      vault: "Test successful ✅",
+      timestamp: new Date().toISOString()
+    };
 
-    if (!session || !session.user) {
-      return new NextResponse("Unauthorized", { status: 401 })
-    }
-
-    const user = session.user as typeof session.user & { sub?: string; id?: string }
-    const uid = user.sub ?? user.id ?? null
-
-    if (!uid || typeof uid !== "string") {
-      return new NextResponse("Unauthorized", { status: 401 })
-    }
-
-    const { data, error } = await supabase
-      .from("vaults_test")
-      .select("*")
-      .eq("user_uid", uid)
-      .limit(1)
-
-    if (error) {
-      console.error("❌ Supabase fetch error:", error.message)
-      return new NextResponse("Supabase error", { status: 500 })
-    }
-
-    const vault = data?.[0] || null
-
-    if (!vault) {
-      console.log(`ℹ️ Vault not found for ${uid}`)
-      return NextResponse.json({ vault: null }, { status: 200 })
-    }
-
-    // ✅ Deep clone and sanitize the object
-    const safeVault = JSON.parse(
-      JSON.stringify({
-        ...vault,
-        dates: Array.isArray(vault.dates)
-          ? vault.dates.filter((d: any) => d?.date && d?.label)
-          : [],
-        people: Array.isArray(vault.people)
-          ? vault.people.filter((p: any) => p?.name && p?.relationship)
-          : [],
-      })
-    );
-
-    console.log(`✅ Vault safely returned for ${uid}`);
-    return NextResponse.json({ vault: safeVault }, { status: 200 });
-
+    console.log("🧪 Returning static vault test response");
+    return NextResponse.json(testData, { status: 200 });
   } catch (err: any) {
-    console.error("🔥 Vault route crash:", err.message || err);
-    return new NextResponse("Server error", { status: 500 });
+    console.error("🔥 Static route test failed:", err.message || err);
+    return new NextResponse("Static response failed", { status: 500 });
   }
 }
