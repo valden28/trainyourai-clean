@@ -21,23 +21,31 @@ export default function DashboardPage() {
   }, [user, isLoading, router])
 
   // ✅ Fetch vault + create if needed
-  useEffect(() => {
-    const fetchVault = async () => {
-      try {
-        const res = await fetch('/api/vault')
-        const json = await res.json()
-
-        if (!res.ok) {
-          setError(json.error || 'Unknown error')
-        } else {
-          setVault(json)
-        }
-      } catch (err: any) {
-        setError(err.message)
-      } finally {
-        setLoading(false)
+  const fetchVault = async () => {
+    try {
+      const res = await fetch('/api/vault')
+  
+      if (!res.ok) {
+        const text = await res.text()
+        console.error('❌ Vault API error:', res.status, text)
+        setError(`API Error ${res.status}: ${text}`)
+        return
       }
+  
+      const json = await res.json()
+  
+      if (!json?.vault) {
+        console.warn('⚠️ No vault found for user.')
+      }
+  
+      setVault(json.vault)
+    } catch (err: any) {
+      console.error('❌ Vault fetch crashed:', err)
+      setError('Unexpected error loading vault.')
+    } finally {
+      setLoading(false)
     }
+  }
 
     if (user?.sub && typeof user.sub === 'string') {
       createUserVaultIfMissing(user.sub)
