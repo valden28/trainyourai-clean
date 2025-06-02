@@ -31,9 +31,20 @@ export async function GET() {
 
     const vault = data?.[0] || null
 
+    
     if (!vault) {
       console.log(`ℹ️ Vault not found for ${uid}`)
       return NextResponse.json({ vault: null }, { status: 200 })
+    }
+    
+    // 🔍 TEMPORARY LOGGING
+    console.log('📦 Raw vault object:', vault)
+    
+    try {
+      return NextResponse.json({ vault }, { status: 200 })
+    } catch (serializationError) {
+      console.error('🔥 JSON serialization failed:', serializationError)
+      return new NextResponse("Serialization error", { status: 500 })
     }
 
     // ✅ Return only safe fields explicitly
