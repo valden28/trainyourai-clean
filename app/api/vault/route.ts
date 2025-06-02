@@ -8,7 +8,7 @@ export async function GET() {
     const session = await getServerSession(authOptions)
 
     if (!session || !session.user) {
-      console.warn("Unauthorized request: missing session or user")
+      console.warn("❌ No session found")
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
@@ -16,7 +16,7 @@ export async function GET() {
     const uid = user.sub ?? user.id ?? null
 
     if (!uid || typeof uid !== "string") {
-      console.warn("Invalid or missing user ID")
+      console.warn("❌ Invalid user UID")
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
@@ -27,21 +27,21 @@ export async function GET() {
       .limit(1)
 
     if (error) {
-      console.error(`❌ Supabase error for ${uid}:`, error.message)
-      return new NextResponse("Vault fetch error", { status: 500 })
+      console.error("❌ Supabase fetch error:", error.message)
+      return new NextResponse("Supabase error", { status: 500 })
     }
 
     const vault = data?.[0] || null
 
     if (!vault) {
-      console.log(`ℹ️ No vault found for ${uid}`)
+      console.log(`ℹ️ Vault not found for ${uid}`)
       return NextResponse.json({ vault: null }, { status: 200 })
     }
 
-    console.log(`✅ Vault loaded for ${uid}`)
+    console.log(`✅ Vault exists for ${uid}`)
     return NextResponse.json({ vault }, { status: 200 })
   } catch (err: any) {
-    console.error("Unexpected /api/vault error:", err.message || err)
+    console.error("🔥 API /vault crashed unexpectedly:", err.message || err)
     return new NextResponse("Server error", { status: 500 })
   }
 }
