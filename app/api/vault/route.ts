@@ -5,18 +5,23 @@ import { supabase } from "@/lib/supabaseServer"
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session || !session.user) {
-      return new NextResponse("Unauthorized", { status: 401 })
-    }
-
-    const user = session.user as typeof session.user & { sub?: string; id?: string }
-    const uid = user.sub ?? user.id ?? null
-
-    if (!uid || typeof uid !== "string") {
-      return new NextResponse("Unauthorized", { status: 401 })
-    }
+    const clean = JSON.parse(
+      JSON.stringify({
+        ...vault,
+        dates: Array.isArray(vault.dates)
+          ? vault.dates.filter((d: any) => d?.date && d?.label)
+          : [],
+        people: Array.isArray(vault.people)
+          ? vault.people.filter((p: any) => p?.name && p?.relationship)
+          : [],
+      })
+    )
+  
+    return NextResponse.json({ vault: clean }, { status: 200 })
+  } catch (err: any) {
+    console.error("🔥 Failed to serialize vault object:", err.message)
+    return new NextResponse("Server error", { status: 500 })
+  }
 
     const { data, error } = await supabase
       .from("vaults_test")
