@@ -36,10 +36,16 @@ export async function GET() {
       return NextResponse.json({ vault: null }, { status: 200 })
     }
 
-    // ✅ Safe flatten before returning
-    const safeVault = JSON.parse(JSON.stringify(vault))
+    // ✅ Return only safe fields explicitly
+    const safeVault = {
+      user_uid: vault.user_uid,
+      innerview: vault.innerview ?? null,
+      tonesync: vault.tonesync ?? null,
+      skillsync: vault.skillsync ?? null,
+      familiarity_score: vault.familiarity_score ?? 0,
+    }
 
-    console.log(`✅ Vault loaded for ${uid}`)
+    console.log(`✅ Vault safely returned for ${uid}`)
     return NextResponse.json({ vault: safeVault }, { status: 200 })
 
   } catch (err: any) {
