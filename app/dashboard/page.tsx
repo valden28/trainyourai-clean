@@ -13,50 +13,40 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // ✅ Redirect if no valid user
   useEffect(() => {
     if (!isLoading && (!user || !user.sub || typeof user.sub !== 'string')) {
       router.push('/')
     }
   }, [user, isLoading, router])
 
-  // ✅ Fetch vault + create if needed
-  const fetchVault = async () => {
-    try {
-      const res = await fetch('/api/vault')
-  
-      if (!res.ok) {
-        const text = await res.text()
-        console.error('❌ Vault API error:', res.status, text)
-        setError(`API Error ${res.status}: ${text}`)
-        return
+  useEffect(() => {
+    const fetchVault = async () => {
+      try {
+        const res = await fetch('/api/vault')
+
+        if (!res.ok) {
+          const text = await res.text()
+          console.error('❌ Vault API error:', res.status, text)
+          setError(`API Error ${res.status}: ${text}`)
+          return
+        }
+
+        const json = await res.json()
+
+        if (!json || typeof json !== 'object' || !('vault' in json)) {
+          console.error('⚠️ Invalid vault response:', json)
+          setError('Vault response was not valid.')
+          return
+        }
+
+        setVault(json.vault)
+      } catch (err: any) {
+        console.error('❌ Vault fetch crashed:', err)
+        setError('Unexpected error loading vault.')
+      } finally {
+        setLoading(false)
       }
-  
-      const json = await res.json()
-  
-      if (!json || typeof json !== 'object' || !('vault' in json)) {
-        console.error('⚠️ Invalid vault response:', json)
-        setError('Vault response was not valid.')
-        return
-      }
-  
-      setVault(json)
-    } catch (err: any) {
-      console.error('❌ Vault fetch crashed:', err)
-      setError('Unexpected error loading vault.')
-    } finally {
-      setLoading(false)
     }
-  }
-  
-      setVault(json)
-    } catch (err: any) {
-      console.error('❌ Vault fetch crashed:', err)
-      setError('Unexpected error loading vault.')
-    } finally {
-      setLoading(false)
-    }
-  }
 
     if (user?.sub && typeof user.sub === 'string') {
       createUserVaultIfMissing(user.sub)
@@ -90,7 +80,7 @@ export default function DashboardPage() {
             className="mb-6 p-4 rounded shadow-md border-l-8 flex justify-between items-center"
             style={{
               borderColor: isComplete ? '#22c55e' : '#ef4444',
-              backgroundColor: '#f9fafb'
+              backgroundColor: '#f9fafb',
             }}
           >
             <div>
