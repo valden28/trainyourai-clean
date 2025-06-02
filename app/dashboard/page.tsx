@@ -34,11 +34,13 @@ export default function DashboardPage() {
   
       const json = await res.json()
   
-      if (!json?.vault) {
-        console.warn('⚠️ No vault found for user.')
+      if (!json || typeof json !== 'object' || !('vault' in json)) {
+        console.error('⚠️ Invalid vault response format:', json)
+        setError('Invalid response from server.')
+        return
       }
   
-      setVault(json.vault)
+      setVault(json)
     } catch (err: any) {
       console.error('❌ Vault fetch crashed:', err)
       setError('Unexpected error loading vault.')
