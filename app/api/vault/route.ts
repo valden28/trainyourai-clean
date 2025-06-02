@@ -31,36 +31,33 @@ export async function GET() {
 
     const vault = data?.[0] || null
 
-    
     if (!vault) {
       console.log(`ℹ️ Vault not found for ${uid}`)
       return NextResponse.json({ vault: null }, { status: 200 })
     }
-    
-    // 🔍 TEMPORARY LOGGING
-    console.log('📦 Raw vault object:', vault)
-    
-    try {
-      return NextResponse.json({ vault }, { status: 200 })
-    } catch (serializationError) {
-      console.error('🔥 JSON serialization failed:', serializationError)
-      return new NextResponse("Serialization error", { status: 500 })
-    }
 
-    // ✅ Return only safe fields explicitly
+    // ✅ Clean out invalid objects from array fields (like dates)
     const safeVault = {
-      user_uid: vault.user_uid,
-      innerview: vault.innerview ?? null,
-      tonesync: vault.tonesync ?? null,
-      skillsync: vault.skillsync ?? null,
-      familiarity_score: vault.familiarity_score ?? 0,
+      ...vault,
+      dates: Array.isArray(vault.dates)
+        ? vault.dates.filter((d: any) => d?.date && d?.label)
+        : [],
+      people: Array.isArray(vault.people)
+        ? vault.people.filter((p: any) => p?.name && p?.relationship)
+        : [],
+      sports: vault.sports ?? {},
+      travel: vault.travel ?? {},
+      food: vault.food ?? {},
+      popculture: vault.popculture ?? {},
+      physical: vault.physical ?? {},
+      health: vault.health ?? {},
     }
 
     console.log(`✅ Vault safely returned for ${uid}`)
     return NextResponse.json({ vault: safeVault }, { status: 200 })
 
   } catch (err: any) {
-    console.error("🔥 API /vault crashed unexpectedly:", err.message || err)
+    console.error("🔥 Vault route crash:", err.message || err)
     return new NextResponse("Server error", { status: 500 })
   }
 }
