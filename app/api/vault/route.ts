@@ -8,7 +8,6 @@ export async function GET() {
     const session = await getServerSession(authOptions)
 
     if (!session || !session.user) {
-      console.warn("❌ No session found")
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
@@ -16,7 +15,6 @@ export async function GET() {
     const uid = user.sub ?? user.id ?? null
 
     if (!uid || typeof uid !== "string") {
-      console.warn("❌ Invalid user UID")
       return new NextResponse("Unauthorized", { status: 401 })
     }
 
@@ -38,8 +36,12 @@ export async function GET() {
       return NextResponse.json({ vault: null }, { status: 200 })
     }
 
-    console.log(`✅ Vault exists for ${uid}`)
-    return NextResponse.json({ vault }, { status: 200 })
+    // ✅ Safe flatten before returning
+    const safeVault = JSON.parse(JSON.stringify(vault))
+
+    console.log(`✅ Vault loaded for ${uid}`)
+    return NextResponse.json({ vault: safeVault }, { status: 200 })
+
   } catch (err: any) {
     console.error("🔥 API /vault crashed unexpectedly:", err.message || err)
     return new NextResponse("Server error", { status: 500 })
