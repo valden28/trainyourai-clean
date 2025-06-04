@@ -15,6 +15,7 @@ export default function ChatMervPage() {
 
   const chatKey = user?.sub ? `trainyourai_chat_merv_${user.sub}` : null
 
+  // ✅ Redirect or flag invalid session
   useEffect(() => {
     if (!isLoading && (!user?.sub || typeof user.sub !== 'string')) {
       setInvalidUser(true)
@@ -23,6 +24,7 @@ export default function ChatMervPage() {
     }
   }, [user, isLoading, router])
 
+  // ✅ Load saved messages
   useEffect(() => {
     if (chatKey) {
       const saved = localStorage.getItem(chatKey)
@@ -30,6 +32,7 @@ export default function ChatMervPage() {
     }
   }, [chatKey])
 
+  // ✅ Save new messages
   useEffect(() => {
     if (chatKey) {
       localStorage.setItem(chatKey, JSON.stringify(messages))
@@ -45,7 +48,6 @@ export default function ChatMervPage() {
     if (!input.trim()) return
 
     const newMessage = { role: 'user', content: input }
-
     const updatedMessages = [...messages, newMessage]
     setMessages(updatedMessages)
     setInput('')
@@ -55,7 +57,10 @@ export default function ChatMervPage() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: updatedMessages }),
+        body: JSON.stringify({
+          messages: updatedMessages,
+          user_uid: user?.sub, // ✅ This is required by the new /api/chat route
+        }),
       })
 
       const reply = await res.json()
@@ -147,7 +152,7 @@ export default function ChatMervPage() {
           disabled={loading}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
         >
-          Send
+          {loading ? '...' : 'Send'}
         </button>
       </form>
     </main>
