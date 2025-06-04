@@ -1,6 +1,4 @@
-// File: /app/api/chat/route.ts
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+// app/api/chat/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { supabase } from '@/lib/supabaseServer';
@@ -11,28 +9,17 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    console.log('[MERV SESSION]', session);
+    const { user_uid, messages } = await req.json();
 
-    if (!session || !session.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+    if (!user_uid || typeof user_uid !== 'string') {
+      return new NextResponse('Missing or invalid user_uid', { status: 400 });
     }
-
-    const user = session.user as typeof session.user & { sub?: string; id?: string };
-    const userId = user.sub ?? user.id ?? null;
-
-    if (!userId) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    const { messages } = await req.json();
-    const userMessage = messages[messages.length - 1]?.content || '';
 
     // 🧠 Load full vault
     const { data: vault, error: vaultError } = await supabase
       .from('vaults_test')
       .select('*')
-      .eq('user_uid', userId)
+      .eq('user_uid', user_uid)
       .single();
 
     if (vaultError || !vault) {
@@ -44,7 +31,7 @@ export async function POST(req: NextRequest) {
     const { data: brain, error: brainError } = await supabase
       .from('merv_brain')
       .select('prompt')
-      .eq('user_uid', userId)
+      .eq('user_uid', user_uid)
       .single();
 
     if (brainError || !brain?.prompt) {
@@ -52,9 +39,7 @@ export async function POST(req: NextRequest) {
       return new NextResponse('Merv prompt not found', { status: 500 });
     }
 
-    // 🔁 Update familiarity score
-    await updateFamiliarityScore(userId);
-
+    await updateFamiliarityScore(user_uid);
     const familiarity = vault.familiarity_score || 0;
     const vaultSummary = generateVaultSummary(vault);
 

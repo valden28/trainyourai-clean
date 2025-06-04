@@ -15,7 +15,7 @@ export default function ChatMervPage() {
 
   const chatKey = user?.sub ? `trainyourai_chat_merv_${user.sub}` : null
 
-  // ✅ Redirect or flag invalid session
+  // ✅ Validate session
   useEffect(() => {
     if (!isLoading && (!user?.sub || typeof user.sub !== 'string')) {
       setInvalidUser(true)
@@ -24,7 +24,7 @@ export default function ChatMervPage() {
     }
   }, [user, isLoading, router])
 
-  // ✅ Load saved messages
+  // ✅ Load saved chat
   useEffect(() => {
     if (chatKey) {
       const saved = localStorage.getItem(chatKey)
@@ -32,13 +32,14 @@ export default function ChatMervPage() {
     }
   }, [chatKey])
 
-  // ✅ Save new messages
+  // ✅ Persist chat to localStorage
   useEffect(() => {
     if (chatKey) {
       localStorage.setItem(chatKey, JSON.stringify(messages))
     }
   }, [messages, chatKey])
 
+  // ✅ Auto-scroll to bottom
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -58,18 +59,23 @@ export default function ChatMervPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          user_uid: user?.sub,
           messages: updatedMessages,
-          user_uid: user?.sub, // ✅ This is required by the new /api/chat route
         }),
       })
 
       const reply = await res.json()
+
       setMessages((prev) => [...prev, reply])
     } catch (err) {
-      console.error('Merv chat error:', err)
+      console.error('❌ Merv chat error:', err)
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: '⚠️ Error contacting Merv.' },
+        {
+          role: 'assistant',
+          name: 'Merv',
+          content: '⚠️ Error contacting Merv. Please try again shortly.',
+        },
       ])
     } finally {
       setLoading(false)
@@ -131,7 +137,9 @@ export default function ChatMervPage() {
           <div
             key={i}
             className={`p-3 rounded-xl max-w-2xl whitespace-pre-wrap ${
-              m.role === 'user' ? 'bg-blue-200 self-end' : 'bg-gray-100 self-start'
+              m.role === 'user'
+                ? 'bg-blue-200 self-end text-right ml-auto'
+                : 'bg-gray-100 self-start'
             }`}
           >
             <strong>{m.role === 'user' ? 'You' : m.name || 'Assistant'}:</strong> {m.content}
