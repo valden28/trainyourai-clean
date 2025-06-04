@@ -1,45 +1,45 @@
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
-import { NextRequest, NextResponse } from "next/server"
-import OpenAI from "openai"
-import { updateFamiliarityScore } from "@/utils/familiarity"
-import { supabase } from "@/lib/supabaseServer"
-import { generateVaultSummary } from "@/utils/vaultSummary"
+// /app/api/chat/route.ts
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
+import OpenAI from "openai";
+import { supabase } from "@/lib/supabaseServer";
+import { updateFamiliarityScore } from "@/utils/familiarity";
+import { generateVaultSummary } from "@/utils/vaultSummary";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session || !session.user) {
-      return new NextResponse("Unauthorized", { status: 401 })
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const user = session.user as typeof session.user & { sub?: string; id?: string }
-    const userId = user.sub ?? user.id ?? null
+    const user = session.user as typeof session.user & { sub?: string; id?: string };
+    const userId = user.sub ?? user.id ?? null;
 
-    if (!userId) {
-      return new NextResponse("Unauthorized", { status: 401 })
+    if (!userId || typeof userId !== "string") {
+      return new NextResponse("Invalid user ID", { status: 400 });
     }
 
-    const { messages } = await req.json()
-    const userMessage = messages[messages.length - 1]?.content || ""
+    const { messages } = await req.json();
+    const userMessage = messages[messages.length - 1]?.content || "";
 
     const { data: vault, error } = await supabase
       .from("vaults_test")
       .select("*")
       .eq("user_uid", userId)
-      .single()
+      .single();
 
     if (error || !vault) {
-      return new NextResponse("Vault not found", { status: 404 })
+      return new NextResponse("Vault not found", { status: 404 });
     }
 
-    await updateFamiliarityScore(userId)
+    await updateFamiliarityScore(userId);
 
-    const familiarity = vault.familiarity_score || 0
-    const vaultSummary = generateVaultSummary(vault)
+    const familiarity = vault.familiarity_score || 0;
+    const vaultSummary = generateVaultSummary(vault);
 
     const mervPrompt = `
 User Profile Summary (use this to guide your tone, examples, and depth):
@@ -121,25 +121,25 @@ You're not neutral. You're thoughtful.
 You're not soft. You're steady.  
 You're not fake. You're Merv.  
 So act like it.
-    `.trim()
+    `.trim();
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
       messages: [
         { role: "system", content: mervPrompt },
-        ...messages,
-      ],
-    })
+        ...messages
+      ]
+    });
 
-    const reply = completion.choices[0]?.message?.content || ""
+    const reply = completion.choices[0]?.message?.content || "";
 
     return NextResponse.json({
       role: "assistant",
       name: "Merv",
-      content: reply,
-    })
+      content: reply
+    });
   } catch (err) {
-    console.error("[MERV CHAT ERROR]", err)
-    return new NextResponse("Error processing Merv chat", { status: 500 })
+    console.error("[MERV CHAT ERROR]", err);
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
 }
