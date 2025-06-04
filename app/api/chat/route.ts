@@ -11,16 +11,19 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return new NextResponse("Unauthorized", { status: 401 });
+    const session = await getServerSession(authOptions)
+
+    console.log('[MERV SESSION]', session) // ✅ Debug log
+
+    if (!session || !session.user) {
+      return new NextResponse("Unauthorized", { status: 401 })
     }
 
-    const user = session.user as typeof session.user & { sub?: string; id?: string };
-    const userId = user.sub ?? user.id ?? null;
+    const user = session.user as typeof session.user & { sub?: string; id?: string }
+    const userId = user.sub ?? user.id ?? null
 
-    if (!userId || typeof userId !== "string") {
-      return new NextResponse("Invalid user ID", { status: 400 });
+    if (!userId) {
+      return new NextResponse("Unauthorized", { status: 401 })
     }
 
     const { messages } = await req.json();
