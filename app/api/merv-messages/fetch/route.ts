@@ -1,28 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getMervMessages } from '@/lib/mervLink/getMessages'
-import { markMessageRead } from '@/lib/mervLink/markMessageRead'
-import { handleIncomingMervMessage } from '@/lib/mervLink/handleIncomingMervMessage'
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabaseServer';
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
-  const uid = searchParams.get('uid')
-
-  if (!uid) {
-    return NextResponse.json({ error: 'Missing uid' }, { status: 400 })
-  }
-
   try {
-    const messages = await getMervMessages(uid, 'unread')
-    const results = []
+    const { searchParams } = new URL(req.url);
+    const uid = searchParams.get('uid');
 
-    for (const msg of messages) {
-      const result = await handleIncomingMervMessage(msg)
-      await markMessageRead(msg.id)
-      results.push({ message: msg, result })
+    if (!uid) {
+      return NextResponse.json({ error: 'Missing uid' }, { status: 400 });
     }
 
-    return NextResponse.json({ handled: results })
-} catch (err: any) {
-    console.error('❌ /api/merv-messages/fetch crashed:', err)
-    return NextResponse.json({ error: err.message || 'Unknown server error' }, { status: 500 })
+    const { data, error } = await supabase
+      .from('merv_messages')
+      .select('*')
+      .or(`sender_uid.eq.${uid},receiver_uid.eq.${uid}`)
+      .order('timestamp', { ascending: true });
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ messages: data });
+  } catch (err: any) {
+    console.error('❌ /api/merv-messages/fetch crashed:', err);
+    return NextResponse.json(
+      { error: err.message || 'Unknown server error' },
+      { status: 500 }
+    );
   }
+}
