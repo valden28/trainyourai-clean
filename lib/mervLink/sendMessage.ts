@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabaseServer'
+import { getSupabaseClient } from '@/utils/supabaseClient'
+const supabase = getSupabaseClient();
 
 type MervCategory =
   | "general"

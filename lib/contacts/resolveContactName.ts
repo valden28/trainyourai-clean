@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabaseServer'
+import { getSupabaseClient } from '@/utils/supabaseClient'
+const supabase = getSupabaseClient();
 
 export async function resolveContactName(owner_uid: string, name: string) {
     const { data, error } = await supabase

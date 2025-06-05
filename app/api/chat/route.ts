@@ -1,7 +1,8 @@
 // app/api/chat/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { supabase } from '@/lib/supabaseServer';
+import { getSupabaseClient } from '@/utils/supabaseClient'
+const supabase = getSupabaseClient();;
 import { updateFamiliarityScore } from '@/utils/familiarity';
 import { generateVaultSummary } from '@/utils/vaultSummary';
 

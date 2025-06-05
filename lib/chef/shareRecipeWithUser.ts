@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabaseServer'
+import { getSupabaseClient } from '@/utils/supabaseClient'
+const supabase = getSupabaseClient();
 import { sendMervMessage } from '@/lib/mervLink/sendMessage'
 import { getBestRecipeMatch } from './getBestRecipeMatch'
 

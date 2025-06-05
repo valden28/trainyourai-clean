@@ -1,5 +1,6 @@
 // Server-side utility to create a MervLink + invite token
-import { supabase } from '@/lib/supabaseServer'
+import { getSupabaseClient } from '@/utils/supabaseClient'
+const supabase = getSupabaseClient();
 import { nanoid } from 'nanoid'
 
 export async function createMervLink(

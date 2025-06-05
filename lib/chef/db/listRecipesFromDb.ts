@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabaseServer'
+import { getSupabaseClient } from '@/utils/supabaseClient'
+const supabase = getSupabaseClient();
 
 export async function listRecipesFromDb(user_uid: string) {
   const { data, error } = await supabase

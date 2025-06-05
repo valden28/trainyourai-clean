@@ -3,7 +3,8 @@
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { supabase } from '@/lib/supabaseServer';
+import { getSupabaseClient } from '@/utils/supabaseClient'
+const supabase = getSupabaseClient();;
 import { buildChefPrompt } from '@/lib/assistants/chefPromptBuilder';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });

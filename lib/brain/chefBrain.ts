@@ -1,17 +1,17 @@
-// File: /lib/brain/chefBrain.ts (vector search query handler)
-
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_URL!,                     // ✅ Private and correct
+  process.env.SUPABASE_SERVICE_ROLE_KEY!         // ✅ Also private and correct
 );
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function queryChefBrain(query: string) {
   try {
+    if (!query.trim()) return [];
+
     const embeddingRes = await openai.embeddings.create({
       model: 'text-embedding-ada-002',
       input: query

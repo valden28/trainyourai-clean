@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ handled: results })
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+} catch (err: any) {
+    console.error('❌ /api/merv-messages/fetch crashed:', err)
+    return NextResponse.json({ error: err.message || 'Unknown server error' }, { status: 500 })
   }
-}

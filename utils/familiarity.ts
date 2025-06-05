@@ -1,6 +1,7 @@
 // utils/familiarity.ts
 
-import { supabase } from '@/lib/supabaseServer'
+import { getSupabaseClient } from '@/utils/supabaseClient'
+const supabase = getSupabaseClient();
 
 const VAULT_FIELDS = [
   'identity',

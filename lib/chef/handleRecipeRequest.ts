@@ -1,7 +1,8 @@
 import { isAccessAllowed } from '@/lib/mervAccess/isAccessAllowed'
 import { sendMervMessage } from '@/lib/mervLink/sendMessage'
 import { getRecipeFromDb } from './db/getRecipeFromDb'
-import { supabase } from '@/lib/supabaseServer'
+import { getSupabaseClient } from '@/utils/supabaseClient'
+const supabase = getSupabaseClient();
 
 export async function handleRecipeRequest({
   owner_uid,

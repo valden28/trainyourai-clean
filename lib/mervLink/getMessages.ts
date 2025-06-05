@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabaseServer'
+import { getSupabaseClient } from '@/utils/supabaseClient'
+const supabase = getSupabaseClient();
 
 export async function getMervMessages(receiver_uid: string, status: 'unread' | 'read' = 'unread') {
   const { data, error } = await supabase
