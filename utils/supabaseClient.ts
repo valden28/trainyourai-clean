@@ -1,11 +1,19 @@
-// /utils/supabaseClient.ts
-import { createClient } from '@supabase/supabase-js'
+// File: /utils/supabaseClient.ts
+import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+let supabase: ReturnType<typeof createClient> | null = null;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('❌ Supabase URL or Anon Key not defined in environment variables')
-}
+export const getSupabaseClient = () => {
+  if (!supabase) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const getSupabaseClient = () => createClient(supabaseUrl, supabaseAnonKey)
+    if (!url || !anonKey) {
+      throw new Error('❌ Supabase URL or Anon Key is missing from env');
+    }
+
+    supabase = createClient(url, anonKey);
+  }
+
+  return supabase;
+};
