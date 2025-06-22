@@ -3,7 +3,7 @@
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { supabase } from '@/lib/supabaseServer'; // ✅ Use server-side client
+import { supabase } from '@/lib/supabaseServer'; // ✅ Server-side Supabase client
 import buildChefPrompt from '@/lib/assistants/chefPromptBuilder';
 import { handleChefIntent } from '@/lib/chef/handleChefIntent';
 
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     const { messages } = await req.json();
     const userMessage = messages[messages.length - 1]?.content || '[Empty]';
 
-    // 🔁 Vault check before OpenAI call
+    // 🔁 Check for vault-related intent before OpenAI
     const intentResult = await handleChefIntent({
       sender_uid: userId,
       receiver_uid: userId,
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 🧠 Retrieve user vault
+    // 🧠 Retrieve user vault for personality prompt
     const { data: vault } = await supabase
       .from('vaults_test')
       .select('*')
@@ -43,11 +43,11 @@ export async function POST(req: NextRequest) {
 
     if (!vault) return new NextResponse('Vault not found', { status: 404 });
 
-    // 🪄 Generate prompt
+    // 🪄 Build prompt
     const systemPrompt = await buildChefPrompt(userMessage, vault);
     console.log('[CHEF DEBUG] System Prompt:', systemPrompt);
 
-    // 🤖 Call OpenAI
+    // 🤖 Query OpenAI
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -59,11 +59,17 @@ export async function POST(req: NextRequest) {
     const reply = completion.choices[0]?.message?.content || '[No reply]';
     console.log('[CHEF DEBUG] OpenAI Reply:', reply);
 
-    // ⏺️ Save reply to pending_recipes table using server-side Supabase client
-    await supabase.from('pending_recipes').insert({
+    // ⏺️ Save reply into pending_recipes
+    const { error: insertError } = await supabase.from('pending_recipes').insert({
       user_uid: userId,
       content: reply
     });
+
+    if (insertError) {
+      console.error('❌ Insert into pending_recipes failed:', insertError.message);
+    } else {
+      console.log('✅ Recipe inserted into pending_recipes:', reply);
+    }
 
     return NextResponse.json({
       role: 'assistant',

@@ -1,3 +1,5 @@
+// ✅ File: /lib/chef/handleChefIntent.ts
+
 import { supabase } from '@/lib/supabaseServer';
 import { sendMervMessage } from '@/lib/mervLink/sendMessage';
 import { saveRecipeToDb } from './db/saveRecipeToDb';
@@ -17,7 +19,7 @@ export async function handleChefIntent({
   console.log('🧠 Incoming chef intent message:', message);
   const lower = message.toLowerCase().trim();
 
-  // 💾 Save most recent recipe from pending_recipes
+  // 💾 Save most recent pending recipe to vault
   if (
     /save .*to (my )?vault/.test(lower) ||
     /store .*in (my )?vault/.test(lower) ||
@@ -44,37 +46,39 @@ export async function handleChefIntent({
       return { status: 'invalid' };
     }
 
-    const lines = data.content.split('\n');
-const title = lines[0]?.replace(/^📬/, '').trim();
+    const lines = data.content.split('\n').map(l => l.trim());
+    const title = lines[0]?.replace(/^📬/, '').trim();
 
-const ingIndex = lines.findIndex((l: string) => l.toLowerCase().includes('ingredients'));
-const instrIndex = lines.findIndex((l: string) => l.toLowerCase().includes('instruction'));
+    const ingIndex = lines.findIndex((l) => l.toLowerCase().includes('ingredients'));
+    const instrIndex = lines.findIndex((l) => l.toLowerCase().includes('instruction'));
 
-if (ingIndex === -1 || instrIndex === -1 || instrIndex <= ingIndex) {
-  await sendMervMessage(
-    receiver_uid,
-    sender_uid,
-    '❌ That recipe isn’t formatted correctly — missing ingredients or instructions.',
-    'vault_response',
-    'chef'
-  );
-  return { status: 'invalid_format' };
-}
+    if (ingIndex === -1 || instrIndex === -1 || instrIndex <= ingIndex) {
+      console.error('❌ Could not parse ingredients/instructions block.');
+      await sendMervMessage(
+        receiver_uid,
+        sender_uid,
+        '❌ That recipe isn’t formatted correctly — missing ingredients or instructions.',
+        'vault_response',
+        'chef'
+      );
+      return { status: 'invalid' };
+    }
 
-const ingredients = lines.slice(ingIndex + 1, instrIndex).filter(Boolean);
-const instructions = lines.slice(instrIndex + 1).filter(Boolean);
+    const ingredients = lines.slice(ingIndex + 1, instrIndex).filter(Boolean);
+    const instructions = lines.slice(instrIndex + 1).filter(Boolean);
+
     if (!title || !ingredients.length || !instructions.length) {
       await sendMervMessage(
         receiver_uid,
         sender_uid,
-        '❌ Missing required fields in the recipe (title, ingredients, or instructions).',
+        '❌ That recipe is missing required info — title, ingredients, or steps.',
         'vault_response',
         'chef'
       );
-      return { status: 'invalid_fields' };
+      return { status: 'invalid' };
     }
 
-    const saved = await saveRecipeToDb(sender_uid, {
+    const result = await saveRecipeToDb(sender_uid, {
       key: title.toLowerCase().replace(/[^a-z0-9]/gi, ''),
       title,
       aliases: [],
@@ -83,17 +87,17 @@ const instructions = lines.slice(instrIndex + 1).filter(Boolean);
     });
 
     const response =
-      saved === 'saved'
+      result === 'saved'
         ? `✅ “${title}” has been saved to your vault.`
-        : saved === 'duplicate'
+        : result === 'duplicate'
         ? `⚠️ You’ve already saved “${title}.”`
         : `❌ Failed to save recipe.`;
 
     await sendMervMessage(receiver_uid, sender_uid, response, 'vault_response', 'chef');
-    return { status: saved, message: response };
+    return { status: result, message: response };
   }
 
-  // 📝 Save with custom name
+  // 📝 Save custom title
   if (lower.startsWith('save this as')) {
     const title = message.replace(/^save this as/i, '').trim();
     const key = title.toLowerCase().replace(/\s+/g, '');
@@ -128,7 +132,7 @@ const instructions = lines.slice(instrIndex + 1).filter(Boolean);
     return { status: result };
   }
 
-  // 📚 Show saved recipes
+  // 📚 List saved recipes
   if (
     lower.includes('recipes') &&
     (lower.includes('saved') ||
@@ -153,7 +157,6 @@ const instructions = lines.slice(instrIndex + 1).filter(Boolean);
     return { status: 'listed', message: response };
   }
 
-  // 🧾 Future share logic here...
-
+  // 🔄 Share intent (reserved)
   return { status: 'ignored' };
 }
