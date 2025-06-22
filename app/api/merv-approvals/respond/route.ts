@@ -25,7 +25,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Approval not found or failed to update' }, { status: 500 })
   }
 
-  const recipeName = data.resource.replace('recipes.', '')
+  if (typeof data?.resource !== 'string') {
+    console.error('❌ Invalid resource type:', data?.resource);
+    return NextResponse.json({ error: 'Invalid resource format' }, { status: 500 });
+  }
+  
+  const recipeName = data.resource.replace('recipes.', '');
 
   // Send back a message to requester
   const responseMessage =
