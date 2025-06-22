@@ -1,5 +1,5 @@
 // ✅ File: /lib/chef/db/getMostRecentRecipe.ts
-import { getSupabaseClient } from '@/utils/supabaseClient';
+import { getSupabaseClient } from '@/utils/supabaseClient'
 const supabase = getSupabaseClient();
 
 interface MervMessage {
@@ -27,43 +27,31 @@ export async function getMostRecentRecipe(user_uid: string) {
 
   for (const msg of data) {
     if (!isMervMessage(msg)) continue;
+
     const lines = msg.message.split('\n').map(l => l.trim()).filter(Boolean);
+    const title = lines[0]?.replace(/^📬\s*/, '').trim() || 'Untitled';
 
-    let title = '';
-    let ingredients: string[] = [];
-    let instructions: string[] = [];
+    // 🧠 Flexible index detection
+    const ingIndex = lines.findIndex(l =>
+      /^(ingredients|what you'll need|what you need|you will need)/i.test(l)
+    );
+    const instrIndex = lines.findIndex(l =>
+      /^(instructions|steps|directions|to make|method)/i.test(l)
+    );
 
-    let section: 'none' | 'ingredients' | 'instructions' = 'none';
+    if (ingIndex === -1 || instrIndex === -1 || instrIndex <= ingIndex) continue;
 
-    for (const line of lines) {
-      const lower = line.toLowerCase();
+    const ingredients = lines.slice(ingIndex + 1, instrIndex).filter(Boolean);
+    const instructions = lines.slice(instrIndex + 1).filter(Boolean);
 
-      if (lower.includes('ingredients')) {
-        section = 'ingredients';
-        continue;
-      }
-
-      if (lower.includes('instructions') || lower.includes('steps')) {
-        section = 'instructions';
-        continue;
-      }
-
-      if (section === 'ingredients') {
-        ingredients.push(line);
-      } else if (section === 'instructions') {
-        instructions.push(line);
-      } else if (!title && line.length < 100 && /^[a-zA-Z0-9\s\-,'()]+$/.test(line)) {
-        title = line;
-      }
-    }
-
-    if (title && ingredients.length && instructions.length) {
+    if (ingredients.length && instructions.length) {
+      console.log('✅ Parsed recipe title:', title);
       return {
         key: title.toLowerCase().replace(/[^a-z0-9]/gi, ''),
         title,
         aliases: [],
         ingredients,
-        instructions
+        instructions,
       };
     }
   }
