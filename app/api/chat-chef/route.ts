@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const { messages } = await req.json();
     const userMessage = messages[messages.length - 1]?.content || '[Empty]';
 
-    // 🔁 Try internal logic first (save, share, list, etc)
+    // 🔁 Smart intent handler
     const logicResult = await handleChefIntent({
       sender_uid: userId,
       receiver_uid: userId,
@@ -27,14 +27,26 @@ export async function POST(req: NextRequest) {
     });
 
     if (logicResult?.status && logicResult.status !== 'ignored') {
+      const fallbackMessage = {
+        saved: '✅ Recipe saved.',
+        duplicate: '⚠️ Already saved.',
+        not_found: '❌ No recipe found.',
+        invalid: '❌ Invalid data.',
+        unauthorized: '❌ Not authorized.',
+        error: '❌ Something went wrong.',
+        listed: '📚 Vault listed.',
+        shared: '✅ Recipe shared.',
+        invalid_title: '❌ Invalid recipe title.'
+      }[logicResult.status] || '✅ All set.';
+
       return NextResponse.json({
         role: 'assistant',
         name: 'chefCarlo',
-        content: logicResult.message || '✅ All set!'
+        content: fallbackMessage
       });
     }
 
-    // 🧠 If not handled internally, continue with OpenAI chat
+    // 🧠 Fallback to OpenAI Chat
     const { data: vault } = await supabase
       .from('vaults_test')
       .select('*')
