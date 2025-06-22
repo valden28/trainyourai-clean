@@ -100,6 +100,7 @@ export async function handleChefIntent({
      lower.includes('list'))
   ) {
     const recipes = await listRecipesFromDb(sender_uid);
+    console.log('📦 Vault contents returned from DB:', recipes);
 
     const list = recipes.length
       ? recipes.map((r: any) => `- ${r.title}`).join('\n')
