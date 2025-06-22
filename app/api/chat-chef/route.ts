@@ -59,16 +59,21 @@ export async function POST(req: NextRequest) {
     const reply = completion.choices[0]?.message?.content || '[No reply]';
     console.log('[CHEF DEBUG] OpenAI Reply:', reply);
 
+    // Extract title from first line or fallback
+    const firstLine = reply.split('\n')[0]?.trim() || '';
+    const cleanedTitle = firstLine.replace(/^📬/, '').trim() || 'Untitled';
+
     // ⏺️ Save reply into pending_recipes
     const { error: insertError } = await supabase.from('pending_recipes').insert({
       user_uid: userId,
-      content: reply
+      content: reply,
+      recipe_title: cleanedTitle
     });
 
     if (insertError) {
       console.error('❌ Insert into pending_recipes failed:', insertError.message);
     } else {
-      console.log('✅ Recipe inserted into pending_recipes:', reply);
+      console.log('✅ Recipe inserted into pending_recipes:', cleanedTitle);
     }
 
     return NextResponse.json({
