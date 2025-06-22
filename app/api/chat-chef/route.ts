@@ -1,13 +1,14 @@
-// File: /app/api/chat-chef/route.ts (Diagnostic version: logging everything)
+// File: /app/api/chat-chef/route.ts
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { getSupabaseClient } from '@/utils/supabaseClient'
-const supabase = getSupabaseClient();;
+import { getSupabaseClient } from '@/utils/supabaseClient';
+import { handleChefIntent } from '@/lib/chef/handleChefIntent';
 import buildChefPrompt from '@/lib/assistants/chefPromptBuilder';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+const supabase = getSupabaseClient();
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,6 +19,22 @@ export async function POST(req: NextRequest) {
     const { messages } = await req.json();
     const userMessage = messages[messages.length - 1]?.content || '[Empty]';
 
+    // 🔁 Try internal logic first (save, share, list, etc)
+    const logicResult = await handleChefIntent({
+      sender_uid: userId,
+      receiver_uid: userId,
+      message: userMessage
+    });
+
+    if (logicResult?.status && logicResult.status !== 'ignored') {
+      return NextResponse.json({
+        role: 'assistant',
+        name: 'chefCarlo',
+        content: logicResult.message || '✅ All set!'
+      });
+    }
+
+    // 🧠 If not handled internally, continue with OpenAI chat
     const { data: vault } = await supabase
       .from('vaults_test')
       .select('*')
@@ -28,9 +45,6 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = await buildChefPrompt(userMessage, vault);
 
-    console.log('[CHEF DEBUG] Incoming messages:', JSON.stringify(messages, null, 2));
-    console.log('[CHEF DEBUG] System Prompt:', systemPrompt);
-
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -40,7 +54,6 @@ export async function POST(req: NextRequest) {
     });
 
     const reply = completion.choices[0]?.message?.content || '[No reply]';
-    console.log('[CHEF DEBUG] OpenAI Reply:', reply);
 
     return NextResponse.json({
       role: 'assistant',
