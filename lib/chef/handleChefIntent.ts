@@ -125,6 +125,12 @@ export async function handleChefIntent({
       return { status: 'error' };
     }
 
+    if (typeof resolve.uid !== 'string') {
+      console.error('❌ Invalid UID from resolveContactName:', resolve.uid);
+      await sendMervMessage(receiver_uid, sender_uid, '❌ Could not resolve the contact UID.', 'vault_response', 'chef');
+      return { status: 'error' };
+    }
+
     const { data, error } = await supabase
       .from('merv_permissions')
       .select('resource')
@@ -176,6 +182,12 @@ export async function handleChefIntent({
           : `❌ Could not find anyone named ${name}.`;
 
       await sendMervMessage(receiver_uid, sender_uid, fallback, 'vault_response', 'chef');
+      return { status: 'error' };
+    }
+
+    if (typeof resolve.uid !== 'string') {
+      console.error('❌ Invalid UID from resolveContactName (share step):', resolve.uid);
+      await sendMervMessage(receiver_uid, sender_uid, '❌ Could not resolve the contact UID.', 'vault_response', 'chef');
       return { status: 'error' };
     }
 
