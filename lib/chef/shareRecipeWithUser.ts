@@ -1,7 +1,9 @@
+// lib/chef/shareRecipeWithUser.ts
 import { getSupabaseClient } from '@/utils/supabaseClient'
 const supabase = getSupabaseClient();
 import { sendMervMessage } from '@/lib/mervLink/sendMessage'
 import { getBestRecipeMatch } from './getBestRecipeMatch'
+import { saveRecipeToDb } from './db/saveRecipeToDb'
 
 export async function shareRecipeWithUser({
   owner_uid,
@@ -29,6 +31,22 @@ export async function shareRecipeWithUser({
 
   const { key, data } = match
   const resource = `recipes.${key}`
+
+  // 👤 Double-check it’s saved to the owner's vault
+  const saveResult = await saveRecipeToDb(owner_uid, {
+    key,
+    title: data.title,
+    ingredients: data.ingredients,
+    instructions: data.instructions,
+    aliases: data.aliases || []
+  });
+
+  if (saveResult !== 'saved' && saveResult !== 'duplicate') {
+    return {
+      success: false,
+      message: `❌ Failed to save recipe to your vault before sharing.`
+    }
+  }
 
   // 🔁 Check if already shared
   const { data: existing, error: checkError } = await supabase
