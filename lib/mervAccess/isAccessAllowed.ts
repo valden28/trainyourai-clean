@@ -1,4 +1,4 @@
-import { getSupabaseClient } from '@/utils/supabaseClient'
+import { getSupabaseClient } from '@/utils/supabaseClient';
 const supabase = getSupabaseClient();
 
 export async function isAccessAllowed(
@@ -15,20 +15,23 @@ export async function isAccessAllowed(
       owner_uid,
       allowed_uid: requester_uid,
       assistant,
-      resource
+      resource,
     })
-    .single()
+    .single();
 
-  if (perm?.approval_mode === 'auto') return 'auto'
-  if (perm?.approval_mode === 'manual') return 'manual'
+  if (perm?.approval_mode === 'auto') return 'auto';
+  if (perm?.approval_mode === 'manual') return 'manual';
 
   // Step 2: Check auto-share rules
   const { data: vaultSettings } = await supabase
     .from('vault_settings')
     .select('auto_share')
     .eq('user_uid', owner_uid)
-    .single()
+    .single();
 
-  const isAuto = vaultSettings?.auto_share?.[assistant] === true
-  return isAuto ? 'auto' : 'denied'
+  // ✅ Explicit type assertion to allow dynamic keys
+  const autoShareMap = vaultSettings?.auto_share as Record<string, boolean> | undefined;
+  const isAuto = autoShareMap?.[assistant] === true;
+
+  return isAuto ? 'auto' : 'denied';
 }
