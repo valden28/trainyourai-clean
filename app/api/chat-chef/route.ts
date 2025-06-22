@@ -1,13 +1,14 @@
 // File: /app/api/chat-chef/route.ts
+
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { getSupabaseClient } from '@/utils/supabaseClient';
-import { handleChefIntent } from '@/lib/chef/handleChefIntent';
 import buildChefPrompt from '@/lib/assistants/chefPromptBuilder';
+import { handleChefIntent } from '@/lib/chef/handleChefIntent';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 const supabase = getSupabaseClient();
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,36 +17,8 @@ export async function POST(req: NextRequest) {
     if (!userId) return new NextResponse('Unauthorized', { status: 401 });
 
     const { messages } = await req.json();
-    const userMessage = messages[messages.length - 1]?.content || '[Empty]';
+    const userMessage = messages[messages.length - 1]?.content || '';
 
-    // 🔁 Smart intent handler
-    const logicResult = await handleChefIntent({
-      sender_uid: userId,
-      receiver_uid: userId,
-      message: userMessage
-    });
-
-    if (logicResult?.status && logicResult.status !== 'ignored') {
-      const fallbackMessage = {
-        saved: '✅ Recipe saved.',
-        duplicate: '⚠️ Already saved.',
-        not_found: '❌ No recipe found.',
-        invalid: '❌ Invalid data.',
-        unauthorized: '❌ Not authorized.',
-        error: '❌ Something went wrong.',
-        listed: '📚 Vault listed.',
-        shared: '✅ Recipe shared.',
-        invalid_title: '❌ Invalid recipe title.'
-      }[logicResult.status] || '✅ All set.';
-
-      return NextResponse.json({
-        role: 'assistant',
-        name: 'chefCarlo',
-        content: fallbackMessage
-      });
-    }
-
-    // 🧠 Fallback to OpenAI Chat
     const { data: vault } = await supabase
       .from('vaults_test')
       .select('*')
@@ -54,6 +27,22 @@ export async function POST(req: NextRequest) {
 
     if (!vault) return new NextResponse('Vault not found', { status: 404 });
 
+    // 🧠 Intercept special vault logic
+    const logicResult = await handleChefIntent({
+      sender_uid: userId,
+      receiver_uid: userId,
+      message: userMessage
+    });
+
+    if (logicResult.status !== 'ignored') {
+      return NextResponse.json({
+        role: 'assistant',
+        name: 'chefCarlo',
+        content: logicResult.message || '✅ All set!'
+      });
+    }
+
+    // 🧠 Build system prompt & send to OpenAI
     const systemPrompt = await buildChefPrompt(userMessage, vault);
 
     const completion = await openai.chat.completions.create({
