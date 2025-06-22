@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabaseServer'
+// lib/chef/db/getBestRecipeMatch.ts
+import { supabase } from '@/lib/supabaseServer';
 
 export async function getBestRecipeMatch(
   user_uid: string,
@@ -7,33 +8,41 @@ export async function getBestRecipeMatch(
   const { data, error } = await supabase
     .from('recipes_vault')
     .select('*')
-    .eq('user_uid', user_uid)
+    .eq('user_uid', user_uid);
 
   if (error || !data) {
-    console.error('❌ Vault lookup error:', error?.message)
-    return null
+    console.error('❌ Vault lookup error:', error?.message);
+    return null;
   }
 
-  const input = query.toLowerCase().replace(/[^a-z0-9]/gi, '')
+  const normalize = (str: string) =>
+    str?.toLowerCase().replace(/[^a-z0-9]/gi, '') || '';
+
+  const input = normalize(query);
 
   const match = data.find((r: any) => {
-    const key = typeof r.key === 'string' ? r.key.toLowerCase().replace(/[^a-z0-9]/gi, '') : ''
-    const title = typeof r.title === 'string' ? r.title.toLowerCase().replace(/[^a-z0-9]/gi, '') : ''
+    const key = normalize(r.key);
+    const title = normalize(r.title);
     const aliases = Array.isArray(r.aliases)
-      ? r.aliases.map((a: string) =>
-          typeof a === 'string' ? a.toLowerCase().replace(/[^a-z0-9]/gi, '') : ''
-        )
-      : []
+      ? r.aliases.map(normalize)
+      : [];
 
     return (
       key === input ||
+      title === input ||
       key.includes(input) ||
       title.includes(input) ||
       aliases.some((alias: string) => alias.includes(input))
-    )
-  })
+    );
+  });
 
-  if (!match || typeof match.key !== 'string') return null
+  if (!match || typeof match.key !== 'string') {
+    console.warn(`❌ No recipe match found for query: "${query}"`);
+    return null;
+  }
 
-  return { key: match.key, data: match }
+  return {
+    key: match.key.toLowerCase(),
+    data: match
+  };
 }

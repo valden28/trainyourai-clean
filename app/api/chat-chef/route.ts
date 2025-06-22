@@ -1,4 +1,4 @@
-// File: /app/api/chat-chef/route.ts
+// ✅ File: /app/api/chat-chef/route.ts
 
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
@@ -7,8 +7,8 @@ import { getSupabaseClient } from '@/utils/supabaseClient';
 import buildChefPrompt from '@/lib/assistants/chefPromptBuilder';
 import { handleChefIntent } from '@/lib/chef/handleChefIntent';
 
-const supabase = getSupabaseClient();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+const supabase = getSupabaseClient();
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,8 +17,25 @@ export async function POST(req: NextRequest) {
     if (!userId) return new NextResponse('Unauthorized', { status: 401 });
 
     const { messages } = await req.json();
-    const userMessage = messages[messages.length - 1]?.content || '';
+    const userMessage = messages[messages.length - 1]?.content || '[Empty]';
 
+    // 🔁 Vault check before OpenAI call
+    const intentResult = await handleChefIntent({
+      sender_uid: userId,
+      receiver_uid: userId,
+      message: userMessage
+    });
+
+    if (intentResult?.status !== 'ignored') {
+      console.log('[CHEF INTENT RESPONSE]', intentResult);
+      return NextResponse.json({
+        role: 'assistant',
+        name: 'chefCarlo',
+        content: intentResult.message || '✅ Handled vault intent.'
+      });
+    }
+
+    // 🧠 Retrieve user vault
     const { data: vault } = await supabase
       .from('vaults_test')
       .select('*')
@@ -27,24 +44,11 @@ export async function POST(req: NextRequest) {
 
     if (!vault) return new NextResponse('Vault not found', { status: 404 });
 
-    // 🧠 Intercept special vault logic
-    const logicResult = await handleChefIntent({
-      sender_uid: userId,
-      receiver_uid: userId,
-      message: userMessage
-    });
-
-    if (logicResult.status !== 'ignored') {
-      return NextResponse.json({
-        role: 'assistant',
-        name: 'chefCarlo',
-        content: logicResult.message || '✅ All set!'
-      });
-    }
-
-    // 🧠 Build system prompt & send to OpenAI
+    // 🪄 Generate prompt
     const systemPrompt = await buildChefPrompt(userMessage, vault);
+    console.log('[CHEF DEBUG] System Prompt:', systemPrompt);
 
+    // 🤖 Call OpenAI
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -54,6 +58,7 @@ export async function POST(req: NextRequest) {
     });
 
     const reply = completion.choices[0]?.message?.content || '[No reply]';
+    console.log('[CHEF DEBUG] OpenAI Reply:', reply);
 
     return NextResponse.json({
       role: 'assistant',

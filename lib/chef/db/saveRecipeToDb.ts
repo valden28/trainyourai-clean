@@ -1,36 +1,17 @@
 // lib/chef/db/saveRecipeToDb.ts
 import { supabase } from '@/lib/supabaseServer';
 
-interface RecipeInput {
-  key: string;
-  title: string;
-  aliases?: string[];
-  ingredients: string[];
-  instructions: string[];
-}
-
-export async function saveRecipeToDb(
-  user_uid: string,
-  recipe: RecipeInput
-): Promise<'saved' | 'duplicate' | 'error' | 'invalid'> {
-  if (
-    !user_uid ||
-    !recipe?.title ||
-    !recipe?.key ||
-    !Array.isArray(recipe.ingredients) ||
-    !Array.isArray(recipe.instructions)
-  ) {
-    console.error('❌ Invalid input to saveRecipeToDb:', { user_uid, recipe });
+export async function saveRecipeToDb(user_uid: string, recipe: any) {
+  if (!recipe?.title || !recipe?.key) {
+    console.error('❌ Recipe missing title or key:', recipe);
     return 'invalid';
   }
-
-  const key = recipe.key.toLowerCase().replace(/\s+/g, '');
 
   const { data: existing, error: lookupError } = await supabase
     .from('recipes_vault')
     .select('id')
     .eq('user_uid', user_uid)
-    .eq('key', key)
+    .eq('key', recipe.key)
     .maybeSingle();
 
   if (lookupError) {
@@ -39,24 +20,39 @@ export async function saveRecipeToDb(
   }
 
   if (existing) {
-    console.log(`⚠️ Recipe already exists: ${key}`);
+    console.log(`⚠️ Duplicate recipe found in vault: "${recipe.key}" for ${user_uid}`);
     return 'duplicate';
   }
 
-  const { error: insertError } = await supabase.from('recipes_vault').insert({
-    user_uid,
-    key,
-    title: recipe.title.trim(),
-    aliases: recipe.aliases || [],
-    ingredients: recipe.ingredients,
-    instructions: recipe.instructions,
-  });
+  const { error: insertError, data: insertData } = await supabase
+    .from('recipes_vault')
+    .insert({
+      user_uid,
+      key: recipe.key,
+      title: recipe.title,
+      ingredients: recipe.ingredients || [],
+      instructions: recipe.instructions || [],
+      aliases: recipe.aliases || [],
+    })
+    .select();
 
   if (insertError) {
     console.error('❌ Insert error:', insertError.message);
     return 'error';
   }
 
-  console.log(`✅ Saved recipe: ${recipe.title} for user ${user_uid}`);
+  if (!insertData || !insertData.length) {
+    console.error('❌ Insert succeeded but returned no data.');
+    return 'error';
+  }
+
+  console.log('✅ Recipe successfully saved to Supabase:', {
+    user_uid,
+    key: recipe.key,
+    title: recipe.title,
+    ingredients: recipe.ingredients,
+    instructions: recipe.instructions
+  });
+
   return 'saved';
 }
