@@ -26,11 +26,13 @@ export async function handleChefIntent({
 
     if (
       !recent ||
-      !recent.title ||
-      !recent.key ||
-      !recent.ingredients?.length ||
-      !recent.instructions?.length
+      typeof recent.title !== 'string' ||
+      typeof recent.key !== 'string' ||
+      !Array.isArray(recent.ingredients) || !recent.ingredients.length ||
+      !Array.isArray(recent.instructions) || !recent.instructions.length
     ) {
+      console.warn('❌ Invalid or incomplete recipe pulled from message history:', recent);
+
       await sendMervMessage(
         receiver_uid,
         sender_uid,
@@ -41,17 +43,19 @@ export async function handleChefIntent({
       return { status: 'invalid' };
     }
 
-    const saved = await saveRecipeToDb(sender_uid, recent);
+    const saveStatus = await saveRecipeToDb(sender_uid, recent);
 
     const response =
-      saved === 'saved'
+      saveStatus === 'saved'
         ? `✅ “${recent.title}” has been saved to your vault.`
-        : saved === 'duplicate'
+        : saveStatus === 'duplicate'
         ? `⚠️ You’ve already saved “${recent.title}.”`
         : `❌ Failed to save recipe.`;
 
+    console.log(`[CHEF] Recipe save status for "${recent.title}": ${saveStatus}`);
+
     await sendMervMessage(receiver_uid, sender_uid, response, 'vault_response', 'chef');
-    return { status: saved };
+    return { status: saveStatus };
   }
 
   // 📝 Save with custom name
@@ -89,15 +93,15 @@ export async function handleChefIntent({
     return { status: result };
   }
 
-  // 📚 Show saved recipes (expanded matching)
+  // 📚 Show saved recipes
   if (
     lower.includes('recipes') &&
     (lower.includes('saved') ||
-     lower.includes('what') ||
-     lower.includes('show') ||
-     lower.includes('in my vault') ||
-     lower.includes('my recipes') ||
-     lower.includes('list'))
+      lower.includes('what') ||
+      lower.includes('show') ||
+      lower.includes('in my vault') ||
+      lower.includes('my recipes') ||
+      lower.includes('list'))
   ) {
     const recipes = await listRecipesFromDb(sender_uid);
     console.log('📦 Vault contents returned from DB:', recipes);
