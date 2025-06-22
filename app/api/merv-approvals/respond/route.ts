@@ -5,17 +5,17 @@ const supabase = getSupabaseClient();
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const rawUid = searchParams.get('uid');
+  const uid = searchParams.get('uid');
 
-  // Type narrowing to guarantee string type
-  if (!rawUid || typeof rawUid !== 'string') {
-    return NextResponse.json({ error: 'Missing or invalid UID' }, { status: 400 });
+  // Explicit runtime check to ensure uid is a non-null string
+  if (!uid) {
+    return NextResponse.json({ error: 'Missing UID parameter' }, { status: 400 });
   }
 
   const { data, error } = await supabase
     .from('merv_approvals')
     .select('*')
-    .eq('owner_uid', rawUid)
+    .eq('owner_uid', uid as string)
     .eq('status', 'pending')
     .order('requested_at', { ascending: true });
 
