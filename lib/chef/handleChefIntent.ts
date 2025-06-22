@@ -105,6 +105,43 @@ export async function handleChefIntent({
     return { status: 'listed', message: response };
   }
 
-  // ❓ Unrecognized
+  // 📤 Share intent: "send lasagna to Dave"
+  const shareMatch =
+    message.match(/(?:send|share)\s+(.+?)\s+(?:to|with)\s+(.+)/i) ||
+    message.match(/(?:send|share)\s+(\w+)\s+my\s+(.+)/i);
+
+  if (shareMatch) {
+    const [_, recipeRaw, nameRaw] = shareMatch;
+    const name = nameRaw?.trim();
+    const recipeName = recipeRaw?.replace(/recipe/i, '').trim();
+
+    if (!name || !recipeName) {
+      await sendMervMessage(receiver_uid, sender_uid, '❌ Could not parse recipe or recipient.', 'vault_response', 'chef');
+      return { status: 'error' };
+    }
+
+    const resolve = await resolveContactName(sender_uid, name);
+
+    if (!resolve.success || typeof resolve.uid !== 'string') {
+      const fallback =
+        resolve.reason === 'ambiguous'
+          ? `🔍 Multiple contacts named ${name}. Be more specific.`
+          : `❌ Could not find anyone named ${name}.`;
+
+      await sendMervMessage(receiver_uid, sender_uid, fallback, 'vault_response', 'chef');
+      return { status: 'error' };
+    }
+
+    const result = await shareRecipeWithUser({
+      owner_uid: sender_uid,
+      target_uid: resolve.uid,
+      recipeQuery: recipeName
+    });
+
+    await sendMervMessage(receiver_uid, sender_uid, result.message, 'vault_response', 'chef');
+    return { status: result.success ? 'shared' : 'error' };
+  }
+
+  // ❓ Unrecognized input
   return { status: 'ignored' };
 }
