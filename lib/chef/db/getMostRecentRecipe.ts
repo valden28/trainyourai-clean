@@ -1,4 +1,5 @@
-import { getSupabaseClient } from '@/utils/supabaseClient'
+// lib/chef/db/getMostRecentRecipe.ts
+import { getSupabaseClient } from '@/utils/supabaseClient';
 const supabase = getSupabaseClient();
 
 export async function getMostRecentRecipe(user_uid: string) {
@@ -12,17 +13,24 @@ export async function getMostRecentRecipe(user_uid: string) {
     .limit(10);
 
   if (error || !data || !data.length) {
-    console.error('❌ No valid recipe messages found:', error?.message);
+    console.error('❌ No recent recipe messages found:', error?.message);
     return null;
   }
 
-  const valid = data.find((msg: any) => typeof msg.message === 'string' && msg.message.trim().startsWith('📬'));
+  const valid = data.find((msg: any) =>
+    typeof msg.message === 'string' &&
+    msg.message.includes('🧂') &&
+    msg.message.includes('👨‍🍳')
+  );
+
   if (!valid || typeof valid.message !== 'string') {
+    console.warn('❌ No valid recipe message structure detected');
     return null;
   }
 
   const lines = valid.message.split('\n');
-  const title = lines[0]?.replace('📬', '').trim() || 'Untitled';
+  const titleLine = lines.find((line: string) => line.startsWith('📬')) || lines[0];
+  const title = titleLine?.replace('📬', '').trim() || 'Untitled';
 
   const ingIndex = lines.findIndex((l: string) => l.includes('🧂'));
   const instrIndex = lines.findIndex((l: string) => l.includes('👨‍🍳'));
