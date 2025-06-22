@@ -20,7 +20,6 @@ export async function handleChefIntent({
   console.log('🧠 Incoming chef intent message:', message);
   const lower = message.toLowerCase().trim();
 
-  // 💾 Save most recent recipe to vault
   if (lower.startsWith('save this') && lower.includes('to my vault')) {
     const recent = await getMostRecentRecipe(sender_uid);
 
@@ -54,7 +53,6 @@ export async function handleChefIntent({
     return { status: saved };
   }
 
-  // 📝 Save under custom name
   if (lower.startsWith('save this as')) {
     const title = message.replace(/^save this as/i, '').trim();
     const key = title.toLowerCase().replace(/\s+/g, '');
@@ -89,7 +87,6 @@ export async function handleChefIntent({
     return { status: result };
   }
 
-  // 📚 List saved recipes
   if (lower.includes('what') && lower.includes('recipes') && lower.includes('saved')) {
     const recipes = await listRecipesFromDb(sender_uid);
 
@@ -105,7 +102,6 @@ export async function handleChefIntent({
     return { status: 'listed' };
   }
 
-  // 📜 Query sharing history (Den-only)
   if (lower.startsWith('what have i shared with')) {
     if (sender_uid !== 'auth0|6825cc5ba058089b86c4edc0') {
       await sendMervMessage(receiver_uid, sender_uid, '⚠️ Only Den can view sharing history for now.', 'vault_response', 'chef');
@@ -115,19 +111,13 @@ export async function handleChefIntent({
     const name = message.replace(/^what have i shared with/i, '').replace(/[?.,!]$/, '').trim();
     const resolve = await resolveContactName(sender_uid, name);
 
-    if (!resolve.success) {
+    if (!resolve.success || typeof resolve.uid !== 'string') {
       const fallback =
         resolve.reason === 'ambiguous'
           ? `🔍 You have multiple contacts named ${name}. Be more specific.`
           : `❌ Could not find anyone named ${name}.`;
 
       await sendMervMessage(receiver_uid, sender_uid, fallback, 'vault_response', 'chef');
-      return { status: 'error' };
-    }
-
-    if (typeof resolve.uid !== 'string') {
-      console.error('❌ Invalid UID from resolveContactName:', resolve.uid);
-      await sendMervMessage(receiver_uid, sender_uid, '❌ Could not resolve the contact UID.', 'vault_response', 'chef');
       return { status: 'error' };
     }
 
@@ -143,7 +133,10 @@ export async function handleChefIntent({
       return { status: 'error' };
     }
 
-    const recipes = data.map((r) => r.resource?.replace('recipes.', '')).filter(Boolean);
+    const recipes = data
+      .map((r) => typeof r.resource === 'string' ? r.resource.replace('recipes.', '') : null)
+      .filter((val): val is string => !!val);
+
     const unique = [...new Set(recipes)];
 
     const list = unique.length
@@ -158,7 +151,6 @@ export async function handleChefIntent({
     return { status: 'listed' };
   }
 
-  // 📤 Share recipe (e.g., "send ravioli to Dave")
   const shareMatch =
     message.match(/(?:send|share)\s+(.+?)\s+(?:to|with)\s+(.+)/i) ||
     message.match(/(?:send|share)\s+(\w+)\s+my\s+(.+)/i);
@@ -175,19 +167,13 @@ export async function handleChefIntent({
 
     const resolve = await resolveContactName(sender_uid, name);
 
-    if (!resolve.success) {
+    if (!resolve.success || typeof resolve.uid !== 'string') {
       const fallback =
         resolve.reason === 'ambiguous'
           ? `🔍 You have multiple contacts named ${name}. Be more specific.`
           : `❌ Could not find anyone named ${name}.`;
 
       await sendMervMessage(receiver_uid, sender_uid, fallback, 'vault_response', 'chef');
-      return { status: 'error' };
-    }
-
-    if (typeof resolve.uid !== 'string') {
-      console.error('❌ Invalid UID from resolveContactName (share step):', resolve.uid);
-      await sendMervMessage(receiver_uid, sender_uid, '❌ Could not resolve the contact UID.', 'vault_response', 'chef');
       return { status: 'error' };
     }
 
@@ -201,6 +187,5 @@ export async function handleChefIntent({
     return { status: result.success ? 'shared' : 'error' };
   }
 
-  // ❓ Unrecognized input
   return { status: 'ignored' };
 }
