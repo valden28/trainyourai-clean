@@ -1,10 +1,9 @@
 import { supabase } from '@/lib/supabaseServer';
 import { sendMervMessage } from '@/lib/mervLink/sendMessage';
 import { saveRecipeToDb } from './db/saveRecipeToDb';
-import { getMostRecentRecipe } from './db/getMostRecentRecipe';
 import { listRecipesFromDb } from './db/listRecipesFromDb';
-import { shareRecipeWithUser } from './shareRecipeWithUser';
 import { resolveContactName } from '@/lib/contacts/resolveContactName';
+import { shareRecipeWithUser } from './shareRecipeWithUser';
 
 export async function handleChefIntent({
   sender_uid,
@@ -18,39 +17,77 @@ export async function handleChefIntent({
   console.log('🧠 Incoming chef intent message:', message);
   const lower = message.toLowerCase().trim();
 
-  // 💾 Save most recent recipe to vault (more flexible matching)
+  // 💾 Save most recent recipe from pending_recipes
   if (
     /save .*to (my )?vault/.test(lower) ||
     /store .*in (my )?vault/.test(lower) ||
     lower.includes('save that') ||
     lower.includes('save it to my vault')
   ) {
-    const recent = await getMostRecentRecipe(sender_uid);
+    const { data, error } = await supabase
+      .from('pending_recipes')
+      .select('id, content')
+      .eq('user_uid', sender_uid)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (
-      !recent ||
-      !recent.title ||
-      !recent.key ||
-      !recent.ingredients?.length ||
-      !recent.instructions?.length
-    ) {
+    if (error || !data?.content) {
+      console.error('❌ Failed to fetch pending recipe:', error?.message);
       await sendMervMessage(
         receiver_uid,
         sender_uid,
-        '❌ That recipe isn’t ready to be saved — missing title, key, or instructions.',
+        '❌ Sorry, I couldn’t find anything recent to save.',
         'vault_response',
         'chef'
       );
       return { status: 'invalid' };
     }
 
-    const saved = await saveRecipeToDb(sender_uid, recent);
+    const lines = data.content.split('\n');
+    const title = lines[0]?.replace(/^📬/, '').trim();
+
+    const ingIndex = lines.findIndex(l => l.toLowerCase().includes('ingredients'));
+    const instrIndex = lines.findIndex(l => l.toLowerCase().includes('instruction'));
+
+    if (ingIndex === -1 || instrIndex === -1 || instrIndex <= ingIndex) {
+      await sendMervMessage(
+        receiver_uid,
+        sender_uid,
+        '❌ That recipe isn’t formatted correctly — missing ingredients or instructions.',
+        'vault_response',
+        'chef'
+      );
+      return { status: 'invalid_format' };
+    }
+
+    const ingredients = lines.slice(ingIndex + 1, instrIndex).filter(Boolean);
+    const instructions = lines.slice(instrIndex + 1).filter(Boolean);
+
+    if (!title || !ingredients.length || !instructions.length) {
+      await sendMervMessage(
+        receiver_uid,
+        sender_uid,
+        '❌ Missing required fields in the recipe (title, ingredients, or instructions).',
+        'vault_response',
+        'chef'
+      );
+      return { status: 'invalid_fields' };
+    }
+
+    const saved = await saveRecipeToDb(sender_uid, {
+      key: title.toLowerCase().replace(/[^a-z0-9]/gi, ''),
+      title,
+      aliases: [],
+      ingredients,
+      instructions
+    });
 
     const response =
       saved === 'saved'
-        ? `✅ “${recent.title}” has been saved to your vault.`
+        ? `✅ “${title}” has been saved to your vault.`
         : saved === 'duplicate'
-        ? `⚠️ You’ve already saved “${recent.title}.”`
+        ? `⚠️ You’ve already saved “${title}.”`
         : `❌ Failed to save recipe.`;
 
     await sendMervMessage(receiver_uid, sender_uid, response, 'vault_response', 'chef');
@@ -117,7 +154,7 @@ export async function handleChefIntent({
     return { status: 'listed', message: response };
   }
 
-  // 📤 Share recipe intent (future logic goes here)
+  // 🧾 Future share logic here...
 
   return { status: 'ignored' };
 }
