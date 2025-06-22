@@ -1,5 +1,4 @@
 // File: /app/api/chat-chef/route.ts
-
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
