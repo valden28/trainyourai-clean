@@ -24,9 +24,21 @@ export async function handleChefIntent({
   if (lower.startsWith('save this') && lower.includes('to my vault')) {
     const recent = await getMostRecentRecipe(sender_uid);
 
-    if (!recent) {
-      await sendMervMessage(receiver_uid, sender_uid, '❌ No recent recipe found to save.', 'vault_response', 'chef');
-      return { status: 'not_found' };
+    if (
+      !recent ||
+      !recent.title ||
+      !recent.key ||
+      !recent.ingredients?.length ||
+      !recent.instructions?.length
+    ) {
+      await sendMervMessage(
+        receiver_uid,
+        sender_uid,
+        '❌ That recipe isn’t ready to be saved — missing title, key, or instructions.',
+        'vault_response',
+        'chef'
+      );
+      return { status: 'invalid' };
     }
 
     const saved = await saveRecipeToDb(sender_uid, recent);
@@ -46,6 +58,17 @@ export async function handleChefIntent({
   if (lower.startsWith('save this as')) {
     const title = message.replace(/^save this as/i, '').trim();
     const key = title.toLowerCase().replace(/\s+/g, '');
+
+    if (!title || title.length < 3) {
+      await sendMervMessage(
+        receiver_uid,
+        sender_uid,
+        '❌ Please provide a valid title for the recipe.',
+        'vault_response',
+        'chef'
+      );
+      return { status: 'invalid_title' };
+    }
 
     const result = await saveRecipeToDb(sender_uid, {
       key,

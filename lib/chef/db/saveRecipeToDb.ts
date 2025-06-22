@@ -1,47 +1,41 @@
-import { getSupabaseClient } from '@/utils/supabaseClient'
-const supabase = getSupabaseClient();
+// lib/chef/db/saveRecipeToDb.ts
+import { supabase } from '@/lib/supabaseServer';
 
-export async function saveRecipeToDb(user_uid: string, recipe: {
-  key: string
-  title: string
-  aliases?: string[]
-  ingredients: string[]
-  instructions: string[]
-}): Promise<'saved' | 'duplicate' | 'error'> {
-  const key = recipe.key.toLowerCase()
+export async function saveRecipeToDb(user_uid: string, recipe: any) {
+  if (!recipe?.title || !recipe?.key) {
+    console.error('❌ Recipe missing title or key:', recipe);
+    return 'invalid';
+  }
 
-  // Check if recipe already exists
-  const { data, error: fetchError } = await supabase
+  const { data: existing, error: lookupError } = await supabase
     .from('recipes_vault')
     .select('id')
     .eq('user_uid', user_uid)
-    .eq('key', key)
-    .maybeSingle()
+    .eq('key', recipe.key)
+    .maybeSingle();
 
-  if (fetchError) {
-    console.error('❌ Error checking for existing recipe:', fetchError.message)
-    return 'error'
+  if (lookupError) {
+    console.error('❌ Vault lookup failed:', lookupError.message);
+    return 'error';
   }
 
-  if (data) {
-    console.log('⚠️ Duplicate recipe detected:', key)
-    return 'duplicate'
+  if (existing) {
+    return 'duplicate';
   }
 
-  const { error } = await supabase.from('recipes_vault').insert({
+  const { error: insertError } = await supabase.from('recipes_vault').insert({
     user_uid,
-    key,
+    key: recipe.key,
     title: recipe.title,
+    ingredients: recipe.ingredients || [],
+    instructions: recipe.instructions || [],
     aliases: recipe.aliases || [],
-    ingredients: recipe.ingredients,
-    instructions: recipe.instructions
-  })
+  });
 
-  if (error) {
-    console.error('❌ Error saving recipe:', error.message)
-    return 'error'
+  if (insertError) {
+    console.error('❌ Insert error:', insertError.message);
+    return 'error';
   }
 
-  console.log('✅ Recipe saved:', key)
-  return 'saved'
+  return 'saved';
 }
