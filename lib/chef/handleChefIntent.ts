@@ -45,25 +45,24 @@ export async function handleChefIntent({
     }
 
     const lines = data.content.split('\n');
-    const title = lines[0]?.replace(/^📬/, '').trim();
+const title = lines[0]?.replace(/^📬/, '').trim();
 
-    const ingIndex = lines.findIndex(l => l.toLowerCase().includes('ingredients'));
-    const instrIndex = lines.findIndex(l => l.toLowerCase().includes('instruction'));
+const ingIndex = lines.findIndex((l: string) => l.toLowerCase().includes('ingredients'));
+const instrIndex = lines.findIndex((l: string) => l.toLowerCase().includes('instruction'));
 
-    if (ingIndex === -1 || instrIndex === -1 || instrIndex <= ingIndex) {
-      await sendMervMessage(
-        receiver_uid,
-        sender_uid,
-        '❌ That recipe isn’t formatted correctly — missing ingredients or instructions.',
-        'vault_response',
-        'chef'
-      );
-      return { status: 'invalid_format' };
-    }
+if (ingIndex === -1 || instrIndex === -1 || instrIndex <= ingIndex) {
+  await sendMervMessage(
+    receiver_uid,
+    sender_uid,
+    '❌ That recipe isn’t formatted correctly — missing ingredients or instructions.',
+    'vault_response',
+    'chef'
+  );
+  return { status: 'invalid_format' };
+}
 
-    const ingredients = lines.slice(ingIndex + 1, instrIndex).filter(Boolean);
-    const instructions = lines.slice(instrIndex + 1).filter(Boolean);
-
+const ingredients = lines.slice(ingIndex + 1, instrIndex).filter(Boolean);
+const instructions = lines.slice(instrIndex + 1).filter(Boolean);
     if (!title || !ingredients.length || !instructions.length) {
       await sendMervMessage(
         receiver_uid,
