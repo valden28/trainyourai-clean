@@ -6,6 +6,10 @@ interface MervMessage {
   message: string;
 }
 
+function isMervMessage(obj: any): obj is MervMessage {
+  return obj && typeof obj.message === 'string';
+}
+
 export async function getMostRecentRecipe(user_uid: string) {
   const { data, error } = await supabase
     .from('merv_messages')
@@ -21,8 +25,8 @@ export async function getMostRecentRecipe(user_uid: string) {
     return null;
   }
 
-  for (const msg of data as MervMessage[]) {
-    if (typeof msg.message !== 'string') continue;
+  for (const msg of data) {
+    if (!isMervMessage(msg)) continue;
 
     const lines = msg.message.split('\n');
     const hasIngredients = lines.some((l) => l.toLowerCase().includes('ingredients'));
