@@ -7,6 +7,8 @@ export async function saveRecipeToDb(user_uid: string, recipe: any) {
     return 'invalid';
   }
 
+  console.log(`🧾 Saving recipe for user ${user_uid}:`, recipe.title);
+
   const { data: existing, error: lookupError } = await supabase
     .from('recipes_vault')
     .select('id')
@@ -20,11 +22,11 @@ export async function saveRecipeToDb(user_uid: string, recipe: any) {
   }
 
   if (existing) {
-    console.log(`⚠️ Duplicate recipe found in vault: "${recipe.key}" for ${user_uid}`);
+    console.warn(`⚠️ Recipe already exists: ${recipe.key} for user ${user_uid}`);
     return 'duplicate';
   }
 
-  const { error: insertError, data: insertData } = await supabase
+  const { data: insertData, error: insertError } = await supabase
     .from('recipes_vault')
     .insert({
       user_uid,
@@ -41,18 +43,11 @@ export async function saveRecipeToDb(user_uid: string, recipe: any) {
     return 'error';
   }
 
-  if (!insertData || !insertData.length) {
-    console.error('❌ Insert succeeded but returned no data.');
+  if (!insertData || insertData.length === 0) {
+    console.error('❌ Insert succeeded but no rows returned.');
     return 'error';
   }
 
-  console.log('✅ Recipe successfully saved to Supabase:', {
-    user_uid,
-    key: recipe.key,
-    title: recipe.title,
-    ingredients: recipe.ingredients,
-    instructions: recipe.instructions
-  });
-
+  console.log('✅ Recipe saved to Supabase vault:', insertData[0]);
   return 'saved';
 }

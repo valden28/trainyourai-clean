@@ -1,3 +1,4 @@
+// lib/chef/db/getMostRecentRecipe.ts
 import { getSupabaseClient } from '@/utils/supabaseClient'
 const supabase = getSupabaseClient();
 
@@ -19,45 +20,37 @@ export async function getMostRecentRecipe(user_uid: string) {
     .order('timestamp', { ascending: false })
     .limit(10);
 
-  if (error || !data || !data.length) {
-    console.error('❌ No valid recipe messages found:', error?.message);
+  if (error || !data?.length) {
+    console.error('❌ No recent recipe messages found:', error?.message);
     return null;
   }
 
   for (const msg of data) {
     if (!isMervMessage(msg)) continue;
 
-    const lines = msg.message.split('\n').map(l => l.trim()).filter(Boolean);
-    const titleLine = lines[0] || '';
-    const title = titleLine.replace(/^📬\s?/, '').trim();
+    const lines = msg.message.split('\n').map((l) => l.trim()).filter(Boolean);
+    if (lines.length < 3) continue;
 
-    const ingIndex = lines.findIndex(l =>
-      /🧂|ingredients[:]?/i.test(l)
-    );
-    const instrIndex = lines.findIndex(l =>
-      /👨‍🍳|instructions[:]?/i.test(l)
-    );
+    const title = lines[0].replace(/^📬\s*/, '').trim();
+    const ingIndex = lines.findIndex((l) => l.toLowerCase().includes('ingredients'));
+    const instrIndex = lines.findIndex((l) => l.toLowerCase().includes('instruction'));
 
-    const ingredients = ingIndex >= 0 && instrIndex > ingIndex
-      ? lines.slice(ingIndex + 1, instrIndex)
-      : [];
+    if (ingIndex === -1 || instrIndex === -1 || instrIndex <= ingIndex) continue;
 
-    const instructions = instrIndex >= 0
-      ? lines.slice(instrIndex + 1)
-      : [];
+    const ingredients = lines.slice(ingIndex + 1, instrIndex).filter(Boolean);
+    const instructions = lines.slice(instrIndex + 1).filter(Boolean);
 
-    if (title && ingredients.length && instructions.length) {
-      console.log('✅ Parsed recipe from recent messages:', { title, ingredients, instructions });
+    if (ingredients.length && instructions.length && title) {
       return {
         key: title.toLowerCase().replace(/[^a-z0-9]/gi, ''),
         title,
         aliases: [],
         ingredients,
-        instructions,
+        instructions
       };
     }
   }
 
-  console.error('❌ No parsable recipe found in recent messages.');
+  console.warn('❌ Could not parse any valid recipe in recent messages.');
   return null;
 }
