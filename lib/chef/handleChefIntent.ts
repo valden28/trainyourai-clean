@@ -1,12 +1,11 @@
+// lib/chef/handleChefIntent.ts
+import { supabase } from '@/lib/supabaseServer'; // ✅ Use server-side client
 import { sendMervMessage } from '@/lib/mervLink/sendMessage';
 import { saveRecipeToDb } from './db/saveRecipeToDb';
 import { getMostRecentRecipe } from './db/getMostRecentRecipe';
 import { listRecipesFromDb } from './db/listRecipesFromDb';
 import { shareRecipeWithUser } from './shareRecipeWithUser';
 import { resolveContactName } from '@/lib/contacts/resolveContactName';
-import { getSupabaseClient } from '@/utils/supabaseClient';
-
-const supabase = getSupabaseClient();
 
 export async function handleChefIntent({
   sender_uid,
@@ -26,13 +25,11 @@ export async function handleChefIntent({
 
     if (
       !recent ||
-      typeof recent.title !== 'string' ||
-      typeof recent.key !== 'string' ||
-      !Array.isArray(recent.ingredients) || !recent.ingredients.length ||
-      !Array.isArray(recent.instructions) || !recent.instructions.length
+      !recent.title ||
+      !recent.key ||
+      !recent.ingredients?.length ||
+      !recent.instructions?.length
     ) {
-      console.warn('❌ Invalid or incomplete recipe pulled from message history:', recent);
-
       await sendMervMessage(
         receiver_uid,
         sender_uid,
@@ -43,19 +40,17 @@ export async function handleChefIntent({
       return { status: 'invalid' };
     }
 
-    const saveStatus = await saveRecipeToDb(sender_uid, recent);
+    const saved = await saveRecipeToDb(sender_uid, recent);
 
     const response =
-      saveStatus === 'saved'
+      saved === 'saved'
         ? `✅ “${recent.title}” has been saved to your vault.`
-        : saveStatus === 'duplicate'
+        : saved === 'duplicate'
         ? `⚠️ You’ve already saved “${recent.title}.”`
         : `❌ Failed to save recipe.`;
 
-    console.log(`[CHEF] Recipe save status for "${recent.title}": ${saveStatus}`);
-
     await sendMervMessage(receiver_uid, sender_uid, response, 'vault_response', 'chef');
-    return { status: saveStatus };
+    return { status: saved };
   }
 
   // 📝 Save with custom name
@@ -93,15 +88,15 @@ export async function handleChefIntent({
     return { status: result };
   }
 
-  // 📚 Show saved recipes
+  // 📚 Show saved recipes (expanded matching)
   if (
     lower.includes('recipes') &&
     (lower.includes('saved') ||
-      lower.includes('what') ||
-      lower.includes('show') ||
-      lower.includes('in my vault') ||
-      lower.includes('my recipes') ||
-      lower.includes('list'))
+     lower.includes('what') ||
+     lower.includes('show') ||
+     lower.includes('in my vault') ||
+     lower.includes('my recipes') ||
+     lower.includes('list'))
   ) {
     const recipes = await listRecipesFromDb(sender_uid);
     console.log('📦 Vault contents returned from DB:', recipes);
@@ -118,7 +113,7 @@ export async function handleChefIntent({
     return { status: 'listed', message: response };
   }
 
-  // 📤 Share recipe intent (optional fallback not shown here)
+  // 📤 Share recipe intent (future handling)
 
   return { status: 'ignored' };
 }
