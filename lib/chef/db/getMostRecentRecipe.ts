@@ -2,6 +2,10 @@
 import { getSupabaseClient } from '@/utils/supabaseClient'
 const supabase = getSupabaseClient();
 
+interface MervMessage {
+  message: string;
+}
+
 export async function getMostRecentRecipe(user_uid: string) {
   const { data, error } = await supabase
     .from('merv_messages')
@@ -17,16 +21,17 @@ export async function getMostRecentRecipe(user_uid: string) {
     return null;
   }
 
-  // Try to extract a recipe from the most recent 10 messages
-  for (const msg of data) {
-    const lines = msg.message?.split('\n') || [];
-    const hasIngredients = lines.some((l: string) => l.toLowerCase().includes('ingredients'));
-    const hasInstructions = lines.some((l: string) => l.toLowerCase().includes('instruction'));
+  for (const msg of data as MervMessage[]) {
+    if (typeof msg.message !== 'string') continue;
+
+    const lines = msg.message.split('\n');
+    const hasIngredients = lines.some((l) => l.toLowerCase().includes('ingredients'));
+    const hasInstructions = lines.some((l) => l.toLowerCase().includes('instruction'));
     const title = lines[0]?.replace('📬', '').trim();
 
     if (hasIngredients && hasInstructions && title) {
-      const ingIndex = lines.findIndex((l: string) => l.toLowerCase().includes('ingredients'));
-      const instrIndex = lines.findIndex((l: string) => l.toLowerCase().includes('instruction'));
+      const ingIndex = lines.findIndex((l) => l.toLowerCase().includes('ingredients'));
+      const instrIndex = lines.findIndex((l) => l.toLowerCase().includes('instruction'));
 
       const ingredients = lines.slice(ingIndex + 1, instrIndex).filter(Boolean);
       const instructions = lines.slice(instrIndex + 1).filter(Boolean);
