@@ -28,7 +28,7 @@ export async function handleChefIntent({
   ) {
     const { data, error } = await supabase
       .from('pending_recipes')
-      .select('id, content')
+      .select('id, content, recipe_title, recipe_key')
       .eq('user_uid', sender_uid)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -47,17 +47,8 @@ export async function handleChefIntent({
     }
 
     const lines = data.content.split('\n').map((l: string) => l.trim());
-    const title = lines[0]?.replace(/^📬/, '').trim();
-
-    const ingIndex = lines.findIndex((l: string) =>
-      l.toLowerCase().includes('ingredient')
-    );
-
-    const instrIndex = lines.findIndex((l: string) =>
-      ['instruction', 'steps', 'directions', 'here’s how', 'here is how', 'game plan'].some(keyword =>
-        l.toLowerCase().includes(keyword)
-      )
-    );
+    const ingIndex = lines.findIndex((l: string) => l.toLowerCase().includes('ingredients'));
+    const instrIndex = lines.findIndex((l: string) => l.toLowerCase().includes('instruction'));
 
     if (ingIndex === -1 || instrIndex === -1 || instrIndex <= ingIndex) {
       console.error('❌ Could not parse ingredients/instructions block.');
@@ -74,7 +65,7 @@ export async function handleChefIntent({
     const ingredients = lines.slice(ingIndex + 1, instrIndex).filter(Boolean);
     const instructions = lines.slice(instrIndex + 1).filter(Boolean);
 
-    if (!title || !ingredients.length || !instructions.length) {
+    if (!data.recipe_title || !ingredients.length || !instructions.length) {
       await sendMervMessage(
         receiver_uid,
         sender_uid,
@@ -86,8 +77,8 @@ export async function handleChefIntent({
     }
 
     const result = await saveRecipeToDb(sender_uid, {
-      key: title.toLowerCase().replace(/[^a-z0-9]/gi, ''),
-      title,
+      key: data.recipe_key,
+      title: data.recipe_title,
       aliases: [],
       ingredients,
       instructions
@@ -95,9 +86,9 @@ export async function handleChefIntent({
 
     const response =
       result === 'saved'
-        ? `✅ “${title}” has been saved to your vault.`
+        ? `✅ “${data.recipe_title}” has been saved to your vault.`
         : result === 'duplicate'
-        ? `⚠️ You’ve already saved “${title}.”`
+        ? `⚠️ You’ve already saved “${data.recipe_title}.”`
         : `❌ Failed to save recipe.`;
 
     await sendMervMessage(receiver_uid, sender_uid, response, 'vault_response', 'chef');
@@ -164,6 +155,53 @@ export async function handleChefIntent({
     return { status: 'listed', message: response };
   }
 
-  // 🔄 Share intent (reserved)
+  // 📤 Share recipe intent
+  if (
+    /share .* with /.test(lower) ||
+    /send .* to /.test(lower)
+  ) {
+    const shareMatch =
+      message.match(/(?:share|send)\s+(.+?)\s+(?:to|with)\s+(.+)/i) ||
+      message.match(/(?:share|send)\s+(\w+)\s+my\s+(.+)/i);
+
+    if (shareMatch) {
+      const [_, rawRecipe, rawTarget] = shareMatch;
+      const recipeQuery = rawRecipe?.trim();
+      const name = rawTarget?.trim();
+
+      if (!recipeQuery || !name) {
+        await sendMervMessage(
+          receiver_uid,
+          sender_uid,
+          '❌ Could not understand which recipe or contact you meant. Try “share my chicken recipe with Dave.”',
+          'vault_response',
+          'chef'
+        );
+        return { status: 'invalid_share' };
+      }
+
+      const resolved = await resolveContactName(sender_uid, name);
+
+      if (!resolved.success || typeof resolved.uid !== 'string') {
+        const fallback =
+          resolved.reason === 'ambiguous'
+            ? `🔍 You have multiple contacts named ${name}. Be more specific.`
+            : `❌ Could not find anyone named ${name}.`;
+
+        await sendMervMessage(receiver_uid, sender_uid, fallback, 'vault_response', 'chef');
+        return { status: 'invalid_contact' };
+      }
+
+      const result = await shareRecipeWithUser({
+        owner_uid: sender_uid,
+        target_uid: resolved.uid,
+        recipeQuery
+      });
+
+      await sendMervMessage(receiver_uid, sender_uid, result.message, 'vault_response', 'chef');
+      return { status: result.success ? 'shared' : 'error' };
+    }
+  }
+
   return { status: 'ignored' };
 }

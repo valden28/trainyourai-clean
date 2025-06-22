@@ -64,15 +64,15 @@ export async function POST(req: NextRequest) {
     const cleanedTitle = firstLine.replace(/^📬/, '').trim() || 'Untitled';
 
     // ⏺️ Save reply into pending_recipes
-const lines = reply.split('\n').map(l => l.trim());
-const title = lines[0]?.replace(/^📬/, '').trim() || 'Untitled';
-const key = title.toLowerCase().replace(/[^a-z0-9]/gi, '');
+const titleMatch = reply.match(/(?:^|\n)[📝📬]?\**(.+?) Recipe\**[:\n]/i);
+const recipeTitle = titleMatch ? titleMatch[1].trim() : 'Untitled Recipe';
+const recipeKey = recipeTitle.toLowerCase().replace(/[^a-z0-9]/gi, '');
 
 const { error: insertError } = await supabase.from('pending_recipes').insert({
   user_uid: userId,
   content: reply,
-  recipe_key: key,
-  recipe_title: title
+  recipe_title: recipeTitle,
+  recipe_key: recipeKey
 });
 
     if (insertError) {
