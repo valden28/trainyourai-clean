@@ -12,14 +12,10 @@ export async function POST(req: NextRequest) {
 
   // Update approval status
   const { data, error } = await supabase
-    .from('merv_approvals')
-    .update({
-      status: action === 'approve' ? 'approved' : 'denied',
-      responded_at: new Date().toISOString()
-    })
-    .eq('id', id)
-    .select()
-    .single()
+  .from('merv_approvals')
+  .select('*')
+  .eq('id', approvalId)
+  .single() as { data: { owner_uid: string; requester_uid: string; resource: string } | null, error: any };
 
   if (error || !data) {
     return NextResponse.json({ error: 'Approval not found or failed to update' }, { status: 500 })
