@@ -1,6 +1,5 @@
 // ✅ File: /lib/chef/db/getMostRecentRecipe.ts
-
-import { getSupabaseClient } from '@/utils/supabaseClient'
+import { getSupabaseClient } from '@/utils/supabaseClient';
 const supabase = getSupabaseClient();
 
 interface MervMessage {
@@ -28,36 +27,43 @@ export async function getMostRecentRecipe(user_uid: string) {
 
   for (const msg of data) {
     if (!isMervMessage(msg)) continue;
+    const lines = msg.message.split('\n').map(l => l.trim()).filter(Boolean);
 
-    const lines = msg.message.split('\n').map(line => line.trim()).filter(Boolean);
+    let title = '';
+    let ingredients: string[] = [];
+    let instructions: string[] = [];
 
-    const titleLine = lines.find(line =>
-      /^(?:\d+\.\s*)?[a-zA-Z].*?(meatballs|salmon|chicken|risotto|pasta|recipe|tacos|soup)/i.test(line)
-    );
-    const title = titleLine?.replace(/^#+\s*/, '').replace(/[*_`]/g, '').trim();
+    let section: 'none' | 'ingredients' | 'instructions' = 'none';
 
-    const ingStart = lines.findIndex(line => line.toLowerCase().includes('ingredients'));
-    const instrStart = lines.findIndex(line =>
-      line.toLowerCase().includes('instructions') ||
-      line.toLowerCase().includes('steps') ||
-      line.toLowerCase().includes('directions')
-    );
+    for (const line of lines) {
+      const lower = line.toLowerCase();
 
-    if (ingStart === -1 || instrStart === -1 || !title) continue;
+      if (lower.includes('ingredients')) {
+        section = 'ingredients';
+        continue;
+      }
 
-    const ingredients = lines.slice(ingStart + 1, instrStart).filter(line =>
-      /^[-*\d.]/.test(line) || /^[a-zA-Z]/.test(line)
-    );
+      if (lower.includes('instructions') || lower.includes('steps')) {
+        section = 'instructions';
+        continue;
+      }
 
-    const instructions = lines.slice(instrStart + 1).filter(Boolean);
+      if (section === 'ingredients') {
+        ingredients.push(line);
+      } else if (section === 'instructions') {
+        instructions.push(line);
+      } else if (!title && line.length < 100 && /^[a-zA-Z0-9\s\-,'()]+$/.test(line)) {
+        title = line;
+      }
+    }
 
-    if (ingredients.length && instructions.length) {
+    if (title && ingredients.length && instructions.length) {
       return {
         key: title.toLowerCase().replace(/[^a-z0-9]/gi, ''),
         title,
         aliases: [],
         ingredients,
-        instructions,
+        instructions
       };
     }
   }
