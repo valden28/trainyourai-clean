@@ -1,5 +1,4 @@
 // lib/mervLink/handleMervThreadMessage.ts
-
 import { sendToAssistant } from './sendToAssistant'
 import { resolveContactName } from '@/lib/contacts/resolveContactName'
 
@@ -24,7 +23,7 @@ export async function handleMervThreadMessage({
 
     const resolve = await resolveContactName(user_uid, name)
 
-    if (!resolve.success) {
+    if (!resolve.success || typeof resolve.uid !== 'string') {
       return {
         type: 'error',
         text: resolve.reason === 'ambiguous'
@@ -57,7 +56,7 @@ export async function handleMervThreadMessage({
 
     const resolve = await resolveContactName(user_uid, name)
 
-    if (!resolve.success) {
+    if (!resolve.success || typeof resolve.uid !== 'string') {
       return {
         type: 'error',
         text: resolve.reason === 'ambiguous'
