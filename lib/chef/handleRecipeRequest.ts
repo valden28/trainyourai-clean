@@ -58,14 +58,18 @@ export async function handleRecipeRequest({
     return { status: 'not_found' }
   }
 
+  // ✅ Explicitly assert types to avoid build failure
+  const ingredients = (match.ingredients ?? []) as string[]
+  const instructions = (match.instructions ?? []) as string[]
+
   const recipeText = [
     `🍽️ ${match.title}`,
     '',
     '🧂 Ingredients:',
-    ...match.ingredients.map((i: string) => `- ${i}`),
+    ...ingredients.map((i: string) => `- ${i}`),
     '',
     '👨‍🍳 Instructions:',
-    ...match.instructions.map((step: string, i: number) => `${i + 1}. ${step}`)
+    ...instructions.map((step: string, i: number) => `${i + 1}. ${step}`)
   ].join('\n')
 
   await sendMervMessage(
