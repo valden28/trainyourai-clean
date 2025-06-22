@@ -1,5 +1,4 @@
-import { getSupabaseClient } from '@/utils/supabaseClient'
-const supabase = getSupabaseClient();
+import { supabase } from '@/lib/supabaseServer'
 
 export async function getBestRecipeMatch(
   user_uid: string,
@@ -18,11 +17,13 @@ export async function getBestRecipeMatch(
   const input = query.toLowerCase().replace(/[^a-z0-9]/gi, '')
 
   const match = data.find((r: any) => {
-    const key = r.key?.toLowerCase().replace(/[^a-z0-9]/gi, '')
-    const title = r.title?.toLowerCase().replace(/[^a-z0-9]/gi, '')
-    const aliases = (r.aliases || []).map((a: string) =>
-      a.toLowerCase().replace(/[^a-z0-9]/gi, '')
-    )
+    const key = typeof r.key === 'string' ? r.key.toLowerCase().replace(/[^a-z0-9]/gi, '') : ''
+    const title = typeof r.title === 'string' ? r.title.toLowerCase().replace(/[^a-z0-9]/gi, '') : ''
+    const aliases = Array.isArray(r.aliases)
+      ? r.aliases.map((a: string) =>
+          typeof a === 'string' ? a.toLowerCase().replace(/[^a-z0-9]/gi, '') : ''
+        )
+      : []
 
     return (
       key === input ||
@@ -32,7 +33,7 @@ export async function getBestRecipeMatch(
     )
   })
 
-  if (!match) return null
+  if (!match || typeof match.key !== 'string') return null
 
   return { key: match.key, data: match }
 }
