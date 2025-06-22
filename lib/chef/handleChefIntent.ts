@@ -46,11 +46,11 @@ export async function handleChefIntent({
       return { status: 'invalid' };
     }
 
-    const lines = data.content.split('\n').map(l => l.trim());
+    const lines = data.content.split('\n').map((l: string) => l.trim());
     const title = lines[0]?.replace(/^📬/, '').trim();
 
-    const ingIndex = lines.findIndex((l) => l.toLowerCase().includes('ingredients'));
-    const instrIndex = lines.findIndex((l) => l.toLowerCase().includes('instruction'));
+    const ingIndex = lines.findIndex((l: string) => l.toLowerCase().includes('ingredients'));
+    const instrIndex = lines.findIndex((l: string) => l.toLowerCase().includes('instruction'));
 
     if (ingIndex === -1 || instrIndex === -1 || instrIndex <= ingIndex) {
       console.error('❌ Could not parse ingredients/instructions block.');
