@@ -1,4 +1,3 @@
-// lib/chef/db/getMostRecentRecipe.ts
 import { getSupabaseClient } from '@/utils/supabaseClient'
 const supabase = getSupabaseClient();
 
@@ -28,27 +27,34 @@ export async function getMostRecentRecipe(user_uid: string) {
   for (const msg of data) {
     if (!isMervMessage(msg)) continue;
 
-    const lines = msg.message.split('\n');
-    const hasIngredients = lines.some((l) => l.toLowerCase().includes('ingredients'));
-    const hasInstructions = lines.some((l) => l.toLowerCase().includes('instruction'));
-    const title = lines[0]?.replace('📬', '').trim();
+    const lines = msg.message.split('\n').map(l => l.trim()).filter(Boolean);
+    const titleLine = lines[0] || '';
+    const title = titleLine.replace(/^📬\s?/, '').trim();
 
-    if (hasIngredients && hasInstructions && title) {
-      const ingIndex = lines.findIndex((l) => l.toLowerCase().includes('ingredients'));
-      const instrIndex = lines.findIndex((l) => l.toLowerCase().includes('instruction'));
+    const ingIndex = lines.findIndex(l =>
+      /🧂|ingredients[:]?/i.test(l)
+    );
+    const instrIndex = lines.findIndex(l =>
+      /👨‍🍳|instructions[:]?/i.test(l)
+    );
 
-      const ingredients = lines.slice(ingIndex + 1, instrIndex).filter(Boolean);
-      const instructions = lines.slice(instrIndex + 1).filter(Boolean);
+    const ingredients = ingIndex >= 0 && instrIndex > ingIndex
+      ? lines.slice(ingIndex + 1, instrIndex)
+      : [];
 
-      if (ingredients.length && instructions.length) {
-        return {
-          key: title.toLowerCase().replace(/[^a-z0-9]/gi, ''),
-          title,
-          aliases: [],
-          ingredients,
-          instructions,
-        };
-      }
+    const instructions = instrIndex >= 0
+      ? lines.slice(instrIndex + 1)
+      : [];
+
+    if (title && ingredients.length && instructions.length) {
+      console.log('✅ Parsed recipe from recent messages:', { title, ingredients, instructions });
+      return {
+        key: title.toLowerCase().replace(/[^a-z0-9]/gi, ''),
+        title,
+        aliases: [],
+        ingredients,
+        instructions,
+      };
     }
   }
 
