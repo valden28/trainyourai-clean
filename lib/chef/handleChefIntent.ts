@@ -1,5 +1,4 @@
-// lib/chef/handleChefIntent.ts
-import { supabase } from '@/lib/supabaseServer';
+import { supabase } from '@/lib/supabaseServer'; // ✅ Server-side client
 import { sendMervMessage } from '@/lib/mervLink/sendMessage';
 import { saveRecipeToDb } from './db/saveRecipeToDb';
 import { getMostRecentRecipe } from './db/getMostRecentRecipe';
@@ -22,7 +21,8 @@ export async function handleChefIntent({
   // 💾 Save most recent recipe to vault
   if (lower.startsWith('save this') && lower.includes('to my vault')) {
     const recent = await getMostRecentRecipe(sender_uid);
-    console.log('📥 Most recent recipe returned:', recent);
+
+    console.log('📬 Most recent recipe candidate:', JSON.stringify(recent, null, 2));
 
     if (
       !recent ||
@@ -31,7 +31,7 @@ export async function handleChefIntent({
       !recent.ingredients?.length ||
       !recent.instructions?.length
     ) {
-      console.warn('❌ Invalid or incomplete recipe structure:', recent);
+      console.warn('⚠️ Recipe validation failed — missing fields.');
       await sendMervMessage(
         receiver_uid,
         sender_uid,
@@ -43,7 +43,7 @@ export async function handleChefIntent({
     }
 
     const saved = await saveRecipeToDb(sender_uid, recent);
-    console.log('💾 Recipe save status:', saved);
+    console.log(`📦 saveRecipeToDb result for "${recent.title}":`, saved);
 
     const response =
       saved === 'saved'
@@ -51,6 +51,14 @@ export async function handleChefIntent({
         : saved === 'duplicate'
         ? `⚠️ You’ve already saved “${recent.title}.”`
         : `❌ Failed to save recipe.`;
+
+    // 🔍 Confirm contents of vault
+    const confirm = await supabase
+      .from('recipes_vault')
+      .select('*')
+      .eq('user_uid', sender_uid);
+
+    console.log('📂 Vault after save attempt:', confirm.data);
 
     await sendMervMessage(receiver_uid, sender_uid, response, 'vault_response', 'chef');
     return { status: saved };
@@ -79,8 +87,6 @@ export async function handleChefIntent({
       ingredients: ['[user-defined]'],
       instructions: ['[user-defined]']
     });
-
-    console.log('💾 Custom recipe save result:', result);
 
     const msg =
       result === 'saved'
@@ -117,6 +123,8 @@ export async function handleChefIntent({
     await sendMervMessage(receiver_uid, sender_uid, response, 'vault_response', 'chef');
     return { status: 'listed', message: response };
   }
+
+  // 📤 Share recipe intent (placeholder)
 
   return { status: 'ignored' };
 }
