@@ -1,5 +1,5 @@
 // lib/chef/handleChefIntent.ts
-import { supabase } from '@/lib/supabaseServer'; // ✅ Use server-side client
+import { supabase } from '@/lib/supabaseServer';
 import { sendMervMessage } from '@/lib/mervLink/sendMessage';
 import { saveRecipeToDb } from './db/saveRecipeToDb';
 import { getMostRecentRecipe } from './db/getMostRecentRecipe';
@@ -22,6 +22,7 @@ export async function handleChefIntent({
   // 💾 Save most recent recipe to vault
   if (lower.startsWith('save this') && lower.includes('to my vault')) {
     const recent = await getMostRecentRecipe(sender_uid);
+    console.log('📥 Most recent recipe returned:', recent);
 
     if (
       !recent ||
@@ -30,6 +31,7 @@ export async function handleChefIntent({
       !recent.ingredients?.length ||
       !recent.instructions?.length
     ) {
+      console.warn('❌ Invalid or incomplete recipe structure:', recent);
       await sendMervMessage(
         receiver_uid,
         sender_uid,
@@ -41,6 +43,7 @@ export async function handleChefIntent({
     }
 
     const saved = await saveRecipeToDb(sender_uid, recent);
+    console.log('💾 Recipe save status:', saved);
 
     const response =
       saved === 'saved'
@@ -77,6 +80,8 @@ export async function handleChefIntent({
       instructions: ['[user-defined]']
     });
 
+    console.log('💾 Custom recipe save result:', result);
+
     const msg =
       result === 'saved'
         ? `✅ Saved “${title}” to your vault.`
@@ -88,7 +93,7 @@ export async function handleChefIntent({
     return { status: result };
   }
 
-  // 📚 Show saved recipes (expanded matching)
+  // 📚 Show saved recipes
   if (
     lower.includes('recipes') &&
     (lower.includes('saved') ||
@@ -112,8 +117,6 @@ export async function handleChefIntent({
     await sendMervMessage(receiver_uid, sender_uid, response, 'vault_response', 'chef');
     return { status: 'listed', message: response };
   }
-
-  // 📤 Share recipe intent (future handling)
 
   return { status: 'ignored' };
 }
