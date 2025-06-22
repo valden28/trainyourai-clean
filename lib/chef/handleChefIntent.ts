@@ -10,5 +10,9 @@ if (lower.includes('what') && lower.includes('recipes') && lower.includes('saved
     : list;
 
   await sendMervMessage(receiver_uid, sender_uid, response, 'vault_response', 'chef');
-  return { status: 'listed', message: response }; // ✅ FIXED LINE
+
+  return {
+    status: 'listed',
+    message: response
+  };
 }
