@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     const { messages } = await req.json();
     const userMessage = messages[messages.length - 1]?.content || '[Empty]';
 
-    // 🧠 Check for intent before OpenAI call
+    // Check for vault intent first
     const intentResult = await handleChefIntent({
       sender_uid: userId,
       receiver_uid: userId,
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 📦 Load full user vault
+    // Get full vault for context
     const { data: vault, error: vaultError } = await supabase
       .from('vaults_test')
       .select('*')
@@ -46,11 +46,11 @@ export async function POST(req: NextRequest) {
       return new NextResponse('Vault not found', { status: 404 });
     }
 
-    // ✨ Generate system prompt
+    // Build system prompt
     const systemPrompt = await buildChefPrompt(userMessage, vault);
     console.log('[CHEF DEBUG] System Prompt:', systemPrompt);
 
-    // 🤖 Generate assistant reply
+    // Call OpenAI
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -62,23 +62,24 @@ export async function POST(req: NextRequest) {
     const reply = completion.choices[0]?.message?.content || '[No reply]';
     console.log('[CHEF DEBUG] OpenAI Reply:', reply);
 
-    // 🧾 Try to extract title from reply for vault tracking
-    const titleLine = reply.split('\n')[0];
-    const titleGuess = titleLine.replace(/^📬/, '').trim();
-    const fallbackKey = titleGuess.toLowerCase().replace(/[^a-z0-9]/gi, '');
+    // Try to extract recipe title
+    const titleMatch = reply.match(/^\s*(?:📬)?\s*(.+?)\s*(?:\n|$)/);
+    const rawTitle = titleMatch?.[1]?.trim();
+    const cleanTitle = rawTitle?.replace(/^["']|["']$/g, '') || 'Untitled Recipe';
+    const cleanKey = cleanTitle.toLowerCase().replace(/[^a-z0-9]/gi, '') || 'untitled';
 
-    // 💾 Insert into pending_recipes table
+    // Save to pending_recipes
     const { error: insertError } = await supabase.from('pending_recipes').insert({
       user_uid: userId,
       content: reply,
-      recipe_title: titleGuess || 'Untitled Recipe',
-      recipe_key: fallbackKey || 'untitled'
+      recipe_title: cleanTitle,
+      recipe_key: cleanKey
     });
 
     if (insertError) {
       console.error('❌ Failed to insert pending recipe:', insertError.message);
     } else {
-      console.log('✅ Pending recipe stored with title:', titleGuess);
+      console.log('✅ Stored pending recipe as:', cleanTitle);
     }
 
     return NextResponse.json({
