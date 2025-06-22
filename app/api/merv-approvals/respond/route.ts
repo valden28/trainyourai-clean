@@ -1,5 +1,4 @@
 // File: /app/api/merv-approvals/respond/route.ts
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/utils/supabaseClient';
 import { sendMervMessage } from '@/lib/mervLink/sendMessage';
@@ -24,12 +23,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Approval not found or failed to retrieve' }, { status: 500 });
   }
 
-  if (typeof data.resource !== 'string') {
-    console.error('❌ Invalid resource format:', data.resource);
-    return NextResponse.json({ error: 'Invalid resource format' }, { status: 500 });
-  }
+  // Type guard
+  const { owner_uid, requester_uid, resource } = data as {
+    owner_uid: string;
+    requester_uid: string;
+    resource: string;
+  };
 
-  const recipeName = data.resource.replace('recipes.', '').trim();
+  const recipeName = resource.replace('recipes.', '').trim();
 
   const responseMessage =
     action === 'approve'
@@ -37,8 +38,8 @@ export async function POST(req: NextRequest) {
       : `❌ Request for ${recipeName} was denied.`;
 
   const result = await sendMervMessage(
-    data.owner_uid,
-    data.requester_uid,
+    owner_uid,
+    requester_uid,
     responseMessage,
     'vault_response',
     'chef'
