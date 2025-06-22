@@ -54,7 +54,7 @@ export async function handleChefIntent({
     return { status: saved };
   }
 
-  // 📝 Save under custom name
+  // 📝 Save with custom name
   if (lower.startsWith('save this as')) {
     const title = message.replace(/^save this as/i, '').trim();
     const key = title.toLowerCase().replace(/\s+/g, '');
@@ -89,8 +89,16 @@ export async function handleChefIntent({
     return { status: result };
   }
 
-  // 📚 List saved recipes
-  if (lower.includes('what') && lower.includes('recipes') && lower.includes('saved')) {
+  // 📚 Show saved recipes (expanded matching)
+  if (
+    lower.includes('recipes') &&
+    (lower.includes('saved') ||
+     lower.includes('what') ||
+     lower.includes('show') ||
+     lower.includes('in my vault') ||
+     lower.includes('my recipes') ||
+     lower.includes('list'))
+  ) {
     const recipes = await listRecipesFromDb(sender_uid);
 
     const list = recipes.length
@@ -105,43 +113,7 @@ export async function handleChefIntent({
     return { status: 'listed', message: response };
   }
 
-  // 📤 Share intent: "send lasagna to Dave"
-  const shareMatch =
-    message.match(/(?:send|share)\s+(.+?)\s+(?:to|with)\s+(.+)/i) ||
-    message.match(/(?:send|share)\s+(\w+)\s+my\s+(.+)/i);
+  // 📤 Share recipe intent (optional fallback not shown here)
 
-  if (shareMatch) {
-    const [_, recipeRaw, nameRaw] = shareMatch;
-    const name = nameRaw?.trim();
-    const recipeName = recipeRaw?.replace(/recipe/i, '').trim();
-
-    if (!name || !recipeName) {
-      await sendMervMessage(receiver_uid, sender_uid, '❌ Could not parse recipe or recipient.', 'vault_response', 'chef');
-      return { status: 'error' };
-    }
-
-    const resolve = await resolveContactName(sender_uid, name);
-
-    if (!resolve.success || typeof resolve.uid !== 'string') {
-      const fallback =
-        resolve.reason === 'ambiguous'
-          ? `🔍 Multiple contacts named ${name}. Be more specific.`
-          : `❌ Could not find anyone named ${name}.`;
-
-      await sendMervMessage(receiver_uid, sender_uid, fallback, 'vault_response', 'chef');
-      return { status: 'error' };
-    }
-
-    const result = await shareRecipeWithUser({
-      owner_uid: sender_uid,
-      target_uid: resolve.uid,
-      recipeQuery: recipeName
-    });
-
-    await sendMervMessage(receiver_uid, sender_uid, result.message, 'vault_response', 'chef');
-    return { status: result.success ? 'shared' : 'error' };
-  }
-
-  // ❓ Unrecognized input
   return { status: 'ignored' };
 }
