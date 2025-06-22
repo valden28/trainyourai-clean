@@ -3,7 +3,7 @@
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { supabase } from '@/lib/supabaseServer'; // ✅ Server-side Supabase client
+import { supabase } from '@/lib/supabaseServer';
 import buildChefPrompt from '@/lib/assistants/chefPromptBuilder';
 import { handleChefIntent } from '@/lib/chef/handleChefIntent';
 
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     const { messages } = await req.json();
     const userMessage = messages[messages.length - 1]?.content || '[Empty]';
 
-    // 🔁 Check for vault-related intent before OpenAI
+    // 🧠 Check for intent before OpenAI call
     const intentResult = await handleChefIntent({
       sender_uid: userId,
       receiver_uid: userId,
@@ -34,20 +34,23 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 🧠 Retrieve user vault for personality prompt
-    const { data: vault } = await supabase
+    // 📦 Load full user vault
+    const { data: vault, error: vaultError } = await supabase
       .from('vaults_test')
       .select('*')
       .eq('user_uid', userId)
       .single();
 
-    if (!vault) return new NextResponse('Vault not found', { status: 404 });
+    if (!vault || vaultError) {
+      console.error('❌ Vault lookup failed:', vaultError?.message);
+      return new NextResponse('Vault not found', { status: 404 });
+    }
 
-    // 🪄 Build prompt
+    // ✨ Generate system prompt
     const systemPrompt = await buildChefPrompt(userMessage, vault);
     console.log('[CHEF DEBUG] System Prompt:', systemPrompt);
 
-    // 🤖 Query OpenAI
+    // 🤖 Generate assistant reply
     const completion = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -59,26 +62,23 @@ export async function POST(req: NextRequest) {
     const reply = completion.choices[0]?.message?.content || '[No reply]';
     console.log('[CHEF DEBUG] OpenAI Reply:', reply);
 
-    // Extract title from first line or fallback
-    const firstLine = reply.split('\n')[0]?.trim() || '';
-    const cleanedTitle = firstLine.replace(/^📬/, '').trim() || 'Untitled';
+    // 🧾 Try to extract title from reply for vault tracking
+    const titleLine = reply.split('\n')[0];
+    const titleGuess = titleLine.replace(/^📬/, '').trim();
+    const fallbackKey = titleGuess.toLowerCase().replace(/[^a-z0-9]/gi, '');
 
-    // ⏺️ Save reply into pending_recipes
-const titleMatch = reply.match(/(?:^|\n)[📝📬]?\**(.+?) Recipe\**[:\n]/i);
-const recipeTitle = titleMatch ? titleMatch[1].trim() : 'Untitled Recipe';
-const recipeKey = recipeTitle.toLowerCase().replace(/[^a-z0-9]/gi, '');
-
-const { error: insertError } = await supabase.from('pending_recipes').insert({
-  user_uid: userId,
-  content: reply,
-  recipe_title: recipeTitle,
-  recipe_key: recipeKey
-});
+    // 💾 Insert into pending_recipes table
+    const { error: insertError } = await supabase.from('pending_recipes').insert({
+      user_uid: userId,
+      content: reply,
+      recipe_title: titleGuess || 'Untitled Recipe',
+      recipe_key: fallbackKey || 'untitled'
+    });
 
     if (insertError) {
-      console.error('❌ Insert into pending_recipes failed:', insertError.message);
+      console.error('❌ Failed to insert pending recipe:', insertError.message);
     } else {
-      console.log('✅ Recipe inserted into pending_recipes:', cleanedTitle);
+      console.log('✅ Pending recipe stored with title:', titleGuess);
     }
 
     return NextResponse.json({

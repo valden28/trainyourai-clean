@@ -156,10 +156,7 @@ export async function handleChefIntent({
   }
 
   // 📤 Share recipe intent
-  if (
-    /share .* with /.test(lower) ||
-    /send .* to /.test(lower)
-  ) {
+  if (/share .* with /.test(lower) || /send .* to /.test(lower)) {
     const shareMatch =
       message.match(/(?:share|send)\s+(.+?)\s+(?:to|with)\s+(.+)/i) ||
       message.match(/(?:share|send)\s+(\w+)\s+my\s+(.+)/i);
