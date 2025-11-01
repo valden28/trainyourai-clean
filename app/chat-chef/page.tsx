@@ -62,10 +62,26 @@ export default function ChatChefPage() {
         body: JSON.stringify({ messages: updatedMessages }),
       })
 
-      const reply = await res.json()
+      // ✅ Safeguard: surface real server errors (prevents JSON SyntaxError on HTML error pages)
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(`API ${res.status}: ${text}`)
+      }
+
+      const reply = await res.json() // { role, name, content }
       setMessages((prev) => [...prev, reply])
-    } catch (err) {
+    } catch (err: any) {
       console.error('Chef chat error:', err)
+      // Show a friendly error message in the chat stream
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          name: 'chefCarlo',
+          content:
+            `⚠️ ${err?.message || 'An unknown error occurred while contacting the Chef API.'}`,
+        },
+      ])
     } finally {
       setLoading(false)
     }
