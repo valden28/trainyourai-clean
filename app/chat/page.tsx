@@ -64,17 +64,24 @@ export default function ChatMervPage() {
         }),
       })
 
-      const reply = await res.json()
+      // ✅ Safeguard: check response before parsing
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(`API ${res.status}: ${text}`)
+      }
 
+      const reply = await res.json() // { role, name, content }
       setMessages((prev) => [...prev, reply])
-    } catch (err) {
+    } catch (err: any) {
       console.error('❌ Merv chat error:', err)
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
           name: 'Merv',
-          content: '⚠️ Error contacting Merv. Please try again shortly.',
+          content: `⚠️ ${
+            err?.message || 'An unknown error occurred while contacting Merv.'
+          }`,
         },
       ])
     } finally {
@@ -102,7 +109,9 @@ export default function ChatMervPage() {
       <div className="flex justify-between items-center p-4 border-b bg-blue-50 shadow-sm">
         <div>
           <h1 className="text-xl font-bold text-blue-800">Your Merv</h1>
-          <p className="text-xs text-gray-500">Personal strategist — grounded, sharp, calibrated</p>
+          <p className="text-xs text-gray-500">
+            Personal strategist — grounded, sharp, calibrated
+          </p>
         </div>
         <div className="flex gap-4 items-center">
           <button
@@ -142,7 +151,8 @@ export default function ChatMervPage() {
                 : 'bg-gray-100 self-start'
             }`}
           >
-            <strong>{m.role === 'user' ? 'You' : m.name || 'Assistant'}:</strong> {m.content}
+            <strong>{m.role === 'user' ? 'You' : m.name || 'Assistant'}:</strong>{' '}
+            {m.content}
           </div>
         ))}
         <div ref={bottomRef} />
