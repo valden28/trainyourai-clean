@@ -59,12 +59,12 @@ export default function ChatMervPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_uid: user?.sub,
+          user_uid: user?.sub,          // harmless if the server ignores it
           messages: updatedMessages,
         }),
       })
 
-      // ✅ Safeguard: check response before parsing
+      // ✅ Safeguard: check response before parsing JSON
       if (!res.ok) {
         const text = await res.text()
         throw new Error(`API ${res.status}: ${text}`)
