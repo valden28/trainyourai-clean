@@ -1,25 +1,12 @@
-import { getSession } from '@auth0/nextjs-auth0/edge';
-import { NextRequest, NextResponse } from 'next/server';
+// ✅ middleware.ts — Auth0 session guard for app pages (not API routes)
+import { withMiddlewareAuthRequired } from '@auth0/nextjs-auth0/edge';
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  const session = await getSession(req, res);
+export default withMiddlewareAuthRequired();
 
-  if (!session?.user) {
-    return NextResponse.redirect(new URL('/api/auth/login', req.url)); // ✅ this triggers login
-  }
-
-  const userId = session.user.sub;
-  const requestHeaders = new Headers(req.headers);
-  requestHeaders.set('x-user-id', userId);
-
-  return NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
-}
-
+// 👇 Only run middleware on real app pages, not API or static assets
 export const config = {
-    matcher: ['/api/chat', '/chat-core', '/onboarding']
-  };
+  matcher: [
+    // Everything EXCEPT api routes, Next.js assets, favicon, and public files
+    '/((?!api|_next/static|_next/image|favicon.ico|public).*)',
+  ],
+};
