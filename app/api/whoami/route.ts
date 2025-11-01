@@ -1,8 +1,8 @@
-// ✅ File: app/api/whoami/route.ts
+// File: app/api/whoami/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0/edge';
 
-// Run this route on the Edge runtime (matches the Auth0 edge helper)
+// Run on the Edge runtime (matches the Auth0 Edge helper)
 export const runtime = 'edge';
 
 export async function GET(req: NextRequest) {
