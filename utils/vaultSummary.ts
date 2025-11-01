@@ -1,7 +1,7 @@
-// utils/vaultSummary.ts
-// Defensive summary builder for Merv (handles vault.data or flat objects)
+// ✅ utils/vaultSummary.ts
+// Defensive summary builder that merges vault row + vault.data + vault.innerview (+ tonesync)
 
-type AnyVault = Record<string, any>;
+type Any = Record<string, any>;
 
 const toArray = (v: any): any[] => {
   if (Array.isArray(v)) return v;
@@ -11,26 +11,29 @@ const toArray = (v: any): any[] => {
 };
 
 const join = (arr: any[], pick?: (x: any) => string) =>
-  toArray(arr)
-    .map((x) => (pick ? pick(x) : String(x)))
-    .filter(Boolean)
-    .join(', ');
+  toArray(arr).map((x) => (pick ? pick(x) : String(x))).filter(Boolean).join(', ');
 
 const clip = (s: string, n = 300) => (s && s.length > n ? s.slice(0, n - 1) + '…' : s || '');
 
-export default function generateVaultSummary(raw: AnyVault): string {
+export default function generateVaultSummary(raw: Any): string {
   if (!raw) return 'No vault data available.';
 
-  // If your row has a JSONB field "data", merge it in so we can read either shape.
-  const base: AnyVault =
-    raw && typeof raw === 'object' && raw.data && typeof raw.data === 'object'
-      ? { ...raw, ...raw.data }
-      : raw;
+  // Merge shapes: row + data + innerview (+ tonesync as hints)
+  const base: Any = {
+    ...(raw || {}),
+    ...(typeof raw.data === 'object' ? raw.data : {}),
+    ...(typeof raw.innerview === 'object' ? raw.innerview : {}),
+  };
 
-  const name       = base.name || base.full_name || base.user_name || '';
-  const role       = base.role || base.title || '';
-  const locale     = base.locale || base.location || base.city || '';
+  // Try multiple key shapes people often use
+  const name =
+    base.name || base.full_name || base.identity?.name || base.user_name || '';
+  const role =
+    base.role || base.identity?.role || base.title || base.bio || '';
+  const locale =
+    base.location || base.locale || base.city || base.identity?.location || '';
 
+  // Common arrays we might find in either object
   const people     = toArray(base.people);
   const prefs      = toArray(base.preferences ?? base.diet?.preferences);
   const dislikes   = toArray(base.dislikes  ?? base.diet?.dislikes);
@@ -38,7 +41,7 @@ export default function generateVaultSummary(raw: AnyVault): string {
   const goals      = toArray(base.goals ?? base.objectives);
   const interests  = toArray(base.interests ?? base.hobbies);
   const equipment  = toArray(base.kitchen_equipment ?? base.equipment);
-  const notes      = toArray(base.notes ?? base.important_notes);
+  const notes      = toArray(base.notes ?? base.important_notes ?? base.bio);
 
   const peopleLine = join(people, (p: any) => {
     if (!p) return '';
@@ -59,6 +62,8 @@ export default function generateVaultSummary(raw: AnyVault): string {
     goals.length ? `Goals: ${join(goals)}` : '',
     notes.length ? `Notes: ${clip(join(notes))}` : '',
     people.length ? `Contacts: ${peopleLine}` : '',
+    // optional tonesync preview if present
+    base.tonesync ? `ToneSync: ${JSON.stringify(base.tonesync)}` : '',
   ].filter(Boolean);
 
   return lines.length ? lines.join('\n') : 'No notable profile fields on record.';
