@@ -6,6 +6,6 @@ export async function GET(req: Request) {
   return NextResponse.json({
     ok: !!session?.user,
     user_uid: session?.user?.sub ?? null,
-    email: session?.user?.email ?? null
+    email: session?.user?.email ?? null,
   });
 }
