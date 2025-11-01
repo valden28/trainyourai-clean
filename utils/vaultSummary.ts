@@ -1,44 +1,59 @@
-// File: /utils/vaultSummary.ts
+// utils/vaultSummary.ts
+// Defensive summary builder for Merv (never .map on non-arrays)
 
-export function generateVaultSummary(vault: any): string {
-    if (!vault) return '';
-  
-    const identity = vault.identity || vault.innerview || {};
-    const name = identity.fullName || '';
-    const nickname = identity.nickname || '';
-    const location = identity.currentLocation || identity.location || identity.hometown || '';
-  
-    const people = vault.people?.map((p: any) => p.name).join(', ') || '';
-    const diet = Array.isArray(vault.food?.diet) ? vault.food.diet.join(', ') : vault.food?.diet || '';
-    const favorites = vault.food?.favorites || '';
-    const cookingStyle = vault.food?.cookingStyle || '';
-    const healthGoals = vault.health?.goals?.join(', ') || '';
-    const values = vault.beliefs?.values?.join(', ') || '';
-    const tone = vault.preferences?.tonePreferences?.join(', ') || '';
-    const sports = vault.sports?.sportsList?.map((s: any) => s.team).join(', ') || '';
-    const job = vault.work?.title || '';
-    const employer = vault.work?.employer || '';
-    const company = vault.work?.company || '';
-    const familiarity = vault.familiarity_score || 0;
-  
-    const sections = [];
-  
-    if (name || nickname) {
-      sections.push(`Name: ${name}${nickname ? ` (goes by ${nickname})` : ''}`);
-    }
-    if (location) sections.push(`Location: ${location}`);
-    if (job || employer) sections.push(`Role: ${job}${employer ? ` at ${employer}` : ''}`);
-    if (company) sections.push(`Affiliation: ${company}`);
-    if (people) sections.push(`People in Life: ${people}`);
-    if (favorites || diet || cookingStyle) {
-      const foodDetails = [favorites && `likes ${favorites}`, diet && `often eats ${diet}`, cookingStyle && `cooks ${cookingStyle}`].filter(Boolean).join('; ');
-      sections.push(`Food Preferences: ${foodDetails}`);
-    }
-    if (healthGoals) sections.push(`Health Goals: ${healthGoals}`);
-    if (values) sections.push(`Core Values: ${values}`);
-    if (tone) sections.push(`Tone Preferences: ${tone}`);
-    if (sports) sections.push(`Follows Sports: ${sports}`);
-    sections.push(`Familiarity Score: ${familiarity}`);
-  
-    return sections.join('\n');
-  }
+type AnyVault = Record<string, any>;
+
+const toArray = (v: any): any[] => {
+  if (Array.isArray(v)) return v;
+  if (!v) return [];
+  if (typeof v === 'object') return Object.values(v).filter(Boolean);
+  return [v];
+};
+
+const join = (arr: any[], pick?: (x: any) => string) =>
+  toArray(arr)
+    .map((x) => (pick ? pick(x) : String(x)))
+    .filter(Boolean)
+    .join(', ');
+
+const clip = (s: string, n = 300) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+
+export default function generateVaultSummary(vault: AnyVault): string {
+  if (!vault) return 'No vault data available.';
+
+  const name       = vault.name || vault.full_name || vault.user_name || '';
+  const role       = vault.role || vault.title || '';
+  const locale     = vault.locale || vault.location || vault.city || '';
+
+  const people     = toArray(vault.people);
+  const prefs      = toArray(vault.preferences ?? vault.diet?.preferences);
+  const dislikes   = toArray(vault.dislikes  ?? vault.diet?.dislikes);
+  const allergies  = toArray(vault.allergies ?? vault.diet?.allergies);
+  const goals      = toArray(vault.goals ?? vault.objectives);
+  const interests  = toArray(vault.interests ?? vault.hobbies);
+  const equipment  = toArray(vault.kitchen_equipment ?? vault.equipment);
+  const notes      = toArray(vault.notes ?? vault.important_notes);
+
+  const peopleLine = join(people, (p: any) => {
+    if (!p) return '';
+    const nm  = p.name || p.label || p.first_name || '';
+    const rel = p.relationship || '';
+    const diet = join([p.allergies, p.preferences]);
+    return [nm, rel, diet].filter(Boolean).join(' • ');
+  });
+
+  const lines = [
+    name || role ? `Identity: ${[name, role].filter(Boolean).join(' — ')}` : '',
+    locale ? `Location: ${locale}` : '',
+    allergies.length ? `Allergies: ${join(allergies)}` : '',
+    prefs.length ? `Preferences: ${join(prefs)}` : '',
+    dislikes.length ? `Dislikes: ${join(dislikes)}` : '',
+    equipment.length ? `Equipment: ${join(equipment)}` : '',
+    interests.length ? `Interests: ${join(interests)}` : '',
+    goals.length ? `Goals: ${join(goals)}` : '',
+    notes.length ? `Notes: ${clip(join(notes))}` : '',
+    people.length ? `Contacts: ${peopleLine}` : '',
+  ].filter(Boolean);
+
+  return lines.length ? lines.join('\n') : 'No notable profile fields on record.';
+}
