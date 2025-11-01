@@ -1,34 +1,60 @@
-// File: /lib/assistants/chefPromptBuilder.ts
+// ✅ /lib/assistants/chefPromptBuilder.ts
+// Defensive prompt builder — never throws if vault fields aren't arrays.
 
-import { queryChefBrain } from '@/lib/brain/chefBrain';
-import { generateVaultSummary } from '@/utils/vaultSummary';
+type AnyVault = Record<string, any>;
 
-export default async function buildChefPrompt(query: string, vault: any) {
-  const vaultSummary = generateVaultSummary(vault);
-  const results = await queryChefBrain(query);
+const toArray = (v: any): any[] => {
+  if (Array.isArray(v)) return v;
+  if (!v) return [];
+  if (typeof v === 'object') return Object.values(v).filter(Boolean);
+  return [v];
+};
 
-  const brainContext = results
-    .map((r: any, i: number) => `Source ${i + 1} [${r.source} / ${r.topic}]:\n${r.content}`)
-    .join('\n\n');
+const fmtList = (arr: any[], pick?: (x: any) => string) =>
+  toArray(arr)
+    .map((x) => (pick ? pick(x) : String(x)))
+    .filter(Boolean)
+    .join('; ');
 
-  return `
-You are Chef Carlo — a warm, witty, unpretentious kitchen strategist.
+export default async function buildChefPrompt(userMessage: string, vault: AnyVault) {
+  const people    = toArray(vault?.people);
+  const allergies = toArray(vault?.allergies ?? vault?.diet?.allergies);
+  const dislikes  = toArray(vault?.dislikes ?? vault?.diet?.dislikes);
+  const prefs     = toArray(vault?.preferences ?? vault?.diet?.preferences);
+  const kitchens  = toArray(vault?.kitchen_equipment ?? vault?.equipment);
+  const concepts  = toArray(vault?.restaurant_concepts ?? vault?.concepts);
+  const notes     = toArray(vault?.important_notes ?? vault?.notes);
 
-Start the conversation by sounding like a real person. Friendly. Playful. Curious.
-You’re not stiff or robotic — you talk like someone who loves food and knows how to make it easy for others.
+  const peopleLine = fmtList(people, (p: any) => {
+    if (!p) return '';
+    const name = p.name || p.label || p.first_name || '';
+    const rel  = p.relationship || '';
+    const diet = fmtList([p.allergies, p.preferences]);
+    return [name, rel, diet].filter(Boolean).join(' • ');
+  });
 
-Use the vault info below to guide your tone and advice.
+  const system = `
+You are Chef Carlo — a professional culinary strategist for a multi-concept restaurant group.
+Be precise, operational, and cost-aware: portions, yields, prep steps, service notes.
 
----
+GUEST / TEAM CONTEXT
+• People: ${peopleLine || '—'}
+• Allergies: ${fmtList(allergies) || '—'}
+• Dislikes: ${fmtList(dislikes) || '—'}
+• Preferences: ${fmtList(prefs) || '—'}
+• Kitchen/Equipment: ${fmtList(kitchens) || '—'}
+• Concepts: ${fmtList(concepts) || '—'}
+• Notes: ${fmtList(notes) || '—'}
 
-🔒 Vault Summary:
-${vaultSummary}
+RULES
+• Be concise and specific with measurable units.
+• If something is missing, ask a short, targeted follow-up.
+• Round yields slightly down to match real kitchen output.
+• Use operational formatting (headings + bullets).
 
-🧠 Chef Knowledge:
-${brainContext}
+User message:
+"${userMessage}"
+`.trim();
 
----
-
-Be specific. Be clear. Keep it fun and real.
-  `.trim();
+  return system;
 }
