@@ -1,5 +1,5 @@
 // utils/vaultSummary.ts
-// Defensive summary builder for Merv (never .map on non-arrays)
+// Defensive summary builder for Merv (handles vault.data or flat objects)
 
 type AnyVault = Record<string, any>;
 
@@ -16,23 +16,29 @@ const join = (arr: any[], pick?: (x: any) => string) =>
     .filter(Boolean)
     .join(', ');
 
-const clip = (s: string, n = 300) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+const clip = (s: string, n = 300) => (s && s.length > n ? s.slice(0, n - 1) + '…' : s || '');
 
-export default function generateVaultSummary(vault: AnyVault): string {
-  if (!vault) return 'No vault data available.';
+export default function generateVaultSummary(raw: AnyVault): string {
+  if (!raw) return 'No vault data available.';
 
-  const name       = vault.name || vault.full_name || vault.user_name || '';
-  const role       = vault.role || vault.title || '';
-  const locale     = vault.locale || vault.location || vault.city || '';
+  // If your row has a JSONB field "data", merge it in so we can read either shape.
+  const base: AnyVault =
+    raw && typeof raw === 'object' && raw.data && typeof raw.data === 'object'
+      ? { ...raw, ...raw.data }
+      : raw;
 
-  const people     = toArray(vault.people);
-  const prefs      = toArray(vault.preferences ?? vault.diet?.preferences);
-  const dislikes   = toArray(vault.dislikes  ?? vault.diet?.dislikes);
-  const allergies  = toArray(vault.allergies ?? vault.diet?.allergies);
-  const goals      = toArray(vault.goals ?? vault.objectives);
-  const interests  = toArray(vault.interests ?? vault.hobbies);
-  const equipment  = toArray(vault.kitchen_equipment ?? vault.equipment);
-  const notes      = toArray(vault.notes ?? vault.important_notes);
+  const name       = base.name || base.full_name || base.user_name || '';
+  const role       = base.role || base.title || '';
+  const locale     = base.locale || base.location || base.city || '';
+
+  const people     = toArray(base.people);
+  const prefs      = toArray(base.preferences ?? base.diet?.preferences);
+  const dislikes   = toArray(base.dislikes  ?? base.diet?.dislikes);
+  const allergies  = toArray(base.allergies ?? base.diet?.allergies);
+  const goals      = toArray(base.goals ?? base.objectives);
+  const interests  = toArray(base.interests ?? base.hobbies);
+  const equipment  = toArray(base.kitchen_equipment ?? base.equipment);
+  const notes      = toArray(base.notes ?? base.important_notes);
 
   const peopleLine = join(people, (p: any) => {
     if (!p) return '';
