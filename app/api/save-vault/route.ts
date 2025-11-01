@@ -1,40 +1,61 @@
-// app/api/save-vault/route.ts
-import { getSession } from '@auth0/nextjs-auth0/edge';
+// ✅ File: app/api/vault/save/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/utils/supabaseClient'
-const supabase = getSupabaseClient();;
-;
+import { getSession } from '@auth0/nextjs-auth0/edge';
+import { supabase } from '@/lib/supabaseServer';
 
+export const runtime = 'edge';
+
+// Optional: minimal schema constraint for sanity
+function isPlainObject(x: any) {
+  return x && typeof x === 'object' && !Array.isArray(x);
+}
+
+/**
+ * POST body: the entire InnerView JSON (all sections you collected).
+ * We shallow-merge it into vaults_test.data for the user.
+ */
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession(req, NextResponse.next());
-    const user = session?.user;
-    const userId = user?.sub;
-
-    if (!userId) {
-      return new NextResponse('Unauthorized', { status: 401 });
+    const user_uid = session?.user?.sub;
+    if (!user_uid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { vault } = await req.json();
+    const payload = await req.json().catch(() => ({}));
+    if (!isPlainObject(payload)) {
+      return NextResponse.json({ error: 'Invalid payload (must be JSON object)' }, { status: 400 });
+    }
 
-    const safeVault = {
-      innerview: vault.innerview || {},
-      tonesync: vault.tonesync || {},
-      skillsync: vault.skillsync || {},
-    };
-
-    const { error } = await supabase
+    // Get current vault (creates default row if missing)
+    const { data: current, error: readErr } = await supabase
       .from('vaults_test')
-      .upsert({ user_uid: userId, ...safeVault }, { onConflict: 'user_uid' });
+      .select('user_uid, data')
+      .eq('user_uid', user_uid)
+      .single();
 
-    if (error) {
-      console.error('[VAULT SAVE ERROR]', JSON.stringify(error, null, 2));
-      return new NextResponse(`Failed to save vault: ${JSON.stringify(error)}`, { status: 500 });
+    if (readErr && readErr.code !== 'PGRST116') { // ignore "no rows" error
+      return NextResponse.json({ error: `Read error: ${readErr.message}` }, { status: 500 });
     }
 
-    return new NextResponse('Vault saved', { status: 200 });
-  } catch (err) {
-    console.error('[SAVE-VAULT ERROR]', err);
-    return new NextResponse('Unexpected error in save-vault route', { status: 500 });
+    const existingData = (current?.data && typeof current.data === 'object') ? current.data : {};
+    // Shallow merge: payload wins; existing keys remain unless overwritten
+    const merged = { ...existingData, ...payload };
+
+    // Upsert
+    const { error: upsertErr } = await supabase
+      .from('vaults_test')
+      .upsert(
+        { user_uid, data: merged },
+        { onConflict: 'user_uid' },
+      );
+
+    if (upsertErr) {
+      return NextResponse.json({ error: `Upsert error: ${upsertErr.message}` }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || 'Unknown error' }, { status: 500 });
   }
 }
