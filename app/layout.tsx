@@ -14,10 +14,30 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-white text-black`}>
+      <body
+        className={`
+          ${inter.className}
+          bg-neutral-50
+          text-neutral-900
+          antialiased
+          selection:bg-blue-200
+          selection:text-neutral-900
+        `}
+      >
         <UserProvider>
           <Header />
-          <main className="p-4 max-w-4xl mx-auto pt-24">{children}</main>
+          <main
+            className="
+              max-w-6xl
+              mx-auto
+              p-6
+              pt-24
+              text-neutral-900
+              leading-relaxed
+            "
+          >
+            {children}
+          </main>
         </UserProvider>
       </body>
     </html>
