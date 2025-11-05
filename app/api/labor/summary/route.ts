@@ -1,5 +1,3 @@
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseServer';
 
@@ -12,7 +10,6 @@ export async function GET(req: NextRequest) {
     const to = url.searchParams.get('to');
     const locationName = url.searchParams.get('location') || 'Banyan House';
 
-    // resolve location id
     const { data: loc, error: locErr } = await supabase
       .from('locations')
       .select('id,name')
@@ -20,7 +17,6 @@ export async function GET(req: NextRequest) {
       .maybeSingle();
     if (locErr || !loc) return NextResponse.json({ rows: [] });
 
-    // base query
     let q = supabase.from('v_schedule_variance_daily')
       .select('*')
       .eq('location_id', loc.id)
@@ -33,7 +29,7 @@ export async function GET(req: NextRequest) {
     const { data, error } = await q;
     if (error) throw error;
 
-    return NextResponse.json({ rows: data || [] });
+    return NextResponse.json({ rows: data ?? [] });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
