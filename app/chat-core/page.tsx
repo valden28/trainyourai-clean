@@ -4,9 +4,17 @@ import { useEffect, useRef, useState } from 'react'
 import { useUser } from '@auth0/nextjs-auth0/client'
 import toast, { Toaster } from 'react-hot-toast'
 
+type Msg = {
+  message: string
+  sender_uid: string | null
+  status?: string
+  category?: string
+  assistant?: 'merv' | 'carlo' | 'luna'
+}
+
 export default function ChatCorePage() {
   const { user, isLoading } = useUser()
-  const [messages, setMessages] = useState<any[]>([])
+  const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement | null>(null)
@@ -23,62 +31,111 @@ export default function ChatCorePage() {
   }
 
   useEffect(() => {
-    if (user?.sub) {
-      fetchMessages()
-    }
-  }, [user])
+    if (user?.sub) fetchMessages()
+  }, [user?.sub])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const fetchMessages = async () => {
+  async function fetchMessages() {
     try {
       const uid = encodeURIComponent(user?.sub || '')
       const res = await fetch(`/api/merv-messages/fetch?uid=${uid}`)
       const data = await res.json()
-
       if (!res.ok) {
         toast.error(data.error || 'Failed to load messages')
         return
       }
-
-      setMessages(data.messages || [])
+      setMessages((data.messages || []) as Msg[])
     } catch (err: any) {
       toast.error('❌ Error: ' + err.message)
     }
   }
 
-  const sendMessage = async () => {
-    if (!input.trim()) return
-    setLoading(true)
-
+  async function persistMessage(msg: Msg) {
     try {
       const res = await fetch('/api/merv-messages/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sender_uid: user?.sub,
-          receiver_uid: user?.sub,
-          message: input.trim(),
-          category: 'general',
-          assistant: 'merv'
-        })
+          sender_uid: msg.sender_uid,
+          receiver_uid: user?.sub,     // store conv under this user
+          message: msg.message,
+          category: msg.category || 'general',
+          assistant: msg.assistant || 'merv',
+        }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        console.warn('persistMessage failed:', d)
+      }
+    } catch (e) {
+      console.warn('persistMessage network error:', e)
+    }
+  }
+
+  async function sendMessage() {
+    const text = input.trim()
+    if (!text || !user?.sub) return
+
+    // optimistic user bubble
+    const userMsg: Msg = {
+      message: text,
+      sender_uid: user.sub,
+      status: 'sent',
+      category: 'general',
+      assistant: 'merv',
+    }
+    setMessages(prev => [...prev, userMsg])
+    setInput('')
+    setLoading(true)
+
+    // persist user message (best-effort)
+    persistMessage(userMsg)
+
+    try {
+      // 🔑 Call the data-aware chat route with the correct shape
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,       // << this is the key the route expects
+          user_id: user.sub,   // passed through (optional)
+        }),
       })
 
       const data = await res.json()
-      if (!res.ok) {
-        toast.error(data.error || 'Failed to send')
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          { message: input, sender_uid: user?.sub, status: 'sent' }
-        ])
-        setInput('')
-        fetchMessages()
+
+      // Build assistant message from /api/chat response
+      const replyText: string =
+        (typeof data?.text === 'string' && data.text) ||
+        (typeof data?.error === 'string' && `⚠️ ${data.error}`) ||
+        '⚠️ No response'
+
+      const assistMsg: Msg = {
+        message: replyText,
+        sender_uid: null, // assistant
+        status: 'sent',
+        category: 'general',
+        assistant: 'merv',
       }
+
+      // show reply
+      setMessages(prev => [...prev, assistMsg])
+
+      // persist assistant reply (best-effort)
+      persistMessage(assistMsg)
     } catch (err: any) {
-      toast.error('❌ Error: ' + err.message)
+      console.error(err)
+      const failMsg: Msg = {
+        message: '❌ Connection error. Please try again.',
+        sender_uid: null,
+        status: 'error',
+        category: 'general',
+        assistant: 'merv',
+      }
+      setMessages(prev => [...prev, failMsg])
     } finally {
       setLoading(false)
     }
@@ -102,10 +159,7 @@ export default function ChatCorePage() {
           >
             Talk to Chef
           </a>
-          <a
-            href="/dashboard"
-            className="text-sm text-blue-700 hover:underline"
-          >
+          <a href="/dashboard" className="text-sm text-blue-700 hover:underline">
             Dashboard
           </a>
           <a
@@ -128,18 +182,23 @@ export default function ChatCorePage() {
             }`}
           >
             {msg.message}
-            <div className="text-xs text-gray-400 mt-1">
-              {msg.category} • {msg.status}
-            </div>
+            {msg.category || msg.status ? (
+              <div className="text-xs text-gray-400 mt-1">
+                {msg.category || 'general'}{msg.status ? ` • ${msg.status}` : ''}
+              </div>
+            ) : null}
           </div>
         ))}
         <div ref={bottomRef} />
+        {loading && (
+          <div className="text-center text-gray-400">Merv is thinking…</div>
+        )}
       </div>
 
       <form
         onSubmit={(e) => {
           e.preventDefault()
-          sendMessage()
+          if (!loading) sendMessage()
         }}
         className="flex p-4 border-t bg-white"
       >
@@ -147,7 +206,7 @@ export default function ChatCorePage() {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask your Merv something..."
+          placeholder="Ask your Merv something…  e.g., “Sales last month at Banyan House?”"
           className="flex-grow p-3 rounded-lg border border-gray-300 mr-2"
         />
         <button
