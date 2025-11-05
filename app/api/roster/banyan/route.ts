@@ -1,5 +1,3 @@
-'use server';
-
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseServer';
 
@@ -8,7 +6,10 @@ export const runtime = 'edge';
 export async function GET() {
   try {
     const { data: loc } = await supabase
-      .from('locations').select('id').ilike('name','Banyan House').maybeSingle();
+      .from('locations')
+      .select('id')
+      .ilike('name', 'Banyan House')
+      .maybeSingle();
     if (!loc) return NextResponse.json({ rows: [] });
 
     const { data, error } = await supabase
@@ -25,13 +26,12 @@ export async function GET() {
 
     if (error) throw error;
 
-    // flatten to simple rows
-    const rows = (data || []).map((r: any) => ({
+    const rows = (data ?? []).map((r: any) => ({
       first_name: r.employees?.first_name,
       last_name:  r.employees?.last_name,
       email:      r.employees?.email,
       phone:      r.employees?.phone,
-      role:       r.roles?.name
+      role:       r.roles?.name,
     }));
 
     return NextResponse.json({ rows });
