@@ -1,5 +1,3 @@
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseServer';
 
@@ -11,7 +9,10 @@ export async function GET(req: NextRequest) {
     const locationName = url.searchParams.get('location') || 'Banyan House';
 
     const { data: loc } = await supabase
-      .from('locations').select('id').ilike('name', locationName).maybeSingle();
+      .from('locations')
+      .select('id')
+      .ilike('name', locationName)
+      .maybeSingle();
     if (!loc) return NextResponse.json({ rows: [] });
 
     const { data, error } = await supabase
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
       .limit(50);
 
     if (error) throw error;
-    return NextResponse.json({ rows: data || [] });
+    return NextResponse.json({ rows: data ?? [] });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
