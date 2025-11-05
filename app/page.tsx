@@ -7,31 +7,38 @@ export default function HomePage() {
   const { user, isLoading } = useUser()
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center text-center p-6 bg-white text-black">
-      <h1 className="text-4xl font-bold mb-4">Welcome to TrainYourAI</h1>
-      <p className="text-gray-700 mb-8">
-        This is your personalized AI. Fully trained, totally secure, always yours.
+    <main className="min-h-screen flex flex-col items-center justify-center text-center p-6 bg-neutral-50 text-neutral-900 antialiased">
+      <h1 className="text-5xl font-extrabold mb-6 tracking-tight text-neutral-900">
+        Welcome to <span className="text-blue-700">TrainYourAI</span>
+      </h1>
+
+      <p className="text-lg text-neutral-800 max-w-xl mb-10 leading-relaxed">
+        Your personalized AI — fully trained, totally secure, and completely yours.
       </p>
 
       {!isLoading && (
-        <div className="space-x-4">
+        <div className="space-x-6">
           {user ? (
             <Link
               href="/dashboard"
-              className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+              className="inline-block bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold shadow hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 transition-colors"
             >
               Go to Dashboard
             </Link>
           ) : (
             <Link
               href="/api/auth/login"
-              className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
+              className="inline-block bg-green-700 text-white px-8 py-3 rounded-lg font-semibold shadow hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 transition-colors"
             >
               Log in to Begin
             </Link>
           )}
         </div>
       )}
+
+      <footer className="mt-16 text-sm text-neutral-600">
+        Built for clarity · <span className="font-medium text-neutral-800">High-contrast mode enabled</span>
+      </footer>
     </main>
   )
 }
