@@ -94,11 +94,22 @@ async function resolveLocationIds(sb: ReturnType<typeof sbAdmin>, names: string[
 }
 
 async function fetchContactByName(sb: ReturnType<typeof sbAdmin>, nameLike: string) {
+  // Use a nullable join so contacts without a location still return
   const { data, error } = await sb
     .from(TABLES.contacts)
-    .select('full_name, title, email, phone, location_id, locations!inner(name)')
+    .select(`
+      full_name,
+      title,
+      email,
+      phone,
+      location_id,
+      locations (
+        name
+      )
+    `) // note: no !inner so it's optional
     .ilike('full_name', `%${nameLike}%`)
     .limit(5);
+
   if (error) throw error;
   return data ?? [];
 }
@@ -327,13 +338,20 @@ export async function POST(req: NextRequest) {
       const nameQuery = message.replace(/\?+$/, '').trim();
       const words = nameQuery.split(/\s+/).slice(0, 5).join(' ');
       const hits = await fetchContactByName(sb, words);
-      if (hits.length) {
-        const c = hits[0];
-        const txt =
-          `${c.full_name} — ${c.title || 'Role N/A'} at ${c.locations?.name || 'Unknown Location'}` +
-          `${c.email ? `, ${c.email}` : ''}${c.phone ? `, ${c.phone}` : ''}.`;
-        return NextResponse.json({ text: txt, meta: { intent, contact: c } });
-      }
+     if (hits.length) {
+  const c = hits[0] as any;
+
+  // normalize location shape (object, array, or null)
+  const locName =
+    Array.isArray(c.locations) ? c.locations[0]?.name :
+    c.locations?.name ??
+    'Unknown Location';
+
+  const txt = `${c.full_name} — ${c.title || 'Role N/A'} at ${locName}`
+            + `${c.email ? `, ${c.email}` : ''}${c.phone ? `, ${c.phone}` : ''}.`;
+
+  return NextResponse.json({ text: txt, meta: { intent, contact: c } });
+}
 
       // fallback: manager by location (e.g., “Who is the Banyan House manager?”)
       const guess = locNames[0] ?? 'Banyan House';
