@@ -5,39 +5,49 @@ import useSWR from 'swr';
 
 const fetcher = (u: string) => fetch(u).then(r => r.json());
 
+// High-contrast KPI
 function Kpi({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-lg border p-4 bg-white shadow-sm">
-      <div className="text-xs uppercase tracking-wide text-gray-500">{label}</div>
-      <div className="text-2xl font-semibold mt-1">{value ?? '—'}</div>
+    <div className="rounded-lg border border-slate-300 bg-white p-4 shadow-sm">
+      <div className="text-xs font-medium uppercase tracking-wide text-neutral-700">{label}</div>
+      <div className="mt-1 text-2xl font-semibold text-neutral-900">{value ?? '—'}</div>
     </div>
   );
 }
 
+// High-contrast Card
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border bg-white shadow-sm">
-      <div className="border-b px-4 py-2 font-semibold">{title}</div>
+    <div className="rounded-lg border border-slate-300 bg-white shadow-sm">
+      <div className="border-b border-slate-300 px-4 py-2 font-semibold text-neutral-900">
+        {title}
+      </div>
       <div className="p-4 overflow-x-auto">{children}</div>
     </div>
   );
 }
 
+// High-contrast Table
 function Table({ rows, columns }: { rows: any[]; columns: string[] }) {
   const safe = Array.isArray(rows) ? rows : [];
   return (
-    <table className="min-w-full text-sm">
+    <table className="min-w-full text-sm text-neutral-900">
       <thead>
-        <tr className="text-left text-gray-600">
-          {columns.map(c => <th key={c} className="px-2 py-1 border-b">{c}</th>)}
+        <tr className="[&>th]:px-2 [&>th]:py-2 [&>th]:text-left [&>th]:border-b [&>th]:border-slate-300 [&>th]:text-neutral-800">
+          {columns.map(c => <th key={c}>{c}</th>)}
         </tr>
       </thead>
       <tbody>
         {safe.length === 0 ? (
-          <tr><td className="px-2 py-3 text-gray-400" colSpan={columns.length}>No data</td></tr>
+          <tr>
+            <td className="px-2 py-3 text-neutral-700" colSpan={columns.length}>No data</td>
+          </tr>
         ) : safe.map((r, i) => (
-          <tr key={i} className="odd:bg-gray-50">
-            {columns.map(c => <td key={c} className="px-2 py-1 border-b">{fmt(r?.[c])}</td>)}
+          <tr
+            key={i}
+            className="odd:bg-neutral-50 even:bg-white [&>td]:border-b [&>td]:border-slate-200 [&>td]:px-2 [&>td]:py-2"
+          >
+            {columns.map(c => <td key={c}>{fmt(r?.[c])}</td>)}
           </tr>
         ))}
       </tbody>
@@ -79,9 +89,9 @@ export default function LaborDashboard() {
   }), [latest]);
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-3xl font-semibold">Luna · Labor & Scheduling</h1>
-      <p className="text-gray-600">Location: {location}</p>
+    <div className="p-6 space-y-6 text-neutral-900">
+      <h1 className="text-3xl font-semibold text-neutral-900">Luna · Labor & Scheduling</h1>
+      <p className="text-neutral-800">Location: {location}</p>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
@@ -109,20 +119,20 @@ export default function LaborDashboard() {
         <Card title="Top Employee Variances (by $)">
           <Table
             rows={(empRes?.rows ?? []).slice(0,20).map((r: any) => ({
-              employee_id: r.employee_id,
-              sched_hours: r.sched_hours ?? r.scheduled_hours,
-              actual_hours: r.actual_hours,
-              hours_variance: r.hours_variance,
-              sched_payroll_est: r.sched_payroll_est,
-              actual_payroll: r.actual_payroll,
-              payroll_variance: r.payroll_variance
+              employee_id:        r.employee_id,
+              sched_hours:        r.sched_hours ?? r.scheduled_hours,
+              actual_hours:       r.actual_hours,
+              hours_variance:     r.hours_variance,
+              sched_payroll_est:  r.sched_payroll_est,
+              actual_payroll:     r.actual_payroll,
+              payroll_variance:   r.payroll_variance
             }))}
             columns={['employee_id','sched_hours','actual_hours','hours_variance','sched_payroll_est','actual_payroll','payroll_variance']}
           />
         </Card>
       </div>
 
-      <Card title={'Roster Snapshot (Banyan)'}>
+      <Card title="Roster Snapshot (Banyan)">
         <Table
           rows={(rosRes?.rows ?? []).slice(0,40)}
           columns={['first_name','last_name','email','phone','role']}
