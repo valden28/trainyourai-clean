@@ -347,10 +347,17 @@ export async function POST(req: NextRequest) {
     c.locations?.name ??
     'Unknown Location';
 
-  const txt = `${c.full_name} — ${c.title || 'Role N/A'} at ${locName}`
-            + `${c.email ? `, ${c.email}` : ''}${c.phone ? `, ${c.phone}` : ''}.`;
+  // Normalize locations: can be object, array, or null
+const locName =
+  Array.isArray((c as any).locations)
+    ? (c as any).locations[0]?.name
+    : (c as any).locations?.name ?? 'Unknown Location';
 
-  return NextResponse.json({ text: txt, meta: { intent, contact: c } });
+const txt =
+  `${c.full_name} — ${c.title || 'Role N/A'} at ${locName}` +
+  `${c.email ? `, ${c.email}` : ''}${c.phone ? `, ${c.phone}` : ''}.`;
+
+return NextResponse.json({ text: txt, meta: { intent, contact: c } });
 }
 
       // fallback: manager by location (e.g., “Who is the Banyan House manager?”)
