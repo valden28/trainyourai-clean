@@ -4,10 +4,12 @@ import { useUser } from '@auth0/nextjs-auth0/client'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useRef } from 'react'
 
+type ChatMsg = { role: 'user' | 'assistant'; name?: string; content: string }
+
 export default function ChatMervPage() {
   const { user, isLoading } = useUser()
   const router = useRouter()
-  const [messages, setMessages] = useState<any[]>([])
+  const [messages, setMessages] = useState<ChatMsg[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement | null>(null)
@@ -15,7 +17,7 @@ export default function ChatMervPage() {
 
   const chatKey = user?.sub ? `trainyourai_chat_merv_${user.sub}` : null
 
-  // ✅ Validate session
+  // Validate session
   useEffect(() => {
     if (!isLoading && (!user?.sub || typeof user.sub !== 'string')) {
       setInvalidUser(true)
@@ -24,7 +26,7 @@ export default function ChatMervPage() {
     }
   }, [user, isLoading, router])
 
-  // ✅ Load saved chat
+  // Load saved chat
   useEffect(() => {
     if (chatKey) {
       const saved = localStorage.getItem(chatKey)
@@ -32,25 +34,40 @@ export default function ChatMervPage() {
     }
   }, [chatKey])
 
-  // ✅ Persist chat to localStorage
+  // Persist chat
   useEffect(() => {
     if (chatKey) {
       localStorage.setItem(chatKey, JSON.stringify(messages))
     }
   }, [messages, chatKey])
 
-  // ✅ Auto-scroll to bottom
+  // Auto-scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Convert API response → assistant message we can render
+  function toAssistantMessage(data: any): ChatMsg {
+    // The server returns { text: "..." }.
+    // In some cases it may return { role, name, content }.
+    const text =
+      (typeof data?.text === 'string' && data.text) ||
+      (typeof data?.content === 'string' && data.content) ||
+      (typeof data === 'string' && data) ||
+      '[empty reply]'
+    const name =
+      (typeof data?.name === 'string' && data.name) ||
+      'Merv'
+    return { role: 'assistant', name, content: text }
+  }
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim()) return
+    if (!input.trim() || loading) return
 
-    const newMessage = { role: 'user', content: input }
-    const updatedMessages = [...messages, newMessage]
-    setMessages(updatedMessages)
+    const userMsg: ChatMsg = { role: 'user', content: input.trim() }
+    const updated = [...messages, userMsg]
+    setMessages(updated)
     setInput('')
     setLoading(true)
 
@@ -59,30 +76,27 @@ export default function ChatMervPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_uid: user?.sub,          // harmless if the server ignores it
-          messages: updatedMessages,
+          user_uid: user?.sub ?? null,   // harmless if server ignores
+          messages: updated,             // server accepts messages[] or message
         }),
       })
 
-      // ✅ Safeguard: check response before parsing JSON
+      // Show API errors visibly in the stream
       if (!res.ok) {
-        const text = await res.text()
-        throw new Error(`API ${res.status}: ${text}`)
+        const text = await res.text().catch(() => '')
+        const errMsg = `⚠️ API ${res.status}${text ? `: ${text}` : ''}`
+        setMessages(prev => [...prev, { role: 'assistant', name: 'Merv', content: errMsg }])
+        return
       }
 
-      const reply = await res.json() // { role, name, content }
-      setMessages((prev) => [...prev, reply])
+      const data = await res.json().catch(() => ({}))
+      const assistantMsg = toAssistantMessage(data)
+      setMessages(prev => [...prev, assistantMsg])
     } catch (err: any) {
       console.error('❌ Merv chat error:', err)
-      setMessages((prev) => [
+      setMessages(prev => [
         ...prev,
-        {
-          role: 'assistant',
-          name: 'Merv',
-          content: `⚠️ ${
-            err?.message || 'An unknown error occurred while contacting Merv.'
-          }`,
-        },
+        { role: 'assistant', name: 'Merv', content: `❌ ${err?.message || 'Network error'}` },
       ])
     } finally {
       setLoading(false)
