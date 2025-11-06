@@ -4,9 +4,18 @@ import { useEffect, useRef, useState } from 'react'
 import { useUser } from '@auth0/nextjs-auth0/client'
 import toast, { Toaster } from 'react-hot-toast'
 
+type LogMsg = {
+  sender_uid: string | null
+  message?: string
+  content?: string
+  status?: string
+  category?: string
+  assistant?: string
+}
+
 export default function ChatCorePage() {
   const { user, isLoading } = useUser()
-  const [messages, setMessages] = useState<any[]>([])
+  const [messages, setMessages] = useState<LogMsg[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement | null>(null)
@@ -20,6 +29,23 @@ export default function ChatCorePage() {
         </p>
       </main>
     )
+  }
+
+  // ——— helpers ———
+  const normalize = (m: LogMsg): LogMsg => ({
+    ...m,
+    // prefer .message; fall back to .content (older history) or a visible placeholder
+    message: typeof m.message === 'string' && m.message.trim().length
+      ? m.message
+      : (typeof m.content === 'string' && m.content.trim().length
+          ? m.content
+          : '[empty]')
+  })
+
+  const appendAssistant = (text: string) => {
+    const mervMsg: LogMsg = { message: text || '[empty reply]', sender_uid: null, status: 'sent' }
+    setMessages(prev => [...prev, normalize(mervMsg)])
+    persistMessage(mervMsg)
   }
 
   useEffect(() => {
@@ -42,14 +68,15 @@ export default function ChatCorePage() {
         toast.error(data.error || 'Failed to load messages')
         return
       }
-      setMessages(data.messages || [])
+      const normalized = (data.messages || []).map((m: LogMsg) => normalize(m))
+      setMessages(normalized)
     } catch (err: any) {
       toast.error('❌ Error: ' + err.message)
     }
   }
 
   // Save a message to your Supabase log
-  const persistMessage = async (msg: any) => {
+  const persistMessage = async (msg: LogMsg) => {
     try {
       await fetch('/api/merv-messages/send', {
         method: 'POST',
@@ -57,7 +84,7 @@ export default function ChatCorePage() {
         body: JSON.stringify({
           sender_uid: msg.sender_uid,
           receiver_uid: user?.sub,
-          message: msg.message,
+          message: normalize(msg).message, // ensure saved as .message
           category: msg.category || 'general',
           assistant: msg.assistant || 'merv',
         }),
@@ -75,8 +102,8 @@ export default function ChatCorePage() {
     setLoading(true)
 
     // Add user bubble immediately
-    const userMsg = { message: text, sender_uid: user?.sub, status: 'sent' }
-    setMessages(prev => [...prev, userMsg])
+    const userMsg: LogMsg = { message: text, sender_uid: user?.sub, status: 'sent' }
+    setMessages(prev => [...prev, normalize(userMsg)])
     persistMessage(userMsg)
 
     try {
@@ -90,26 +117,25 @@ export default function ChatCorePage() {
         }),
       })
 
-      const data = await res.json()
+      // If server returns HTML error page, avoid JSON parse crash
+      if (!res.ok) {
+        const plain = await res.text().catch(() => '')
+        appendAssistant(`⚠️ API ${res.status}${plain ? `: ${plain}` : ''}`)
+        return
+      }
 
-      // Handle Merv's response
+      const data = await res.json().catch(() => ({} as any))
+
+      // Accept both shapes: { text: "..."} or { role,name,content:"..." }
       const replyText =
-        typeof data?.text === 'string'
-          ? data.text
-          : data?.error
-          ? `⚠️ ${data.error}`
-          : '⚠️ No response from Merv.'
+        (typeof data?.text === 'string' && data.text.trim()) ||
+        (typeof data?.content === 'string' && data.content.trim()) ||
+        '[empty reply]'
 
-      const mervMsg = { message: replyText, sender_uid: null, status: 'sent' }
-      setMessages(prev => [...prev, mervMsg])
-      persistMessage(mervMsg)
+      appendAssistant(replyText)
     } catch (err: any) {
       console.error(err)
-      const failMsg = {
-        message: '❌ Connection error. Please try again.',
-        sender_uid: null,
-      }
-      setMessages(prev => [...prev, failMsg])
+      appendAssistant('❌ Connection error. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -160,7 +186,7 @@ export default function ChatCorePage() {
                 : 'bg-gray-100 self-start'
             }`}
           >
-            {msg.message}
+            {normalize(msg).message}
           </div>
         ))}
         {loading && (
