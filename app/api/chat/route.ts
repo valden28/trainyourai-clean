@@ -1,4 +1,4 @@
-// app/api/chat/route.ts
+   // app/api/chat/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import OpenAI from 'openai';
@@ -132,16 +132,14 @@ export async function POST(req: NextRequest) {
     const basePersona = brain?.prompt || 'You are Merv — grounded, sharp, calibrated.';
 
     /* ──────────────────────────────────────────────────────────────────────
-       CONTACTS via EMPLOYEES (robust, early return, no model)
+       EMPLOYEES lookup (robust, early return, no model)
     ─────────────────────────────────────────────────────────────────────── */
 
     let contactsContext = '';
     if (tenant_id && CONTACT_INTENT.test(lastUserMsg)) {
-      // 1) get a clean-ish name
       const rawName = extractName(lastUserMsg) || '';
       const cleanedBase = rawName && rawName.length >= 3 ? rawName : lastUserMsg;
 
-      // 2) normalize tokens & build AND pattern
       const norm = cleanedBase
         .replace(/(phone|number|email|contact|reach|call|text)\b/gi, '')
         .replace(/[’']/g, "'")
@@ -152,16 +150,14 @@ export async function POST(req: NextRequest) {
       const tokens = norm.split(' ').filter(t => t.length >= 2).slice(0, 3); // up to 3 words
       const likeAND = tokens.map(t => `full_name.ilike.%${t}%`).join(',');
 
-      // helper: query EMPLOYEES table with flexible OR
-      async function queryEmployees(orExpr: string, alsoLike?: string) {
+      async function queryEmployees(orExpr: string, alsoLike?: string): Promise<any[]> {
         const orParts = [orExpr];
-
         if (alsoLike) orParts.push(`full_name.ilike.%${alsoLike}%`);
         if (tokens[0]) { orParts.push(`email.ilike.%${tokens[0]}%`); orParts.push(`phone.ilike.%${tokens[0]}%`); }
         if (tokens[1]) { orParts.push(`email.ilike.%${tokens[1]}%`); orParts.push(`phone.ilike.%${tokens[1]}%`); }
 
-        // Try with tenant filter; on error, retry without (in case column differs)
-        let resp = await supabase
+        // Use 'any' so TS doesn't complain when we change selection shape
+        let resp: any = await supabase
           .from('employees')
           .select('id, full_name, first_name, last_name, email, phone, location_id, locations ( name )')
           .eq('tenant_id', tenant_id)
@@ -169,6 +165,7 @@ export async function POST(req: NextRequest) {
           .limit(5);
 
         if (resp.error) {
+          // Retry without join if join relation name differs
           resp = await supabase
             .from('employees')
             .select('id, full_name, first_name, last_name, email, phone, location_id')
@@ -190,7 +187,7 @@ export async function POST(req: NextRequest) {
 
       // Third pass — whole cleaned string against full_name/email/phone
       if (!hits.length && norm) {
-        let resp = await supabase
+        let resp: any = await supabase
           .from('employees')
           .select('id, full_name, first_name, last_name, email, phone, location_id, locations ( name )')
           .eq('tenant_id', tenant_id)
@@ -207,16 +204,14 @@ export async function POST(req: NextRequest) {
       }
 
       if (hits.length) {
-        const e = hits[0] as any;
-        // Best-effort name
+        const e: any = hits[0];
         const name =
           e.full_name ||
           [e.first_name, e.last_name].filter(Boolean).join(' ') ||
           'Unknown';
 
-        // location name if joined
         const locName = Array.isArray(e.locations)
-          ? e.locations[0]?.name
+          ? e.locations?.[0]?.name
           : e.locations?.name;
 
         const lines = [
@@ -227,10 +222,9 @@ export async function POST(req: NextRequest) {
 
         const directAnswer = lines.join('\n');
 
-        // Context string (optional, for future model calls)
         const ctxLines = hits.map((h: any) => {
           const nm = h.full_name || [h.first_name, h.last_name].filter(Boolean).join(' ');
-          const ln = Array.isArray(h.locations) ? h.locations[0]?.name : h.locations?.name;
+          const ln = Array.isArray(h.locations) ? h.locations?.[0]?.name : h.locations?.name;
           return `- ${nm}${ln ? ` (${ln})` : ''}${h.email ? ` | email: ${h.email}` : ''}${h.phone ? ` | phone: ${h.phone}` : ''}`;
         });
         contactsContext = `\nContactsContext:\n${ctxLines.join('\n')}\n`;
@@ -266,9 +260,9 @@ export async function POST(req: NextRequest) {
     if (SALES_INTENT.test(lastUserMsg)) {
       const d = parseDateSmart(lastUserMsg) || new Date().toISOString().slice(0, 10);
 
-      // Try daily_sales
       let row: any = null;
-      const tryDaily = await supabase
+      // Try daily_sales
+      const tryDaily: any = await supabase
         .from('daily_sales')
         .select('date, net_sales, bar_sales, total_tips, comps, voids, deposit')
         .eq('date', d)
@@ -278,7 +272,7 @@ export async function POST(req: NextRequest) {
 
       // Fallback sales_daily
       if (!row) {
-        const tryLegacy = await supabase
+        const tryLegacy: any = await supabase
           .from('sales_daily')
           .select('work_date, net_sales, bar_sales, total_tips, comps, voids, deposit')
           .eq('work_date', d)
