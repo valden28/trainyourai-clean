@@ -19,18 +19,48 @@ function sanitizeHistory(input: any[]): Array<{ role: 'user' | 'assistant'; cont
       const r = String(m.role || '').toLowerCase();
       const role: 'user' | 'assistant' = r === 'assistant' ? 'assistant' : 'user';
       return { role, content: m.content.trim() };
-    });
+    })
+    .slice(-10);
 }
 
 const CONTACT_INTENT = /\b(phone|number|email|contact|employee|staff|manager|gm)\b/i;
 const SALES_INTENT   = /\b(sales?|revenue|net sales|bar sales|daily sales)\b/i;
+const SEARCH_INTENT  = /\b(search|find|look\s*up|lookup|show|list)\b/i;
+
+// everyday words → your search sources (tables in search_index)
+const SOURCE_SYNONYMS: Record<string, string> = {
+  employee: 'employees', staff: 'employees', manager: 'employees', gm: 'employees',
+  item: 'items', items: 'items', 'item book': 'items', sku: 'items', cbi: 'items',
+  'item price': 'item_prices', 'contract': 'item_prices', 'contract price': 'item_prices',
+  invoice: 'invoices', invoices: 'invoices',
+  'invoice line': 'invoice_lines', 'invoice lines': 'invoice_lines', line: 'invoice_lines',
+  schedule: 'schedules', schedules: 'schedules', shift: 'schedules',
+  sale: 'daily_sales', sales: 'daily_sales', 'daily sales': 'daily_sales',
+  // add more later (recipes, pmix, labor_timesheets, etc.)
+};
+
+function guessSourcesFromText(msg: string): string[] {
+  const m = msg.toLowerCase();
+  const chosen = new Set<string>();
+  for (const [word, src] of Object.entries(SOURCE_SYNONYMS)) {
+    if (m.includes(word)) chosen.add(src);
+  }
+  return Array.from(chosen);
+}
+
+function stripSearchLead(msg: string) {
+  return msg
+    .replace(/\b(search|find|look\s*up|lookup|show|list)\b/i, '')
+    .replace(/\b(in|from|for|within|on)\b/i, '')
+    .trim();
+}
 
 function extractName(s: string): string | null {
   if (!s) return null;
   const mFor = s.match(/\bfor\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\b/);
   if (mFor?.[1]) return mFor[1].trim();
   const all = s.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/g) || [];
-  const blacklist = new Set(['I','Phone','Number','Email','Sales','Manager','Chef','Merv','Luna']);
+  const blacklist = new Set(['I','Phone','Number','Email','Sales','Manager','Chef','Merv','Luna','Team','Employees']);
   const names = all.filter(w => !blacklist.has(w)).sort((a,b)=>b.length-a.length);
   return names[0] || null;
 }
@@ -49,7 +79,9 @@ function parseDateSmart(s: string): string | null {
   return null;
 }
 
+// ✅ Correct Banyan House UUID (note the double “d”)
 const BANYAN_LOCATION_ID = '2da9f238-3449-41db-b69d-bdbd357dd496';
+
 /* ────────────────────────── Main Route ────────────────────────── */
 export async function POST(req: NextRequest) {
   try {
@@ -70,7 +102,7 @@ export async function POST(req: NextRequest) {
     const lastUserMsg = history.slice().reverse().find(m=>m.role==='user')?.content || '';
     if (DEBUG_LOG) console.log('[MERV DEBUG] lastUserMsg:', lastUserMsg);
 
-    // Vault / persona
+    // Vault / persona (tenant is optional but useful for search filtering)
     let tenant_id: string | null = null;
     try {
       const { data: vault } = await supabase.from('vaults_test').select('*').eq('user_uid', user_uid).single();
@@ -97,10 +129,10 @@ export async function POST(req: NextRequest) {
         ors.push(`email.ilike.%${t}%`);
       });
 
-      // Always include the full cleaned string for composite match
       if (cleaned) {
         ors.push(`email.ilike.%${cleaned}%`);
-        ors.push(`first_name.ilike.%${cleaned.split(' ')[0]}%`);
+        const first = cleaned.split(' ')[0];
+        if (first) ors.push(`first_name.ilike.%${first}%`);
       }
 
       const { data: employees, error } = await supabase
@@ -109,9 +141,7 @@ export async function POST(req: NextRequest) {
         .or(ors.join(','))
         .limit(5);
 
-      if (error) {
-        console.error('[MERV DEBUG] supabase error', error);
-      }
+      if (error) console.error('[MERV DEBUG] supabase error', error);
       if (DEBUG_LOG) console.log('[MERV DEBUG] employee hits', employees?.length || 0);
 
       if (employees && employees.length) {
@@ -143,56 +173,132 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    /* ───────────────────── SALES LOOKUP ───────────────────── */
+    /* ───────────────────── SALES LOOKUP (robust) ───────────────────── */
     if (SALES_INTENT.test(lastUserMsg)) {
       const d = parseDateSmart(lastUserMsg) || new Date().toISOString().slice(0, 10);
+      if (DEBUG_LOG) console.log('[MERV DEBUG][sales] date:', d);
 
-      const { data: daily } = await supabase
-        .from('daily_sales')
-        .select('date, net_sales, bar_sales, total_tips, comps, voids, deposit')
-        .eq('date', d)
-        .eq('location_id', BANYAN_LOCATION_ID)
-        .limit(1);
-      let s = daily?.[0];
+      type Row = {
+        date?: string;
+        work_date?: string;
+        net_sales?: number | null;
+        bar_sales?: number | null;
+        total_tips?: number | null;
+        comps?: number | null;
+        voids?: number | null;
+        deposit?: number | string | null;
+      } | null;
 
-      if (!s) {
-        const { data: legacy } = await supabase
-          .from('sales_daily')
-          .select('work_date, net_sales, bar_sales, total_tips, comps, voids, deposit')
-          .eq('work_date', d)
-          .eq('location_id', BANYAN_LOCATION_ID)
+      async function qDailyByDate(withLoc: boolean): Promise<Row> {
+        let q = supabase.from('daily_sales')
+          .select('date, net_sales, bar_sales, total_tips, comps, voids, deposit')
+          .eq('date', d)
           .limit(1);
-        if (legacy?.[0])
-          s = {
-            date: legacy[0].work_date,
-            ...legacy[0],
-          };
+        if (withLoc) q = q.eq('location_id', BANYAN_LOCATION_ID);
+        const { data } = await q;
+        return data?.[0] ?? null;
       }
 
-      if (s) {
-        const txt =
-          `Sales for ${s.date}:\n` +
-          `- Net Sales: $${Number(s.net_sales || 0).toFixed(2)}\n` +
-          `- Bar Sales: $${Number(s.bar_sales || 0).toFixed(2)}\n` +
-          (s.total_tips ? `- Total Tips: $${Number(s.total_tips).toFixed(2)}\n` : '') +
-          (s.comps ? `- Comps: ${s.comps}\n` : '') +
-          (s.voids ? `- Voids: ${s.voids}\n` : '') +
-          (s.deposit ? `- Deposit: ${s.deposit}\n` : '');
-        return NextResponse.json({
-          text: txt.trim(),
-          role: 'assistant',
-          name: 'Merv',
-          content: txt.trim(),
+      async function qLegacyByWorkDate(withLoc: boolean): Promise<Row> {
+        let q = supabase.from('sales_daily')
+          .select('work_date, net_sales, bar_sales, total_tips, comps, voids, deposit')
+          .eq('work_date', d)
+          .limit(1);
+        if (withLoc) q = q.eq('location_id', BANYAN_LOCATION_ID);
+        const { data } = await q;
+        return data?.[0] ?? null;
+      }
+
+      async function qLegacyByDate(withLoc: boolean): Promise<Row> {
+        let q = supabase.from('sales_daily')
+          .select('date, net_sales, bar_sales, total_tips, comps, voids, deposit')
+          .eq('date', d)
+          .limit(1);
+        if (withLoc) q = q.eq('location_id', BANYAN_LOCATION_ID);
+        const { data } = await q;
+        return data?.[0] ?? null;
+      }
+
+      const tries: Array<() => Promise<Row>> = [
+        // daily_sales (uses "date")
+        () => qDailyByDate(true),
+        () => qDailyByDate(false),
+        // sales_daily (older dumps often use "work_date")
+        () => qLegacyByWorkDate(true),
+        () => qLegacyByWorkDate(false),
+        // some sales_daily versions also have "date"
+        () => qLegacyByDate(true),
+        () => qLegacyByDate(false),
+      ];
+
+      let row: Row = null;
+      for (const run of tries) {
+        try { row = await run(); if (row) break; } catch {}
+      }
+
+      if (!row) {
+        const miss = `No sales found for ${d}${BANYAN_LOCATION_ID ? ' (Banyan House)' : ''}.`;
+        if (DEBUG_LOG) console.log('[MERV DEBUG][sales] not found');
+        return NextResponse.json({ text: miss, role: 'assistant', name: 'Merv', content: miss });
+      }
+
+      const s = row as NonNullable<Row>;
+      const day = s.date || s.work_date || d;
+      const txt =
+        `Sales for ${day}:\n` +
+        `- Net Sales: $${Number(s.net_sales || 0).toFixed(2)}\n` +
+        `- Bar Sales: $${Number(s.bar_sales || 0).toFixed(2)}\n` +
+        (s.total_tips != null ? `- Total Tips: $${Number(s.total_tips || 0).toFixed(2)}\n` : '') +
+        (s.comps != null ? `- Comps: ${s.comps}\n` : '') +
+        (s.voids != null ? `- Voids: ${s.voids}\n` : '') +
+        (s.deposit != null ? `- Deposit: ${s.deposit}\n` : '');
+      return NextResponse.json({ text: txt.trim(), role: 'assistant', name: 'Merv', content: txt.trim() });
+    }
+
+    /* ───────────────────── GLOBAL SEARCH (direct to rpc_search_all) ───────────────────── */
+    if (SEARCH_INTENT.test(lastUserMsg)) {
+      const sources = guessSourcesFromText(lastUserMsg);         // [] → search everything
+      const query = stripSearchLead(lastUserMsg) || lastUserMsg; // strip "search/find..." lead
+      if (DEBUG_LOG) console.log('[MERV DEBUG][search]', { query, sources });
+
+      try {
+        const { data, error } = await supabase.rpc('rpc_search_all', {
+          p_tenant: tenant_id ?? null,
+          p_query: query.trim(),
+          p_sources: sources.length ? sources : null,
+          p_limit: 12,
         });
+
+        if (error) {
+          const errTxt = `Search error: ${error.message}`;
+          return NextResponse.json({ text: errTxt, role: 'assistant', name: 'Merv', content: errTxt });
+        }
+
+        if (!data?.length) {
+          const hint = sources.length ? ` in ${sources.join(', ')}` : '';
+          const miss = `No results for “${query.trim()}”${hint}.`;
+          return NextResponse.json({ text: miss, role: 'assistant', name: 'Merv', content: miss });
+        }
+
+        const lines = data.map((r: any) => `• [${r.source_table}] ${r.title} — ${r.snippet}`).join('\n');
+        const txt = `Search results for “${query.trim()}”${sources.length ? ` in ${sources.join(', ')}` : ''}:\n${lines}`;
+        return NextResponse.json({ text: txt, role: 'assistant', name: 'Merv', content: txt });
+      } catch (e: any) {
+        const errTxt = `Search error: ${e?.message || 'unknown'}`;
+        return NextResponse.json({ text: errTxt, role: 'assistant', name: 'Merv', content: errTxt });
       }
     }
 
     /* ───────────────────── DEFAULT → OpenAI ───────────────────── */
     const systemPrompt = `
 User Profile Summary:
-${tenant_id ? `Tenant ID: ${tenant_id}` : ''}
+${tenant_id ? generateVaultSummary?.({ user_uid: user_uid, tenant_id }) ?? '' : ''}
 
 ${basePersona}
+
+Notes:
+- Prefer direct, factual answers. Be concise.
+- If user asks to "search", the server performs it (handled above). Do not invent results.
     `.trim();
 
     const completion = await openai.chat.completions.create({
@@ -200,7 +306,7 @@ ${basePersona}
       temperature: 0.2,
       messages: [
         { role: 'system', content: systemPrompt },
-        ...history.slice(-10),
+        ...history,
       ],
     });
 
