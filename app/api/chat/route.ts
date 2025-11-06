@@ -7,7 +7,7 @@ import generateVaultSummary from '@/utils/vaultSummary';
 
 export const runtime = 'nodejs';
 
-// Turn on to see server logs in Vercel / local terminal
+// Enable to see diagnostic logs in Vercel/terminal
 const DEBUG_LOG = true;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
@@ -15,7 +15,6 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 /* ──────────────────────────────────────────────────────────────────────────────
    Helpers
 ────────────────────────────────────────────────────────────────────────────── */
-
 function sanitizeHistory(input: any[]): Array<{ role: 'user' | 'assistant'; content: string }> {
   if (!Array.isArray(input)) return [];
   return input
@@ -27,40 +26,28 @@ function sanitizeHistory(input: any[]): Array<{ role: 'user' | 'assistant'; cont
     });
 }
 
-// Broad contacts/people trigger
 const CONTACT_INTENT =
   /\b(phone|number|email|contact|reach|call|text|employee|staff|worker|team|manager|gm|general manager)\b/i;
 const SALES_INTENT = /\b(sales?|revenue|net sales|bar sales|daily sales)\b/i;
 
-// Robust proper name extractor (find last prominent 1–3-word capitalized chunk)
 function extractName(s: string): string | null {
   if (!s) return null;
-
-  // Prefer “for NAME …”
   const mFor = s.match(/\bfor\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\b/);
   if (mFor?.[1]) return mFor[1].trim();
-
-  // Collect 1–3 word capitalized chunks anywhere
   const all = s.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/g) || [];
-
-  // Blacklist obvious non-names
   const blacklist = new Set(
     ['I','Phone','Number','Email','Sales','Report','Manager','Chef','Merv','Luna','Team','Employees'].map(t=>t.trim())
   );
-
   const candidates = Array.from(new Set(all))
     .map(t => t.trim())
     .filter(t => !blacklist.has(t))
     .sort((a,b)=> b.split(' ').length - a.split(' ').length);
-
   return candidates[0] || null;
 }
 
-// parse common date formats
 function parseDateSmart(s: string): string | null {
   const iso = s.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
   if (iso?.[1]) return iso[1];
-
   const us = s.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);
   if (us) {
     const mm = Number(us[1]); const dd = Number(us[2]);
@@ -69,7 +56,6 @@ function parseDateSmart(s: string): string | null {
     const dt = new Date(yy, mm - 1, dd);
     if (!isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);
   }
-
   const months = [
     'january','february','march','april','may','june',
     'july','august','september','october','november','december'
@@ -86,13 +72,12 @@ function parseDateSmart(s: string): string | null {
   return null;
 }
 
-// Correct Banyan House location UUID
+// Banyan House location UUID
 const BANYAN_LOCATION_ID = '2da9f238-3449-41db-b69d-bdbd357d6496';
 
 /* ──────────────────────────────────────────────────────────────────────────────
    Route
 ────────────────────────────────────────────────────────────────────────────── */
-
 export async function POST(req: NextRequest) {
   try {
     // Auth
@@ -120,8 +105,8 @@ export async function POST(req: NextRequest) {
       .from('vaults_test')
       .select('*')
       .eq('user_uid', user_uid)
-      .single();
-
+      .single()
+      .catch(() => ({ data: null as any }));
     const tenant_id: string | null = vault?.tenant_id || null;
     if (DEBUG_LOG) console.log('[MERV DEBUG] tenant_id:', tenant_id ?? '(null)');
 
@@ -130,17 +115,18 @@ export async function POST(req: NextRequest) {
       .from('merv_brain')
       .select('prompt')
       .eq('user_uid', user_uid)
-      .maybeSingle();
+      .maybeSingle()
+      .catch(() => ({ data: null as any }));
     const basePersona = brain?.prompt || 'You are Merv — grounded, sharp, calibrated.';
 
     /* ──────────────────────────────────────────────────────────────────────
        EMPLOYEES lookup (robust, early return, NO OpenAI)
-       — no longer requires tenant_id to run —
     ─────────────────────────────────────────────────────────────────────── */
     if (CONTACT_INTENT.test(lastUserMsg)) {
       const rawName = extractName(lastUserMsg) || '';
       const cleanedBase = rawName && rawName.length >= 3 ? rawName : lastUserMsg;
 
+      // normalize input and build tokens
       const norm = cleanedBase
         .replace(/(phone|number|email|contact|reach|call|text|employee|staff|worker|team|manager|gm|general manager)\b/gi, '')
         .replace(/[’']/g, "'")
@@ -149,52 +135,91 @@ export async function POST(req: NextRequest) {
         .trim();
 
       const tokens = norm.split(' ').filter(t => t.length >= 2).slice(0, 3); // up to 3 words
-      const orParts: string[] = [];
-      if (tokens[0]) orParts.push(`full_name.ilike.%${tokens[0]}%`);
-      if (tokens[1]) orParts.push(`full_name.ilike.%${tokens[1]}%`);
-      if (tokens[2]) orParts.push(`full_name.ilike.%${tokens[2]}%`);
-      if (tokens[0]) { orParts.push(`email.ilike.%${tokens[0]}%`); orParts.push(`phone.ilike.%${tokens[0]}%`); }
-      if (tokens[1]) { orParts.push(`email.ilike.%${tokens[1]}%`); orParts.push(`phone.ilike.%${tokens[1]}%`); }
+      if (DEBUG_LOG) console.log('[MERV DEBUG] employee intent', { norm, tokens });
 
-      if (DEBUG_LOG) console.log('[MERV DEBUG] employee intent', { norm, tokens, orCount: orParts.length });
+      // Build a single supabase query that checks multiple likely columns:
+      // full_name, name, first_name||' '||last_name, email, phone, phone_number
+      // We can't AND within .or(), so we approximate with multi-token ORs.
+      const ors: string[] = [];
 
-      // First pass: with tenant filter if present
-      let resp: any = await (async () => {
-        if (tenant_id) {
-          return await supabase
-            .from('employees')
-            .select('id, full_name, first_name, last_name, email, phone')
-            .eq('tenant_id', tenant_id)
-            .or(orParts.join(','))
-            .limit(5);
-        } else {
-          return await supabase
-            .from('employees')
-            .select('id, full_name, first_name, last_name, email, phone')
-            .or(orParts.join(','))
-            .limit(5);
-        }
-      })();
+      // name fields
+      if (norm) {
+        ors.push(`full_name.ilike.%${norm}%`);
+        ors.push(`name.ilike.%${norm}%`);
+        ors.push(`email.ilike.%${norm}%`);
+        ors.push(`phone.ilike.%${norm}%`);
+        ors.push(`phone_number.ilike.%${norm}%`);
+      }
+      // tokenized extras
+      tokens.forEach(t => {
+        ors.push(`full_name.ilike.%${t}%`);
+        ors.push(`name.ilike.%${t}%`);
+        ors.push(`first_name.ilike.%${t}%`);
+        ors.push(`last_name.ilike.%${t}%`);
+        ors.push(`email.ilike.%${t}%`);
+        ors.push(`phone.ilike.%${t}%`);
+        ors.push(`phone_number.ilike.%${t}%`);
+      });
 
-      // Second pass: whole cleaned string across fields (no tenant filter)
-      if ((!resp.data || !resp.data.length) && norm) {
+      // Base select tries to include both name variants and both phone variants
+      const baseSelect =
+        'id, full_name, name, first_name, last_name, email, phone, phone_number';
+
+      // First pass: with tenant filter if available
+      let resp: any;
+      if (tenant_id) {
         resp = await supabase
           .from('employees')
-          .select('id, full_name, first_name, last_name, email, phone')
-          .or(`full_name.ilike.%${norm}%,email.ilike.%${norm}%,phone.ilike.%${norm}%`)
-          .limit(5);
+          .select(baseSelect)
+          .eq('tenant_id', tenant_id)
+          .or(ors.join(','))
+          .limit(10);
+      } else {
+        resp = await supabase
+          .from('employees')
+          .select(baseSelect)
+          .or(ors.join(','))
+          .limit(10);
+      }
+
+      // If nothing yet, one more loose pass without tenant filter on the full norm
+      if ((!resp?.data || !resp.data.length) && norm) {
+        resp = await supabase
+          .from('employees')
+          .select(baseSelect)
+          .or(`full_name.ilike.%${norm}%,name.ilike.%${norm}%,email.ilike.%${norm}%,phone.ilike.%${norm}%,phone_number.ilike.%${norm}%`)
+          .limit(10);
       }
 
       const hits: any[] = resp?.data ?? [];
       if (DEBUG_LOG) console.log('[MERV DEBUG] employee hits count:', hits.length);
 
       if (hits.length) {
-        const e = hits[0];
-        const name = e.full_name || [e.first_name, e.last_name].filter(Boolean).join(' ') || 'Unknown';
+        // Prefer exact-ish match when possible
+        const pick = (() => {
+          const lower = norm.toLowerCase();
+          // exact equals on common name fields
+          const exact = hits.find(h =>
+            (h.full_name && h.full_name.toLowerCase() === lower) ||
+            (h.name && h.name.toLowerCase() === lower) ||
+            ((h.first_name || h.last_name) && `${(h.first_name||'').toLowerCase()} ${(h.last_name||'').toLowerCase()}`.trim() === lower)
+          );
+          return exact || hits[0];
+        })();
+
+        const displayName =
+          pick.full_name ||
+          pick.name ||
+          [pick.first_name, pick.last_name].filter(Boolean).join(' ') ||
+          'Unknown';
+
+        const phoneOut = pick.phone_number || pick.phone || null;
+        const emailOut = pick.email || null;
+
         const lines = [
-          name,
-          e.email ? `Email: ${e.email}` : null,
-          e.phone ? `Phone: ${e.phone}` : null,
+          displayName,
+          emailOut ? `Email: ${emailOut}` : null,
+          phoneOut ? `Phone: ${phoneOut}` : null,
         ].filter(Boolean);
 
         const directAnswer = lines.join('\n');
@@ -222,7 +247,7 @@ export async function POST(req: NextRequest) {
     }
 
     /* ──────────────────────────────────────────────────────────────────────
-       SALES (early return with formatted values)
+       SALES (early return)
     ─────────────────────────────────────────────────────────────────────── */
     if (SALES_INTENT.test(lastUserMsg)) {
       const d = parseDateSmart(lastUserMsg) || new Date().toISOString().slice(0, 10);
@@ -276,7 +301,6 @@ export async function POST(req: NextRequest) {
           meta: { intent: 'sales', date: s.date },
         });
       }
-      // If no row, fall through to model for a helpful answer
     }
 
     /* ──────────────────────────────────────────────────────────────────────
