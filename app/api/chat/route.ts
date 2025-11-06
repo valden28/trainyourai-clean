@@ -9,90 +9,88 @@ export const runtime = 'nodejs';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-// ---------- helpers ----------
+/* ──────────────────────────────────────────────────────────────────────────────
+   Helpers
+────────────────────────────────────────────────────────────────────────────── */
 
-// Accept only 'user' | 'assistant' and non-empty string content
 function sanitizeHistory(input: any[]): Array<{ role: 'user' | 'assistant'; content: string }> {
   if (!Array.isArray(input)) return [];
   return input
     .filter((m) => m && typeof m.content === 'string' && m.content.trim().length > 0)
     .map((m) => {
-      const rawRole = (m.role || '').toString().toLowerCase();
-      const role: 'user' | 'assistant' = rawRole === 'assistant' ? 'assistant' : 'user';
+      const r = (m.role || '').toString().toLowerCase();
+      const role: 'user' | 'assistant' = r === 'assistant' ? 'assistant' : 'user';
       return { role, content: m.content.trim() };
     });
 }
 
-// Intents
+// intent detectors
 const CONTACT_INTENT = /(phone|number|email|contact|reach|call|text)\b/i;
 const SALES_INTENT   = /\b(sales?|revenue|net sales|bar sales|daily sales)\b/i;
 
-// ---- Robust name extractor ----
-// Finds the most likely 1–3 word proper name anywhere in the sentence.
-// Handles: “can you give me Stacy Jones phone number”
+// robust proper-name extractor (finds last prominent 1–3 word capitalized name)
 function extractName(s: string): string | null {
   if (!s) return null;
 
-  // prefer "for NAME" pattern when present
+  // Prefer “for NAME …”
   const mFor = s.match(/\bfor\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\b/);
   if (mFor?.[1]) return mFor[1].trim();
 
-  // collect all capitalized chunks (1–3 words)
+  // Collect all 1–3 word capitalized chunks
   const all = s.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/g) || [];
 
-  // blacklist obvious non-names
+  // Blacklist obvious non-names
   const blacklist = new Set(
-    ['I', 'Phone', 'Number', 'Email', 'Sales', 'Report', 'Manager', 'Chef', 'Merv', 'Luna'].map(t => t.trim())
+    ['I','Phone','Number','Email','Sales','Report','Manager','Chef','Merv','Luna'].map(t=>t.trim())
   );
 
-  // dedupe, drop blacklisted, pick the longest chunk near the end
+  // De-dupe and pick the longest chunk
   const candidates = Array.from(new Set(all))
     .map(t => t.trim())
     .filter(t => !blacklist.has(t))
-    .sort((a, b) => b.split(' ').length - a.split(' ').length);
+    .sort((a,b)=> b.split(' ').length - a.split(' ').length);
 
   return candidates[0] || null;
 }
 
-// parse a date like "2025-10-28", "10/28/25", "Oct 28", "October 28, 2025"
+// parse common date formats
 function parseDateSmart(s: string): string | null {
-  // ISO or yyyy-mm-dd
   const iso = s.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
   if (iso?.[1]) return iso[1];
 
-  // mm/dd[/yy]
   const us = s.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);
   if (us) {
     const mm = Number(us[1]);
     const dd = Number(us[2]);
     let yy = us[3] ? Number(us[3]) : new Date().getFullYear();
-    if (yy < 100) yy += 2000; // 25 -> 2025
+    if (yy < 100) yy += 2000;
     const dt = new Date(yy, mm - 1, dd);
     if (!isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);
   }
 
-  // Month name
   const months = [
     'january','february','march','april','may','june',
     'july','august','september','october','november','december'
   ];
-  const rx = new RegExp(`\\b(${months.join('|')})\\s+(\\d{1,2})(?:,\\s*(\\d{4}))?\\b`, 'i');
+  const rx = new RegExp(`\\b(${months.join('|')})\\s+(\\d{1,2})(?:,\\s*(\\d{4}))?\\b`,'i');
   const nm = s.match(rx);
   if (nm) {
-    const monthIdx = months.indexOf(nm[1].toLowerCase());
+    const idx = months.indexOf(nm[1].toLowerCase());
     const day = Number(nm[2]);
     const year = nm[3] ? Number(nm[3]) : new Date().getFullYear();
-    const dt = new Date(year, monthIdx, day);
+    const dt = new Date(year, idx, day);
     if (!isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);
   }
 
   return null;
 }
 
-// Correct Banyan House location id
+// Correct Banyan House location UUID
 const BANYAN_LOCATION_ID = '2da9f238-3449-41db-b69d-bdbd357d6496';
 
-// ---------- route ----------
+/* ──────────────────────────────────────────────────────────────────────────────
+   Route
+────────────────────────────────────────────────────────────────────────────── */
 
 export async function POST(req: NextRequest) {
   try {
@@ -101,7 +99,7 @@ export async function POST(req: NextRequest) {
     const user_uid = session?.user?.sub;
     if (!user_uid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // Body: support {messages:[...]} and {message:"..."}
+    // Body: accept {messages:[...]} or {message:"..."}
     const raw = await req.text();
     let parsed: any = {};
     try { parsed = raw ? JSON.parse(raw) : {}; } catch { parsed = {}; }
@@ -113,10 +111,9 @@ export async function POST(req: NextRequest) {
     if (!history.length) {
       return NextResponse.json({ error: 'Missing messages' }, { status: 400 });
     }
+    const lastUserMsg = history.slice().reverse().find(m=>m.role==='user')?.content || '';
 
-    const lastUserMsg = history.slice().reverse().find((m) => m.role === 'user')?.content || '';
-
-    // Vault (for summary + tenant)
+    // Vault (tenant + summary)
     const { data: vault } = await supabase
       .from('vaults_test')
       .select('*')
@@ -134,90 +131,153 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
     const basePersona = brain?.prompt || 'You are Merv — grounded, sharp, calibrated.';
 
-    // ---------- DYNAMIC CONTEXTS ----------
+    /* ──────────────────────────────────────────────────────────────────────
+       CONTACTS via EMPLOYEES (robust, early return, no model)
+    ─────────────────────────────────────────────────────────────────────── */
+
     let contactsContext = '';
-    let salesContext = '';
-
-    // ===== CONTACTS (with robust name + retry) =====
     if (tenant_id && CONTACT_INTENT.test(lastUserMsg)) {
-      // First pass: try robust name
-      let qName = extractName(lastUserMsg) || lastUserMsg;
-      let like = `%${qName}%`;
+      // 1) get a clean-ish name
+      const rawName = extractName(lastUserMsg) || '';
+      const cleanedBase = rawName && rawName.length >= 3 ? rawName : lastUserMsg;
 
-      let { data: hits } = await supabase
-        .from('contacts')
-        .select('id,full_name,email,phone,location')
-        .eq('tenant_id', tenant_id)
-        .eq('owner_uid', user_uid)
-        .or(`full_name.ilike.${like},email.ilike.${like},phone.ilike.${like}`)
-        .limit(5);
+      // 2) normalize tokens & build AND pattern
+      const norm = cleanedBase
+        .replace(/(phone|number|email|contact|reach|call|text)\b/gi, '')
+        .replace(/[’']/g, "'")
+        .replace(/[^\w' ]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 
-      // Second chance: strip common words and retry if nothing found
-      if (!hits?.length) {
-        const cleaned = lastUserMsg
-          .replace(/(phone|number|email|contact|reach|call|text)\b/gi, '')
-          .replace(/[^\w' ]/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
+      const tokens = norm.split(' ').filter(t => t.length >= 2).slice(0, 3); // up to 3 words
+      const likeAND = tokens.map(t => `full_name.ilike.%${t}%`).join(',');
 
-        if (cleaned && cleaned !== lastUserMsg) {
-          like = `%${cleaned}%`;
-          const retry = await supabase
-            .from('contacts')
-            .select('id,full_name,email,phone,location')
-            .eq('tenant_id', tenant_id)
-            .eq('owner_uid', user_uid)
-            .or(`full_name.ilike.${like},email.ilike.${like},phone.ilike.${like}`)
+      // helper: query EMPLOYEES table with flexible OR
+      async function queryEmployees(orExpr: string, alsoLike?: string) {
+        const orParts = [orExpr];
+
+        if (alsoLike) orParts.push(`full_name.ilike.%${alsoLike}%`);
+        if (tokens[0]) { orParts.push(`email.ilike.%${tokens[0]}%`); orParts.push(`phone.ilike.%${tokens[0]}%`); }
+        if (tokens[1]) { orParts.push(`email.ilike.%${tokens[1]}%`); orParts.push(`phone.ilike.%${tokens[1]}%`); }
+
+        // Try with tenant filter; on error, retry without (in case column differs)
+        let resp = await supabase
+          .from('employees')
+          .select('id, full_name, first_name, last_name, email, phone, location_id, locations ( name )')
+          .eq('tenant_id', tenant_id)
+          .or(orParts.join(','))
+          .limit(5);
+
+        if (resp.error) {
+          resp = await supabase
+            .from('employees')
+            .select('id, full_name, first_name, last_name, email, phone, location_id')
+            .or(orParts.join(','))
             .limit(5);
-          hits = retry.data || [];
         }
+
+        return resp.data ?? [];
       }
 
-      // If we found a contact, return it immediately (no OpenAI polish)
-      if (hits && hits.length) {
-        const c = hits[0];
+      // First pass — AND tokens on full_name
+      let hits = await queryEmployees(likeAND);
+
+      // Second pass — Stacy/Stacey loosen
+      if (!hits.length && /stac/i.test(norm)) {
+        const alt = norm.replace(/stac(i|ey)/i, 'stac%');
+        hits = await queryEmployees(likeAND, alt);
+      }
+
+      // Third pass — whole cleaned string against full_name/email/phone
+      if (!hits.length && norm) {
+        let resp = await supabase
+          .from('employees')
+          .select('id, full_name, first_name, last_name, email, phone, location_id, locations ( name )')
+          .eq('tenant_id', tenant_id)
+          .or(`full_name.ilike.%${norm}%,email.ilike.%${norm}%,phone.ilike.%${norm}%`)
+          .limit(5);
+        if (resp.error) {
+          resp = await supabase
+            .from('employees')
+            .select('id, full_name, first_name, last_name, email, phone, location_id')
+            .or(`full_name.ilike.%${norm}%,email.ilike.%${norm}%,phone.ilike.%${norm}%`)
+            .limit(5);
+        }
+        hits = resp.data ?? [];
+      }
+
+      if (hits.length) {
+        const e = hits[0] as any;
+        // Best-effort name
+        const name =
+          e.full_name ||
+          [e.first_name, e.last_name].filter(Boolean).join(' ') ||
+          'Unknown';
+
+        // location name if joined
+        const locName = Array.isArray(e.locations)
+          ? e.locations[0]?.name
+          : e.locations?.name;
+
         const lines = [
-          `${c.full_name}${c.location ? ` — ${c.location}` : ''}`,
-          c.email ? `Email: ${c.email}` : null,
-          c.phone ? `Phone: ${c.phone}` : null,
+          `${name}${locName ? ` — ${locName}` : ''}`,
+          e.email ? `Email: ${e.email}` : null,
+          e.phone ? `Phone: ${e.phone}` : null,
         ].filter(Boolean);
+
         const directAnswer = lines.join('\n');
 
-        // Also include a context block for continuity if you still send to OpenAI later
-        const ctxLines = hits.map((h) =>
-          `- ${h.full_name}${h.location ? ` (${h.location})` : ''}${h.email ? ` | email: ${h.email}` : ''}${h.phone ? ` | phone: ${h.phone}` : ''}`
-        );
+        // Context string (optional, for future model calls)
+        const ctxLines = hits.map((h: any) => {
+          const nm = h.full_name || [h.first_name, h.last_name].filter(Boolean).join(' ');
+          const ln = Array.isArray(h.locations) ? h.locations[0]?.name : h.locations?.name;
+          return `- ${nm}${ln ? ` (${ln})` : ''}${h.email ? ` | email: ${h.email}` : ''}${h.phone ? ` | phone: ${h.phone}` : ''}`;
+        });
         contactsContext = `\nContactsContext:\n${ctxLines.join('\n')}\n`;
 
-        // Early return so there’s no chance of model “safety” refusing
         return NextResponse.json({
           text: directAnswer,
           role: 'assistant',
           name: 'Merv',
           content: directAnswer,
-          meta: { intent: 'contacts', hits },
+          meta: { intent: 'employees', searched: norm, hits },
         });
       }
+
+      const miss =
+        (extractName(lastUserMsg) || tokens.join(' ') || 'that person');
+      const notFound =
+        `I couldn’t find ${miss} in employees. If you give me a phone or email, I can save it for next time.`;
+
+      return NextResponse.json({
+        text: notFound,
+        role: 'assistant',
+        name: 'Merv',
+        content: notFound,
+        meta: { intent: 'employees', searched: norm, hits: [] },
+      });
     }
 
-    // ===== DAILY SALES =====
+    /* ──────────────────────────────────────────────────────────────────────
+       SALES (early return with formatted values)
+    ─────────────────────────────────────────────────────────────────────── */
+
+    let salesContext = '';
     if (SALES_INTENT.test(lastUserMsg)) {
       const d = parseDateSmart(lastUserMsg) || new Date().toISOString().slice(0, 10);
 
-      // Prefer daily_sales if present (adjust column names to yours)
-      let salesRow: any = null;
-
       // Try daily_sales
+      let row: any = null;
       const tryDaily = await supabase
         .from('daily_sales')
         .select('date, net_sales, bar_sales, total_tips, comps, voids, deposit')
         .eq('date', d)
         .eq('location_id', BANYAN_LOCATION_ID)
         .limit(1);
-      if (tryDaily.data && tryDaily.data.length) salesRow = tryDaily.data[0];
+      if (tryDaily.data && tryDaily.data.length) row = tryDaily.data[0];
 
-      // Fallback to sales_daily if needed
-      if (!salesRow) {
+      // Fallback sales_daily
+      if (!row) {
         const tryLegacy = await supabase
           .from('sales_daily')
           .select('work_date, net_sales, bar_sales, total_tips, comps, voids, deposit')
@@ -226,7 +286,7 @@ export async function POST(req: NextRequest) {
           .limit(1);
         if (tryLegacy.data && tryLegacy.data.length) {
           const s = tryLegacy.data[0];
-          salesRow = {
+          row = {
             date: s.work_date,
             net_sales: s.net_sales,
             bar_sales: s.bar_sales,
@@ -238,8 +298,8 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      if (salesRow) {
-        const s = salesRow;
+      if (row) {
+        const s = row;
         const txt =
           `Sales for ${s.date}:\n` +
           `- Net Sales: $${Number(s.net_sales || 0).toFixed(2)}\n` +
@@ -249,7 +309,6 @@ export async function POST(req: NextRequest) {
           (s.total_tips != null ? `- Total Tips: $${Number(s.total_tips || 0).toFixed(2)}\n` : '') +
           (s.deposit != null ? `- Deposit: $${Number(s.deposit || 0).toFixed(2)}\n` : '');
 
-        // Early return (no need to ask OpenAI to rewrite)
         return NextResponse.json({
           text: txt.trim(),
           role: 'assistant',
@@ -258,18 +317,19 @@ export async function POST(req: NextRequest) {
           meta: { intent: 'sales', date: s.date },
         });
       }
-
-      // No sales row found — let OpenAI respond later with a helpful message
+      // If no row, fall through to model for a helpful response
     }
 
-    // ---------- Contacts policy add-on ----------
+    /* ──────────────────────────────────────────────────────────────────────
+       System prompt & OpenAI (for everything else)
+    ─────────────────────────────────────────────────────────────────────── */
+
     const contactsPolicy = `
 Contacts & Personal Info (policy)
-- You may provide phone numbers or emails ONLY if they are present in ContactsContext (these come from the user's internal contacts).
-- If ContactsContext is missing or empty, ask if they'd like you to add the contact.
+- You may provide phone numbers or emails ONLY if they are present in ContactsContext (these are internal records).
+- If ContactsContext is missing or empty, ask if they'd like to add the contact.
     `.trim();
 
-    // System prompt build
     const vaultSummary = generateVaultSummary(vault);
     const systemPrompt = `
 User Profile Summary:
@@ -282,17 +342,13 @@ ${contactsContext}
 ${salesContext}
 `.trim();
 
-    // Optional assistant primer to keep answers tight
     const primer: { role: 'assistant'; content: string } = {
       role: 'assistant',
-      content:
-        'Understood. I will answer with an executive summary, an action list, and concise watch-outs as needed.',
+      content: 'Understood. Respond concisely with clear next steps when appropriate.',
     };
 
-    // Trim to last N messages
     const trimmed = history.slice(-10);
 
-    // Model call (used for everything else)
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0.2,
@@ -305,7 +361,6 @@ ${salesContext}
 
     const reply = completion.choices?.[0]?.message?.content || '[No reply]';
 
-    // Return in both shapes so any frontend can display it
     return NextResponse.json({
       text: reply,
       role: 'assistant',
@@ -314,13 +369,9 @@ ${salesContext}
     });
   } catch (err: any) {
     console.error('[MERV CHAT ERROR]', err);
+    const msg = `Error: ${err?.message || String(err)}`;
     return NextResponse.json(
-      {
-        text: `Error: ${err?.message || String(err)}`,
-        role: 'assistant',
-        name: 'Merv',
-        content: `Error: ${err?.message || String(err)}`,
-      },
+      { text: msg, role: 'assistant', name: 'Merv', content: msg },
       { status: 500 }
     );
   }
