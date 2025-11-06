@@ -159,8 +159,9 @@ export async function POST(req: NextRequest) {
         ...history.slice(-10),
       ],
     });
-    const reply = completion.choices?.[0]?.message?.content || 'Okay.';
-    return NextResponse.json({ text: reply });
+    const reply = completion.choices?.[0]?.message?.content || '[No reply from model]';
+console.log('[CHAT DEBUG] reply:', reply);
+return NextResponse.json({ text: reply || '[empty text returned]' });
   } catch (err: any) {
     const msg = `Error: ${err?.message || String(err)}`;
     return NextResponse.json({ text: msg }, { status: 500 });
