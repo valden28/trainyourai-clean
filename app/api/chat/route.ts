@@ -1,4 +1,4 @@
-   // app/api/chat/route.ts
+// app/api/chat/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import OpenAI from 'openai';
@@ -7,7 +7,9 @@ import generateVaultSummary from '@/utils/vaultSummary';
 
 export const runtime = 'nodejs';
 
-const DEBUG_LOG = true; // toggle to false later
+// Toggle true to see server logs in Vercel (helps verify branches hit)
+const DEBUG_LOG = false;
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 /* ──────────────────────────────────────────────────────────────────────────────
@@ -19,17 +21,19 @@ function sanitizeHistory(input: any[]): Array<{ role: 'user' | 'assistant'; cont
   return input
     .filter((m) => m && typeof m.content === 'string' && m.content.trim().length > 0)
     .map((m) => {
-      const r = (m.role || '').toString().toLowerCase();
+      const r = String(m.role || '').toLowerCase();
       const role: 'user' | 'assistant' = r === 'assistant' ? 'assistant' : 'user';
       return { role, content: m.content.trim() };
     });
 }
 
-// intent detectors
-const CONTACT_INTENT = /(phone|number|email|contact|reach|call|text)\b/i;
-const SALES_INTENT   = /\b(sales?|revenue|net sales|bar sales|daily sales)\b/i;
+// INTENTS (wider contacts trigger)
+const CONTACT_INTENT =
+  /\b(phone|number|email|contact|reach|call|text|employee|staff|worker|team|manager|gm|general manager)\b/i;
+const SALES_INTENT = /\b(sales?|revenue|net sales|bar sales|daily sales)\b/i;
+const VAULT_INTENT = /\b(vault|lookup|search\s+vault|what('?s|\s+is)\s+my)\b/i;
 
-// robust proper-name extractor (finds last prominent 1–3 word capitalized name)
+// Robust proper name extractor (find last prominent 1–3-word capitalized chunk)
 function extractName(s: string): string | null {
   if (!s) return null;
 
@@ -37,15 +41,14 @@ function extractName(s: string): string | null {
   const mFor = s.match(/\bfor\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\b/);
   if (mFor?.[1]) return mFor[1].trim();
 
-  // Collect all 1–3 word capitalized chunks
+  // Collect 1–3 word capitalized chunks anywhere
   const all = s.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/g) || [];
 
   // Blacklist obvious non-names
   const blacklist = new Set(
-    ['I','Phone','Number','Email','Sales','Report','Manager','Chef','Merv','Luna'].map(t=>t.trim())
+    ['I','Phone','Number','Email','Sales','Report','Manager','Chef','Merv','Luna','Team','Employees'].map(t=>t.trim())
   );
 
-  // De-dupe and pick the longest chunk
   const candidates = Array.from(new Set(all))
     .map(t => t.trim())
     .filter(t => !blacklist.has(t))
@@ -61,8 +64,7 @@ function parseDateSmart(s: string): string | null {
 
   const us = s.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);
   if (us) {
-    const mm = Number(us[1]);
-    const dd = Number(us[2]);
+    const mm = Number(us[1]); const dd = Number(us[2]);
     let yy = us[3] ? Number(us[3]) : new Date().getFullYear();
     if (yy < 100) yy += 2000;
     const dt = new Date(yy, mm - 1, dd);
@@ -82,7 +84,6 @@ function parseDateSmart(s: string): string | null {
     const dt = new Date(year, idx, day);
     if (!isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);
   }
-
   return null;
 }
 
@@ -114,8 +115,8 @@ export async function POST(req: NextRequest) {
     }
     const lastUserMsg = history.slice().reverse().find(m=>m.role==='user')?.content || '';
     if (DEBUG_LOG) console.log('[MERV DEBUG] lastUserMsg:', lastUserMsg);
- 
-     // Vault (tenant + summary)
+
+    // Vault (tenant + summary)
     const { data: vault } = await supabase
       .from('vaults_test')
       .select('*')
@@ -134,116 +135,81 @@ export async function POST(req: NextRequest) {
     const basePersona = brain?.prompt || 'You are Merv — grounded, sharp, calibrated.';
 
     /* ──────────────────────────────────────────────────────────────────────
-       EMPLOYEES lookup (robust, early return, no model)
+       EMPLOYEES lookup (robust, early return, NO OpenAI)
     ─────────────────────────────────────────────────────────────────────── */
-
-    let contactsContext = '';
     if (tenant_id && CONTACT_INTENT.test(lastUserMsg)) {
       const rawName = extractName(lastUserMsg) || '';
       const cleanedBase = rawName && rawName.length >= 3 ? rawName : lastUserMsg;
 
       const norm = cleanedBase
-        .replace(/(phone|number|email|contact|reach|call|text)\b/gi, '')
+        .replace(/(phone|number|email|contact|reach|call|text|employee|staff|worker|team|manager|gm|general manager)\b/gi, '')
         .replace(/[’']/g, "'")
         .replace(/[^\w' ]+/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
 
       const tokens = norm.split(' ').filter(t => t.length >= 2).slice(0, 3); // up to 3 words
-      const likeAND = tokens.map(t => `full_name.ilike.%${t}%`).join(',');
+      // Build flexible OR list for Supabase .or()
+      const orParts: string[] = [];
+      // Token AND on full_name by simulating AND with multiple ORs is tricky;
+      // we approximate: require first token, plus loose matches for others
+      if (tokens[0]) orParts.push(`full_name.ilike.%${tokens[0]}%`);
+      if (tokens[1]) orParts.push(`full_name.ilike.%${tokens[1]}%`);
+      if (tokens[2]) orParts.push(`full_name.ilike.%${tokens[2]}%`);
+      if (tokens[0]) { orParts.push(`email.ilike.%${tokens[0]}%`); orParts.push(`phone.ilike.%${tokens[0]}%`); }
+      if (tokens[1]) { orParts.push(`email.ilike.%${tokens[1]}%`); orParts.push(`phone.ilike.%${tokens[1]}%`); }
 
-      async function queryEmployees(orExpr: string, alsoLike?: string): Promise<any[]> {
-        const orParts = [orExpr];
-        if (alsoLike) orParts.push(`full_name.ilike.%${alsoLike}%`);
-        if (tokens[0]) { orParts.push(`email.ilike.%${tokens[0]}%`); orParts.push(`phone.ilike.%${tokens[0]}%`); }
-        if (tokens[1]) { orParts.push(`email.ilike.%${tokens[1]}%`); orParts.push(`phone.ilike.%${tokens[1]}%`); }
+      if (DEBUG_LOG) console.log('[MERV DEBUG] employee intent', { norm, tokens });
 
-        // Use 'any' so TS doesn't complain when we change selection shape
-        let resp: any = await supabase
+      // First pass (with tenant filter)
+      let resp: any = await supabase
+        .from('employees')
+        .select('id, full_name, first_name, last_name, email, phone')
+        .eq('tenant_id', tenant_id)
+        .or(orParts.join(','))
+        .limit(5);
+
+      // If no hits, try a wide pass without tenant filter (in case tenant_id not present in table)
+      if ((!resp.data || !resp.data.length) && !resp.error) {
+        resp = await supabase
           .from('employees')
-          .select('id, full_name, first_name, last_name, email, phone, location_id, locations ( name )')
-          .eq('tenant_id', tenant_id)
+          .select('id, full_name, first_name, last_name, email, phone')
           .or(orParts.join(','))
           .limit(5);
-
-        if (resp.error) {
-          // Retry without join if join relation name differs
-          resp = await supabase
-            .from('employees')
-            .select('id, full_name, first_name, last_name, email, phone, location_id')
-            .or(orParts.join(','))
-            .limit(5);
-      
-           if (DEBUG_LOG) console.log('[MERV DEBUG] employee intent triggered', { tenant_id, norm });
-           if (hits?.length) console.log('[MERV DEBUG] employee hits', hits);
-        }
-        return resp.data ?? [];
       }
 
-      // First pass — AND tokens on full_name
-      let hits = await queryEmployees(likeAND);
-
-      // Second pass — Stacy/Stacey loosen
-      if (!hits.length && /stac/i.test(norm)) {
-        const alt = norm.replace(/stac(i|ey)/i, 'stac%');
-        hits = await queryEmployees(likeAND, alt);
-      }
-
-      // Third pass — whole cleaned string against full_name/email/phone
-      if (!hits.length && norm) {
-        let resp: any = await supabase
+      // If still no hits, last resort: whole cleaned string across fields
+      if ((!resp.data || !resp.data.length) && norm) {
+        resp = await supabase
           .from('employees')
-          .select('id, full_name, first_name, last_name, email, phone, location_id, locations ( name )')
-          .eq('tenant_id', tenant_id)
+          .select('id, full_name, first_name, last_name, email, phone')
           .or(`full_name.ilike.%${norm}%,email.ilike.%${norm}%,phone.ilike.%${norm}%`)
           .limit(5);
-        if (resp.error) {
-          resp = await supabase
-            .from('employees')
-            .select('id, full_name, first_name, last_name, email, phone, location_id')
-            .or(`full_name.ilike.%${norm}%,email.ilike.%${norm}%,phone.ilike.%${norm}%`)
-            .limit(5);
-        }
-        hits = resp.data ?? [];
       }
 
+      const hits: any[] = resp?.data ?? [];
+      if (DEBUG_LOG) console.log('[MERV DEBUG] employee hits', hits);
+
       if (hits.length) {
-        const e: any = hits[0];
-        const name =
-          e.full_name ||
-          [e.first_name, e.last_name].filter(Boolean).join(' ') ||
-          'Unknown';
-
-        const locName = Array.isArray(e.locations)
-          ? e.locations?.[0]?.name
-          : e.locations?.name;
-
+        const e = hits[0];
+        const name = e.full_name || [e.first_name, e.last_name].filter(Boolean).join(' ') || 'Unknown';
         const lines = [
-          `${name}${locName ? ` — ${locName}` : ''}`,
+          name,
           e.email ? `Email: ${e.email}` : null,
           e.phone ? `Phone: ${e.phone}` : null,
         ].filter(Boolean);
-
         const directAnswer = lines.join('\n');
-
-        const ctxLines = hits.map((h: any) => {
-          const nm = h.full_name || [h.first_name, h.last_name].filter(Boolean).join(' ');
-          const ln = Array.isArray(h.locations) ? h.locations?.[0]?.name : h.locations?.name;
-          return `- ${nm}${ln ? ` (${ln})` : ''}${h.email ? ` | email: ${h.email}` : ''}${h.phone ? ` | phone: ${h.phone}` : ''}`;
-        });
-        contactsContext = `\nContactsContext:\n${ctxLines.join('\n')}\n`;
 
         return NextResponse.json({
           text: directAnswer,
           role: 'assistant',
           name: 'Merv',
           content: directAnswer,
-          meta: { intent: 'employees', searched: norm, hits },
+          meta: { intent: 'employees', searched: norm, hitsCount: hits.length },
         });
       }
 
-      const miss =
-        (extractName(lastUserMsg) || tokens.join(' ') || 'that person');
+      const miss = extractName(lastUserMsg) || tokens.join(' ') || 'that person';
       const notFound =
         `I couldn’t find ${miss} in employees. If you give me a phone or email, I can save it for next time.`;
 
@@ -252,20 +218,17 @@ export async function POST(req: NextRequest) {
         role: 'assistant',
         name: 'Merv',
         content: notFound,
-        meta: { intent: 'employees', searched: norm, hits: [] },
+        meta: { intent: 'employees', searched: norm, hitsCount: 0 },
       });
     }
 
     /* ──────────────────────────────────────────────────────────────────────
        SALES (early return with formatted values)
     ─────────────────────────────────────────────────────────────────────── */
-
-    let salesContext = '';
     if (SALES_INTENT.test(lastUserMsg)) {
       const d = parseDateSmart(lastUserMsg) || new Date().toISOString().slice(0, 10);
 
       let row: any = null;
-      // Try daily_sales
       const tryDaily: any = await supabase
         .from('daily_sales')
         .select('date, net_sales, bar_sales, total_tips, comps, voids, deposit')
@@ -274,7 +237,6 @@ export async function POST(req: NextRequest) {
         .limit(1);
       if (tryDaily.data && tryDaily.data.length) row = tryDaily.data[0];
 
-      // Fallback sales_daily
       if (!row) {
         const tryLegacy: any = await supabase
           .from('sales_daily')
@@ -315,29 +277,34 @@ export async function POST(req: NextRequest) {
           meta: { intent: 'sales', date: s.date },
         });
       }
-      // If no row, fall through to model for a helpful response
+      // If no row, fall through to model for a helpful answer
     }
 
     /* ──────────────────────────────────────────────────────────────────────
-       System prompt & OpenAI (for everything else)
+       VAULT quick lookup (optional, early return)
     ─────────────────────────────────────────────────────────────────────── */
+    if (VAULT_INTENT.test(lastUserMsg)) {
+      const vaultSummary = generateVaultSummary(vault);
+      // You can swap in rpc_vault_get / rpc_vault_search later. For now, expose summary.
+      const txt = `Vault summary loaded.\n${vaultSummary?.slice(0, 800) ?? ''}`;
+      return NextResponse.json({ text: txt, role: 'assistant', name: 'Merv', content: txt, meta: { intent: 'vault' } });
+    }
 
+    /* ──────────────────────────────────────────────────────────────────────
+       System prompt & OpenAI (everything else)
+    ─────────────────────────────────────────────────────────────────────── */
     const contactsPolicy = `
-Contacts & Personal Info (policy)
-- You may provide phone numbers or emails ONLY if they are present in ContactsContext (these are internal records).
-- If ContactsContext is missing or empty, ask if they'd like to add the contact.
+Contacts & Personal Info
+- Provide phone numbers/emails only when returned by the server (employees lookup). Do not invent or refuse when the server provided it.
     `.trim();
 
-    const vaultSummary = generateVaultSummary(vault);
     const systemPrompt = `
 User Profile Summary:
-${vaultSummary}
+${generateVaultSummary(vault)}
 
 ${basePersona}
 
 ${contactsPolicy}
-${contactsContext}
-${salesContext}
 `.trim();
 
     const primer: { role: 'assistant'; content: string } = {
@@ -358,19 +325,10 @@ ${salesContext}
     });
 
     const reply = completion.choices?.[0]?.message?.content || '[No reply]';
-
-    return NextResponse.json({
-      text: reply,
-      role: 'assistant',
-      name: 'Merv',
-      content: reply,
-    });
+    return NextResponse.json({ text: reply, role: 'assistant', name: 'Merv', content: reply });
   } catch (err: any) {
     console.error('[MERV CHAT ERROR]', err);
     const msg = `Error: ${err?.message || String(err)}`;
-    return NextResponse.json(
-      { text: msg, role: 'assistant', name: 'Merv', content: msg },
-      { status: 500 }
-    );
+    return NextResponse.json({ text: msg, role: 'assistant', name: 'Merv', content: msg }, { status: 500 });
   }
 }
