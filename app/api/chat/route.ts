@@ -8,7 +8,7 @@ import generateVaultSummary from '@/utils/vaultSummary';
 export const runtime = 'nodejs';
 
 // Toggle true to see server logs in Vercel (helps verify branches hit)
-const DEBUG_LOG = false;
+const DEBUG_LOG = true;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
