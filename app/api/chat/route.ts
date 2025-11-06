@@ -49,8 +49,7 @@ function parseDateSmart(s: string): string | null {
   return null;
 }
 
-const BANYAN_LOCATION_ID = '2da9f238-3449-41db-b69d-bdbd357d6496';
-
+const BANYAN_LOCATION_ID = '2da9f238-3449-41db-b69d-bdbd357dd496';
 /* ────────────────────────── Main Route ────────────────────────── */
 export async function POST(req: NextRequest) {
   try {
