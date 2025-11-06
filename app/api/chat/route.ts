@@ -7,7 +7,7 @@ import generateVaultSummary from '@/utils/vaultSummary';
 
 export const runtime = 'nodejs';
 
-// Enable to see diagnostic logs in Vercel/terminal
+// Toggle to see server logs (Vercel → Functions → Logs)
 const DEBUG_LOG = true;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
@@ -26,6 +26,7 @@ function sanitizeHistory(input: any[]): Array<{ role: 'user' | 'assistant'; cont
     });
 }
 
+// Broad people/contacts trigger
 const CONTACT_INTENT =
   /\b(phone|number|email|contact|reach|call|text|employee|staff|worker|team|manager|gm|general manager)\b/i;
 const SALES_INTENT = /\b(sales?|revenue|net sales|bar sales|daily sales)\b/i;
@@ -48,6 +49,7 @@ function extractName(s: string): string | null {
 function parseDateSmart(s: string): string | null {
   const iso = s.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
   if (iso?.[1]) return iso[1];
+
   const us = s.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);
   if (us) {
     const mm = Number(us[1]); const dd = Number(us[2]);
@@ -56,6 +58,7 @@ function parseDateSmart(s: string): string | null {
     const dt = new Date(yy, mm - 1, dd);
     if (!isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);
   }
+
   const months = [
     'january','february','march','april','may','june',
     'july','august','september','october','november','december'
@@ -101,22 +104,32 @@ export async function POST(req: NextRequest) {
     if (DEBUG_LOG) console.log('[MERV DEBUG] lastUserMsg:', lastUserMsg);
 
     // Vault (tenant + summary)
-    const { data: vault } = await supabase
-      .from('vaults_test')
-      .select('*')
-      .eq('user_uid', user_uid)
-      .single()
-      .catch(() => ({ data: null as any }));
+    let vault: any = null;
+    try {
+      const vr = await supabase
+        .from('vaults_test')
+        .select('*')
+        .eq('user_uid', user_uid)
+        .single();
+      vault = vr.data ?? null;
+    } catch {
+      vault = null;
+    }
     const tenant_id: string | null = vault?.tenant_id || null;
     if (DEBUG_LOG) console.log('[MERV DEBUG] tenant_id:', tenant_id ?? '(null)');
 
     // Persona
-    const { data: brain } = await supabase
-      .from('merv_brain')
-      .select('prompt')
-      .eq('user_uid', user_uid)
-      .maybeSingle()
-      .catch(() => ({ data: null as any }));
+    let brain: any = null;
+    try {
+      const br = await supabase
+        .from('merv_brain')
+        .select('prompt')
+        .eq('user_uid', user_uid)
+        .maybeSingle();
+      brain = br.data ?? null;
+    } catch {
+      brain = null;
+    }
     const basePersona = brain?.prompt || 'You are Merv — grounded, sharp, calibrated.';
 
     /* ──────────────────────────────────────────────────────────────────────
@@ -126,7 +139,6 @@ export async function POST(req: NextRequest) {
       const rawName = extractName(lastUserMsg) || '';
       const cleanedBase = rawName && rawName.length >= 3 ? rawName : lastUserMsg;
 
-      // normalize input and build tokens
       const norm = cleanedBase
         .replace(/(phone|number|email|contact|reach|call|text|employee|staff|worker|team|manager|gm|general manager)\b/gi, '')
         .replace(/[’']/g, "'")
@@ -137,12 +149,8 @@ export async function POST(req: NextRequest) {
       const tokens = norm.split(' ').filter(t => t.length >= 2).slice(0, 3); // up to 3 words
       if (DEBUG_LOG) console.log('[MERV DEBUG] employee intent', { norm, tokens });
 
-      // Build a single supabase query that checks multiple likely columns:
-      // full_name, name, first_name||' '||last_name, email, phone, phone_number
-      // We can't AND within .or(), so we approximate with multi-token ORs.
+      // Build OR list to search many likely columns
       const ors: string[] = [];
-
-      // name fields
       if (norm) {
         ors.push(`full_name.ilike.%${norm}%`);
         ors.push(`name.ilike.%${norm}%`);
@@ -150,7 +158,6 @@ export async function POST(req: NextRequest) {
         ors.push(`phone.ilike.%${norm}%`);
         ors.push(`phone_number.ilike.%${norm}%`);
       }
-      // tokenized extras
       tokens.forEach(t => {
         ors.push(`full_name.ilike.%${t}%`);
         ors.push(`name.ilike.%${t}%`);
@@ -161,11 +168,10 @@ export async function POST(req: NextRequest) {
         ors.push(`phone_number.ilike.%${t}%`);
       });
 
-      // Base select tries to include both name variants and both phone variants
       const baseSelect =
         'id, full_name, name, first_name, last_name, email, phone, phone_number';
 
-      // First pass: with tenant filter if available
+      // First pass: with tenant filter if present
       let resp: any;
       if (tenant_id) {
         resp = await supabase
@@ -182,7 +188,7 @@ export async function POST(req: NextRequest) {
           .limit(10);
       }
 
-      // If nothing yet, one more loose pass without tenant filter on the full norm
+      // Second pass: extra-loose on full norm, no tenant filter
       if ((!resp?.data || !resp.data.length) && norm) {
         resp = await supabase
           .from('employees')
@@ -195,14 +201,13 @@ export async function POST(req: NextRequest) {
       if (DEBUG_LOG) console.log('[MERV DEBUG] employee hits count:', hits.length);
 
       if (hits.length) {
-        // Prefer exact-ish match when possible
         const pick = (() => {
           const lower = norm.toLowerCase();
-          // exact equals on common name fields
           const exact = hits.find(h =>
             (h.full_name && h.full_name.toLowerCase() === lower) ||
             (h.name && h.name.toLowerCase() === lower) ||
-            ((h.first_name || h.last_name) && `${(h.first_name||'').toLowerCase()} ${(h.last_name||'').toLowerCase()}`.trim() === lower)
+            ((h.first_name || h.last_name) &&
+              `${(h.first_name||'').toLowerCase()} ${(h.last_name||'').toLowerCase()}`.trim() === lower)
           );
           return exact || hits[0];
         })();
@@ -291,7 +296,7 @@ export async function POST(req: NextRequest) {
           (s.comps != null ? `- Comps: ${s.comps}\n` : '') +
           (s.voids != null ? `- Voids: ${s.voids}\n` : '') +
           (s.total_tips != null ? `- Total Tips: $${Number(s.total_tips || 0).toFixed(2)}\n` : '') +
-          (s.deposit != null ? `- Deposit: $${Number(s.deposit || 0).toFixed(2)}\n` : '');
+          (s.deposit != null ? `- Deposit: ${Number(s.deposit || 0).toFixed(2)}\n` : '');
 
         return NextResponse.json({
           text: txt.trim(),
@@ -342,6 +347,9 @@ ${contactsPolicy}
   } catch (err: any) {
     console.error('[MERV CHAT ERROR]', err);
     const msg = `Error: ${err?.message || String(err)}`;
-    return NextResponse.json({ text: msg, role: 'assistant', name: 'Merv', content: msg }, { status: 500 });
+    return NextResponse.json(
+      { text: msg, role: 'assistant', name: 'Merv', content: msg },
+      { status: 500 }
+    );
   }
 }
