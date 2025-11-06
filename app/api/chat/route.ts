@@ -7,6 +7,7 @@ import generateVaultSummary from '@/utils/vaultSummary';
 
 export const runtime = 'nodejs';
 
+const DEBUG_LOG = true; // toggle to false later
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
 /* ──────────────────────────────────────────────────────────────────────────────
@@ -112,8 +113,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing messages' }, { status: 400 });
     }
     const lastUserMsg = history.slice().reverse().find(m=>m.role==='user')?.content || '';
-
-    // Vault (tenant + summary)
+    if (DEBUG_LOG) console.log('[MERV DEBUG] lastUserMsg:', lastUserMsg);
+ 
+     // Vault (tenant + summary)
     const { data: vault } = await supabase
       .from('vaults_test')
       .select('*')
@@ -171,8 +173,10 @@ export async function POST(req: NextRequest) {
             .select('id, full_name, first_name, last_name, email, phone, location_id')
             .or(orParts.join(','))
             .limit(5);
+      
+           if (DEBUG_LOG) console.log('[MERV DEBUG] employee intent triggered', { tenant_id, norm });
+           if (hits?.length) console.log('[MERV DEBUG] employee hits', hits);
         }
-
         return resp.data ?? [];
       }
 
