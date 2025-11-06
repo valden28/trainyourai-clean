@@ -34,12 +34,12 @@ export default function ChatCorePage() {
   // ——— helpers ———
   const normalize = (m: LogMsg): LogMsg => ({
     ...m,
-    // prefer .message; fall back to .content (older history) or a visible placeholder
-    message: typeof m.message === 'string' && m.message.trim().length
-      ? m.message
-      : (typeof m.content === 'string' && m.content.trim().length
-          ? m.content
-          : '[empty]')
+    message:
+      (typeof m.message === 'string' && m.message.trim().length
+        ? m.message
+        : (typeof m.content === 'string' && m.content.trim().length
+            ? m.content
+            : '[empty]'))
   })
 
   const appendAssistant = (text: string) => {
@@ -83,8 +83,8 @@ export default function ChatCorePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sender_uid: msg.sender_uid,
-          receiver_uid: user?.sub,
-          message: normalize(msg).message, // ensure saved as .message
+          receiver_uid: user?.sub ?? null,     // ← ensure null, not undefined
+          message: normalize(msg).message,      // save as .message
           category: msg.category || 'general',
           assistant: msg.assistant || 'merv',
         }),
@@ -102,7 +102,11 @@ export default function ChatCorePage() {
     setLoading(true)
 
     // Add user bubble immediately
-    const userMsg: LogMsg = { message: text, sender_uid: user?.sub, status: 'sent' }
+    const userMsg: LogMsg = {
+      message: text,
+      sender_uid: user?.sub ?? null,          // ← fix: undefined → null
+      status: 'sent'
+    }
     setMessages(prev => [...prev, normalize(userMsg)])
     persistMessage(userMsg)
 
@@ -113,11 +117,10 @@ export default function ChatCorePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
-          user_id: user?.sub,
+          user_id: user?.sub ?? null,         // ← optional, but safer as null
         }),
       })
 
-      // If server returns HTML error page, avoid JSON parse crash
       if (!res.ok) {
         const plain = await res.text().catch(() => '')
         appendAssistant(`⚠️ API ${res.status}${plain ? `: ${plain}` : ''}`)
@@ -181,7 +184,7 @@ export default function ChatCorePage() {
           <div
             key={i}
             className={`p-3 rounded-xl max-w-2xl whitespace-pre-wrap ${
-              msg.sender_uid === user?.sub
+              msg.sender_uid === (user?.sub ?? null)
                 ? 'bg-green-100 self-end text-right ml-auto'
                 : 'bg-gray-100 self-start'
             }`}
