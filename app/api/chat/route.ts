@@ -6,11 +6,11 @@ import { supabase } from '@/lib/supabaseServer';
 import generateVaultSummary from '@/utils/vaultSummary';
 
 export const runtime = 'nodejs';
-const DEBUG_LOG = true;
+const DEBUG_LOG = false;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-/* ────────────────────────── Helpers ────────────────────────── */
+/* ───────────── Helpers ───────────── */
 function sanitizeHistory(input: any[]): Array<{ role: 'user' | 'assistant'; content: string }> {
   if (!Array.isArray(input)) return [];
   return input
@@ -22,36 +22,66 @@ function sanitizeHistory(input: any[]): Array<{ role: 'user' | 'assistant'; cont
     });
 }
 
-const CONTACT_INTENT = /\b(phone|number|email|contact|employee|staff|manager|gm)\b/i;
-const SALES_INTENT   = /\b(sales?|revenue|net sales|bar sales|daily sales)\b/i;
+const CONTACT_INTENT =
+  /\b(phone|number|email|contact|employee|staff|manager|gm|general manager)\b/i;
+const SALES_INTENT = /\b(sales?|revenue|net sales|bar sales|daily sales)\b/i;
+
+/** natural language → “search” intent */
+const SEARCH_INTENT =
+  /\b(search|find|look\s*up|lookup|show|list)\b/i;
+
+/** optional: vault read/write (already added earlier, keep if you use it) */
+// const VAULT_GET_INTENT    = /\b(what('?s|\s+is)\s+(my|the)\s+([a-z0-9_]{3,}))\b/i;
+// const VAULT_SEARCH_INTENT = /\b(search|lookup)\s+(vault|profile|settings)\b/i;
+// const VAULT_SAVE_INTENT   = /\b(save|set|remember)\s+([a-z0-9_]{3,})\s+as\s+(.+)/i;
 
 function extractName(s: string): string | null {
   if (!s) return null;
   const mFor = s.match(/\bfor\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\b/);
   if (mFor?.[1]) return mFor[1].trim();
   const all = s.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/g) || [];
-  const blacklist = new Set(['I','Phone','Number','Email','Sales','Manager','Chef','Merv','Luna']);
-  const names = all.filter(w => !blacklist.has(w)).sort((a,b)=>b.length-a.length);
-  return names[0] || null;
+  const blacklist = new Set(['I','Phone','Number','Email','Sales','Manager','Chef','Merv','Luna','Team','Employees']);
+  const candidates = Array.from(new Set(all)).map(t=>t.trim()).filter(t=>!blacklist.has(t)).sort((a,b)=>b.length-a.length);
+  return candidates[0] || null;
 }
 
 function parseDateSmart(s: string): string | null {
-  const iso = s.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
-  if (iso?.[1]) return iso[1];
+  const iso = s.match(/\b(20\d{2}-\d{2}-\d{2})\b/); if (iso?.[1]) return iso[1];
   const us = s.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);
-  if (us) {
-    const mm = Number(us[1]); const dd = Number(us[2]);
-    let yy = us[3] ? Number(us[3]) : new Date().getFullYear();
-    if (yy < 100) yy += 2000;
-    const dt = new Date(yy, mm - 1, dd);
-    if (!isNaN(dt.getTime())) return dt.toISOString().slice(0, 10);
-  }
+  if (us) { const mm=+us[1], dd=+us[2]; let yy=us[3]?+us[3]:new Date().getFullYear(); if(yy<100) yy+=2000; const dt=new Date(yy,mm-1,dd); if(!isNaN(dt.getTime())) return dt.toISOString().slice(0,10); }
   return null;
+}
+
+/** map everyday words → search sources (table names in search_index) */
+const SOURCE_SYNONYMS: Record<string, string> = {
+  employee: 'employees', staff: 'employees', manager: 'employees', gm: 'employees',
+  item: 'items', items: 'items', 'item book': 'items', cbi: 'items', sku: 'items',
+  'item price': 'item_prices', 'contract': 'item_prices', 'contract price': 'item_prices',
+  invoice: 'invoices', invoices: 'invoices',
+  'invoice line': 'invoice_lines', 'invoice lines': 'invoice_lines', line: 'invoice_lines',
+  schedule: 'schedules', schedules: 'schedules', shift: 'schedules',
+  sale: 'daily_sales', sales: 'daily_sales', 'daily sales': 'daily_sales',
+  // add more mappings anytime (recipes, pmix, labor_timesheets, etc.)
+};
+
+function guessSourcesFromText(msg: string): string[] {
+  const m = msg.toLowerCase();
+  const chosen = new Set<string>();
+  for (const [word, src] of Object.entries(SOURCE_SYNONYMS)) {
+    if (m.includes(word)) chosen.add(src);
+  }
+  return Array.from(chosen);
+}
+
+function stripLeadingSearchWords(msg: string) {
+  return msg.replace(/\b(search|find|look\s*up|lookup|show|list)\b/i,'')
+            .replace(/\b(in|from|for|within|on)\b/i,'')
+            .trim();
 }
 
 const BANYAN_LOCATION_ID = '2da9f238-3449-41db-b69d-bdbd357d6496';
 
-/* ────────────────────────── Main Route ────────────────────────── */
+/* ───────────── Main Route ───────────── */
 export async function POST(req: NextRequest) {
   try {
     // Auth
@@ -63,15 +93,17 @@ export async function POST(req: NextRequest) {
     const raw = await req.text();
     let parsed: any = {};
     try { parsed = raw ? JSON.parse(raw) : {}; } catch {}
+
     let history = sanitizeHistory(Array.isArray(parsed?.messages) ? parsed.messages : []);
-    if (!history.length && typeof parsed?.message === 'string' && parsed.message.trim())
+    if (!history.length && typeof parsed?.message === 'string' && parsed.message.trim()) {
       history = [{ role: 'user', content: parsed.message.trim() }];
+    }
     if (!history.length) return NextResponse.json({ error: 'Missing messages' }, { status: 400 });
 
     const lastUserMsg = history.slice().reverse().find(m=>m.role==='user')?.content || '';
     if (DEBUG_LOG) console.log('[MERV DEBUG] lastUserMsg:', lastUserMsg);
 
-    // Vault / persona
+    // Vault / persona (tenant when available)
     let tenant_id: string | null = null;
     try {
       const { data: vault } = await supabase.from('vaults_test').select('*').eq('user_uid', user_uid).single();
@@ -80,97 +112,96 @@ export async function POST(req: NextRequest) {
     const { data: brain } = await supabase.from('merv_brain').select('prompt').eq('user_uid', user_uid).maybeSingle();
     const basePersona = brain?.prompt || 'You are Merv — grounded, sharp, calibrated.';
 
-    /* ───────────────────── EMPLOYEE LOOKUP ───────────────────── */
+    /* ───────── SEARCH (plain language → rpc_search_all) ───────── */
+    if (SEARCH_INTENT.test(lastUserMsg)) {
+      const sources = guessSourcesFromText(lastUserMsg);
+      const stripped = stripLeadingSearchWords(lastUserMsg);
+      const query = stripped || lastUserMsg;
+
+      if (DEBUG_LOG) console.log('[MERV DEBUG] search', { query, sources });
+
+      const { data, error } = await supabase.rpc('rpc_search_all', {
+        p_tenant: tenant_id ?? null,
+        p_query: query,
+        p_sources: sources.length ? sources : null,
+        p_limit: 12,
+      });
+
+      if (error) {
+        if (DEBUG_LOG) console.error('[MERV DEBUG] search error:', error.message);
+        return NextResponse.json({ text: `Search error: ${error.message}` });
+      }
+
+      if (!data?.length) {
+        const hint = sources.length
+          ? ` in ${sources.join(', ')}`
+          : '';
+        return NextResponse.json({ text: `No results for “${query}”${hint}. Try another term or specify a source like employees, items, invoices, invoice_lines, schedules, or daily_sales.` });
+      }
+
+      const lines = data.map((r: any) => `• [${r.source_table}] ${r.title} — ${r.snippet}`).join('\n');
+      const txt = `Search results for “${query}”${sources.length ? ` in ${sources.join(', ')}` : ''}:\n${lines}`;
+      return NextResponse.json({ text: txt, meta: { count: data.length } });
+    }
+
+    /* ───────── EMPLOYEES: direct phone/email (no AI) ───────── */
     if (CONTACT_INTENT.test(lastUserMsg)) {
       const nameGuess = extractName(lastUserMsg);
       const cleaned = (nameGuess || lastUserMsg)
-        .replace(/(phone|number|email|contact|employee|manager|staff|gm)\b/gi, '')
-        .replace(/[^\w' ]+/g, ' ')
+        .replace(/(phone|number|email|contact|employee|manager|staff|gm)\b/gi,'')
+        .replace(/[^\w' ]+/g,' ')
         .trim();
 
-      const tokens = cleaned.split(' ').filter(t => t.length > 1);
-      if (DEBUG_LOG) console.log('[MERV DEBUG] employee search', { cleaned, tokens });
-
+      const tokens = cleaned.split(' ').filter(t=>t.length>1).slice(0,3);
       const ors: string[] = [];
+      if (cleaned) { ors.push(`email.ilike.%${cleaned}%`); }
       tokens.forEach(t => {
         ors.push(`first_name.ilike.%${t}%`);
         ors.push(`last_name.ilike.%${t}%`);
         ors.push(`email.ilike.%${t}%`);
       });
 
-      // Always include the full cleaned string for composite match
-      if (cleaned) {
-        ors.push(`email.ilike.%${cleaned}%`);
-        ors.push(`first_name.ilike.%${cleaned.split(' ')[0]}%`);
-      }
-
-      const { data: employees, error } = await supabase
+      const { data: employees } = await supabase
         .from('employees')
         .select('id, first_name, last_name, email, phone')
         .or(ors.join(','))
         .limit(5);
 
-      if (error) {
-        console.error('[MERV DEBUG] supabase error', error);
-      }
-      if (DEBUG_LOG) console.log('[MERV DEBUG] employee hits', employees?.length || 0);
-
-      if (employees && employees.length) {
+      if (employees?.length) {
         const e = employees[0];
-        const fullName = [e.first_name, e.last_name].filter(Boolean).join(' ');
-        const lines = [
-          fullName,
-          e.email ? `Email: ${e.email}` : null,
-          e.phone ? `Phone: ${e.phone}` : null,
-        ].filter(Boolean);
-        const reply = lines.join('\n');
-
-        return NextResponse.json({
-          text: reply,
-          role: 'assistant',
-          name: 'Merv',
-          content: reply,
-          meta: { intent: 'employees', hits: employees.length },
-        });
+        const full = [e.first_name, e.last_name].filter(Boolean).join(' ') || 'Unknown';
+        const txt = [full, e.email ? `Email: ${e.email}` : null, e.phone ? `Phone: ${e.phone}` : null].filter(Boolean).join('\n');
+        return NextResponse.json({ text: txt, meta: { intent: 'employees', hits: employees.length } });
       }
 
-      const notFound = `I couldn’t find ${cleaned || 'that person'} in employees.`;
-      return NextResponse.json({
-        text: notFound,
-        role: 'assistant',
-        name: 'Merv',
-        content: notFound,
-        meta: { intent: 'employees', hits: 0 },
-      });
+      const notFound = `I couldn’t find ${cleaned || 'that person'} in employees. If you give me a phone or email, I can save it for next time.`;
+      return NextResponse.json({ text: notFound, meta: { intent: 'employees', hits: 0 } });
     }
 
-    /* ───────────────────── SALES LOOKUP ───────────────────── */
+    /* ───────── SALES: date summary (no AI) ───────── */
     if (SALES_INTENT.test(lastUserMsg)) {
       const d = parseDateSmart(lastUserMsg) || new Date().toISOString().slice(0, 10);
 
+      let row: any = null;
       const { data: daily } = await supabase
         .from('daily_sales')
         .select('date, net_sales, bar_sales, total_tips, comps, voids, deposit')
-        .eq('date', d)
-        .eq('location_id', BANYAN_LOCATION_ID)
-        .limit(1);
-      let s = daily?.[0];
+        .eq('date', d).eq('location_id', BANYAN_LOCATION_ID).limit(1);
+      if (daily?.[0]) row = daily[0];
 
-      if (!s) {
+      if (!row) {
         const { data: legacy } = await supabase
           .from('sales_daily')
           .select('work_date, net_sales, bar_sales, total_tips, comps, voids, deposit')
-          .eq('work_date', d)
-          .eq('location_id', BANYAN_LOCATION_ID)
-          .limit(1);
-        if (legacy?.[0])
-          s = {
-            date: legacy[0].work_date,
-            ...legacy[0],
-          };
+          .eq('work_date', d).eq('location_id', BANYAN_LOCATION_ID).limit(1);
+        if (legacy?.[0]) {
+          const s = legacy[0];
+          row = { date: s.work_date, net_sales: s.net_sales, bar_sales: s.bar_sales, total_tips: s.total_tips, comps: s.comps, voids: s.voids, deposit: s.deposit };
+        }
       }
 
-      if (s) {
+      if (row) {
+        const s = row;
         const txt =
           `Sales for ${s.date}:\n` +
           `- Net Sales: $${Number(s.net_sales || 0).toFixed(2)}\n` +
@@ -179,22 +210,21 @@ export async function POST(req: NextRequest) {
           (s.comps ? `- Comps: ${s.comps}\n` : '') +
           (s.voids ? `- Voids: ${s.voids}\n` : '') +
           (s.deposit ? `- Deposit: ${s.deposit}\n` : '');
-        return NextResponse.json({
-          text: txt.trim(),
-          role: 'assistant',
-          name: 'Merv',
-          content: txt.trim(),
-        });
+        return NextResponse.json({ text: txt.trim(), meta: { intent: 'sales', date: s.date } });
       }
     }
 
-    /* ───────────────────── DEFAULT → OpenAI ───────────────────── */
+    /* ───────── Everything else → concise AI reply ───────── */
     const systemPrompt = `
 User Profile Summary:
-${tenant_id ? `Tenant ID: ${tenant_id}` : ''}
+${generateVaultSummary ? (await (async()=>{ try{ const {data:vault}=await supabase.from('vaults_test').select('*').eq('user_uid', (session?.user?.sub||'')).single(); return generateVaultSummary(vault||{});}catch{return ''}})()) : ''}
 
 ${basePersona}
-    `.trim();
+
+Notes:
+- Prefer direct, factual answers. Be concise.
+- If user asks to "search", call the server search (handled above). Do not invent results.
+`.trim();
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -206,10 +236,10 @@ ${basePersona}
     });
 
     const reply = completion.choices?.[0]?.message?.content || '[No reply]';
-    return NextResponse.json({ text: reply, role: 'assistant', name: 'Merv', content: reply });
+    return NextResponse.json({ text: reply });
   } catch (err: any) {
     console.error('[MERV CHAT ERROR]', err);
     const msg = `Error: ${err?.message || String(err)}`;
-    return NextResponse.json({ text: msg, role: 'assistant', name: 'Merv', content: msg }, { status: 500 });
+    return NextResponse.json({ text: msg }, { status: 500 });
   }
 }
