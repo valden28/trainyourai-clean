@@ -7,7 +7,7 @@ import generateVaultSummary from '@/utils/vaultSummary';
 
 export const runtime = 'nodejs';
 
-// Toggle true to see server logs in Vercel (helps verify branches hit)
+// Turn on to see server logs in Vercel / local terminal
 const DEBUG_LOG = true;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
@@ -27,11 +27,10 @@ function sanitizeHistory(input: any[]): Array<{ role: 'user' | 'assistant'; cont
     });
 }
 
-// INTENTS (wider contacts trigger)
+// Broad contacts/people trigger
 const CONTACT_INTENT =
   /\b(phone|number|email|contact|reach|call|text|employee|staff|worker|team|manager|gm|general manager)\b/i;
 const SALES_INTENT = /\b(sales?|revenue|net sales|bar sales|daily sales)\b/i;
-const VAULT_INTENT = /\b(vault|lookup|search\s+vault|what('?s|\s+is)\s+my)\b/i;
 
 // Robust proper name extractor (find last prominent 1–3-word capitalized chunk)
 function extractName(s: string): string | null {
@@ -122,9 +121,9 @@ export async function POST(req: NextRequest) {
       .select('*')
       .eq('user_uid', user_uid)
       .single();
-    if (!vault) return NextResponse.json({ error: 'Vault not found' }, { status: 404 });
 
-    const tenant_id: string | null = vault.tenant_id || null;
+    const tenant_id: string | null = vault?.tenant_id || null;
+    if (DEBUG_LOG) console.log('[MERV DEBUG] tenant_id:', tenant_id ?? '(null)');
 
     // Persona
     const { data: brain } = await supabase
@@ -136,8 +135,9 @@ export async function POST(req: NextRequest) {
 
     /* ──────────────────────────────────────────────────────────────────────
        EMPLOYEES lookup (robust, early return, NO OpenAI)
+       — no longer requires tenant_id to run —
     ─────────────────────────────────────────────────────────────────────── */
-    if (tenant_id && CONTACT_INTENT.test(lastUserMsg)) {
+    if (CONTACT_INTENT.test(lastUserMsg)) {
       const rawName = extractName(lastUserMsg) || '';
       const cleanedBase = rawName && rawName.length >= 3 ? rawName : lastUserMsg;
 
@@ -149,36 +149,34 @@ export async function POST(req: NextRequest) {
         .trim();
 
       const tokens = norm.split(' ').filter(t => t.length >= 2).slice(0, 3); // up to 3 words
-      // Build flexible OR list for Supabase .or()
       const orParts: string[] = [];
-      // Token AND on full_name by simulating AND with multiple ORs is tricky;
-      // we approximate: require first token, plus loose matches for others
       if (tokens[0]) orParts.push(`full_name.ilike.%${tokens[0]}%`);
       if (tokens[1]) orParts.push(`full_name.ilike.%${tokens[1]}%`);
       if (tokens[2]) orParts.push(`full_name.ilike.%${tokens[2]}%`);
       if (tokens[0]) { orParts.push(`email.ilike.%${tokens[0]}%`); orParts.push(`phone.ilike.%${tokens[0]}%`); }
       if (tokens[1]) { orParts.push(`email.ilike.%${tokens[1]}%`); orParts.push(`phone.ilike.%${tokens[1]}%`); }
 
-      if (DEBUG_LOG) console.log('[MERV DEBUG] employee intent', { norm, tokens });
+      if (DEBUG_LOG) console.log('[MERV DEBUG] employee intent', { norm, tokens, orCount: orParts.length });
 
-      // First pass (with tenant filter)
-      let resp: any = await supabase
-        .from('employees')
-        .select('id, full_name, first_name, last_name, email, phone')
-        .eq('tenant_id', tenant_id)
-        .or(orParts.join(','))
-        .limit(5);
+      // First pass: with tenant filter if present
+      let resp: any = await (async () => {
+        if (tenant_id) {
+          return await supabase
+            .from('employees')
+            .select('id, full_name, first_name, last_name, email, phone')
+            .eq('tenant_id', tenant_id)
+            .or(orParts.join(','))
+            .limit(5);
+        } else {
+          return await supabase
+            .from('employees')
+            .select('id, full_name, first_name, last_name, email, phone')
+            .or(orParts.join(','))
+            .limit(5);
+        }
+      })();
 
-      // If no hits, try a wide pass without tenant filter (in case tenant_id not present in table)
-      if ((!resp.data || !resp.data.length) && !resp.error) {
-        resp = await supabase
-          .from('employees')
-          .select('id, full_name, first_name, last_name, email, phone')
-          .or(orParts.join(','))
-          .limit(5);
-      }
-
-      // If still no hits, last resort: whole cleaned string across fields
+      // Second pass: whole cleaned string across fields (no tenant filter)
       if ((!resp.data || !resp.data.length) && norm) {
         resp = await supabase
           .from('employees')
@@ -188,7 +186,7 @@ export async function POST(req: NextRequest) {
       }
 
       const hits: any[] = resp?.data ?? [];
-      if (DEBUG_LOG) console.log('[MERV DEBUG] employee hits', hits);
+      if (DEBUG_LOG) console.log('[MERV DEBUG] employee hits count:', hits.length);
 
       if (hits.length) {
         const e = hits[0];
@@ -198,6 +196,7 @@ export async function POST(req: NextRequest) {
           e.email ? `Email: ${e.email}` : null,
           e.phone ? `Phone: ${e.phone}` : null,
         ].filter(Boolean);
+
         const directAnswer = lines.join('\n');
 
         return NextResponse.json({
@@ -281,16 +280,6 @@ export async function POST(req: NextRequest) {
     }
 
     /* ──────────────────────────────────────────────────────────────────────
-       VAULT quick lookup (optional, early return)
-    ─────────────────────────────────────────────────────────────────────── */
-    if (VAULT_INTENT.test(lastUserMsg)) {
-      const vaultSummary = generateVaultSummary(vault);
-      // You can swap in rpc_vault_get / rpc_vault_search later. For now, expose summary.
-      const txt = `Vault summary loaded.\n${vaultSummary?.slice(0, 800) ?? ''}`;
-      return NextResponse.json({ text: txt, role: 'assistant', name: 'Merv', content: txt, meta: { intent: 'vault' } });
-    }
-
-    /* ──────────────────────────────────────────────────────────────────────
        System prompt & OpenAI (everything else)
     ─────────────────────────────────────────────────────────────────────── */
     const contactsPolicy = `
@@ -300,7 +289,7 @@ Contacts & Personal Info
 
     const systemPrompt = `
 User Profile Summary:
-${generateVaultSummary(vault)}
+${vault ? generateVaultSummary(vault) : ''}
 
 ${basePersona}
 
