@@ -20,8 +20,7 @@ function sanitizeHistory(input: any[]): ChatMsg[] {
     .filter((m) => m && typeof m.content === 'string' && m.content.trim().length > 0)
     .map((m) => {
       const r = String(m.role || '').toLowerCase();
-      const role: ChatMsg['role'] =
-        r === 'assistant' ? 'assistant' : r === 'system' ? 'system' : 'user';
+      const role: ChatMsg['role'] = r === 'assistant' ? 'assistant' : r === 'system' ? 'system' : 'user';
       return { role, content: m.content.trim() };
     })
     .slice(-10);
@@ -30,7 +29,7 @@ function sanitizeHistory(input: any[]): ChatMsg[] {
 const CONTACT_INTENT  = /\b(phone|number|email|contact|employee|staff|manager|gm|general manager)\b/i;
 const SALES_INTENT    = /\b(sales?|revenue|net sales|bar sales|daily sales)\b/i;
 const SEARCH_INTENT   = /\b(search|find|look\s*up|lookup|show|list)\b/i;
-const INVOICE_INTENT  = /\binvoice(s)?\b/i;
+const INCOME_INTENT   = /\binvoice(s)?\b/i;
 const PRICE_INTENT    = /\b(how\s*much|price|cost|how\s*much\s*is)\b/i;
 
 const SOURCE_SYNONYMS: Record<string, string> = {
@@ -69,7 +68,7 @@ function cleanQuery(msg: string): { query: string; sources: string[] } {
   q = q.replace(/\b(everything|all|entire|database|records?)\b/g, ' ');
   q = q.replace(/\b(can|could|would|please|show|give|have|need|do|you|me|the|a|an)\b/g, ' ');
 
-  // remove source phrases from the query itself
+  // remove source phrases from the query
   for (const phrase of Object.keys(SOURCE_SYNONYMS)) {
     const rx = new RegExp(`\\b${phrase.replace(/\s+/g, '\\s+')}\\b`, 'g');
     q = q.replace(rx, ' ');
@@ -106,14 +105,14 @@ function parseDateSmart(s: string): string | null {
   return null;
 }
 
-// Update if your location id changes; this is the corrected “double-d” one you validated.
+// Use the corrected “double-d” location id you validated earlier.
 const BANYAN_LOCATION_ID = '2da9f238-3449-41db-b69d-bdbd357d6496';
 
 /* ────────────────────────── Main Route ────────────────────────── */
 
 export async function POST(req: NextRequest) {
   try {
-    // Tolerant auth (don’t hard-fail if session is absent)
+    // Tolerant auth
     let user_uid: string | null = null;
     try {
       const session = await getSession(req, NextResponse.next());
@@ -122,7 +121,7 @@ export async function POST(req: NextRequest) {
       user_uid = null;
     }
 
-    // Ingest body
+    // Parse body → normalized history
     const raw = await req.text();
     let parsed: any = {};
     try { parsed = raw ? JSON.parse(raw) : {}; } catch {}
@@ -137,25 +136,23 @@ export async function POST(req: NextRequest) {
     const lastUserMsg = history[history.length - 1]?.content ?? '';
     if (DEBUG_LOG) console.log('[MERV DEBUG] lastUserMsg:', lastUserMsg);
 
-    // Tenant context (optional)
+    // Tenant (optional)
     let tenant_id: string | null = null;
     if (user_uid) {
       try {
-        const { data: vault } = await supabase
-          .query('select * from vaults_test where user_uid = $1 limit 1', { count: 'exact' } as any)
-          .throwOnError();
-        // Fallback to the standard way if query helper not available in your SDK:
-        // const { data: vault } = await supabase.from('vaults_test').select('*').eq('user_uid', user_uid).maybeSingle();
-        if (Array.isArray(vault) && vault.length) {
+        const { data: vault, error: vErr } = await (supabase
+          .from('vaults_test')
+          .select('*')
+          .eq('user_uid', user_uid)
+          .maybeSingle());
+        if (!vErr && vault) {
           // @ts-ignore
-          tenant_id = (vault[0]?.tenant_id as string) ?? null;
+          tenant_id = (vault?.tenant_id as string) ?? null;
         }
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore */ }
     }
 
-    /* ─────────────── EMPLOYEES: phone/email ─────────────── */
+    /* ───────── EMPLOYEES: phone/email ───────── */
     if (CONTACT_INTENT.test(lastUserMsg)) {
       const nameGuess = extractName(lastUserMsg);
       const cleaned = (nameGuess || lastUserMsg)
@@ -201,12 +198,12 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    /* ─────────────── SALES: robust by date ─────────────── */
+    /* ───────── SALES: robust by date ───────── */
     if (SALES_INTENT.test(lastUserMsg)) {
       const d = parseDateSmart(lastUserMsg) || new Date().toISOString().slice(0, 10);
       if (DEBUG_LOG) console.log('[MERV DEBUG][sales] date:', d);
 
-      type Row = {
+      type SalesRow = {
         date?: string;
         work_date?: string;
         net_sales?: number | null;
@@ -215,66 +212,59 @@ export async function POST(req: NextRequest) {
         comps?: number | null;
         voids?: number | null;
         deposit?: number | string | null;
-      } | null;
+      };
 
-      async function fetchOne<T>(fn: () => Promise<{ data?: T[] | null }>): Promise<T | null> {
-        try {
-          const { data } = await fn();
-          return (data && data.length ? (data[0] as any) : null) as T | null;
-        } catch { return null; }
+      async function firstHit(...queries: Array<() => Promise<any>>): Promise<SalesRow | null> {
+        for (const q of queries) {
+          try {
+            const { data } = await q();
+            if (data && data.length) return data[0] as SalesRow;
+          } catch { /* continue */ }
+        }
+        return null;
       }
 
-      const tryOrder: Array<() => Promise<{ data?: any[] | null }>> = [
-        // daily_sales by date (with / without location)
+      const row = await firstHit(
         () => supabase.from('daily_sales').select('date, net_sales, bar_sales, total_tips, comps, voids, deposit').eq('date', d).eq('location_id', BANYAN_LOCATION_ID).limit(1),
         () => supabase.from('daily_sales').select('date, net_sales, bar_sales, total_tips, comps, voids, deposit').eq('date', d).limit(1),
-        // sales_daily fallbacks
         () => supabase.from('sales_daily').select('work_date, net_sales, bar_sales, total_tips, comps, voids, deposit').eq('work_date', d).eq('location_id', BANYAN_LOCATION_ID).limit(1),
         () => supabase.from('sales_daily').select('work_date, net_sales, bar_sales, total_tips, comps, voids, deposit').eq('work_date', d).limit(1),
-        () => superset(supabase.from('sales_daily').select('date, net_sales, bar_sales, total_tips, comps, voids, deposit').eq('date', d).eq('location_id', BANYAN_LOCATION_ID).limit(1)),
-        () => superset(supabase.from('sales_daily').select('date, net_sales, bar_sales, total_tips, comps, voids, deposit').eq('date', d).limit(1)),
-      ];
-
-      // helper to coerce generic shape
-      function superset(p: any) { return p as Promise<{ data?: any[] | null }>; }
-
-      let row: any = null;
-      for (const step of tryOrder) {
-        const r = await fetchOne<any>(() => step());
-        if (r) { row = r; break; }
-      }
+        () => supabase.from('sales_daily').select('date, net_sales, bar_sales, total_tips, comps, voids, deposit').eq('date', d).eq('location_id', BANYAN_LOCATION_ID).limit(1),
+        () => supabase.from('sales_daily').select('date, net_sales, bar_sales, total_tips, comps, voids, deposit').eq('date', d).limit(1),
+      );
 
       if (!row) {
         return NextResponse.json({
           text: `No sales found for ${d}${BANYAN_LOCATION_ID ? ' (Banyan House)' : ''}.`,
-          role: 'assistant', name: 'Merv', content: `No sales found for ${d}${BANYAN_LOCATION_ID ? ' (Banyan House)' : ''}.`
+          role: 'assistant', name: 'Merv', content: `No sales found for ${d}${BANYAN_LOCATION_ID ? ' (BANYAN House)' : ''}.`
         });
       }
 
       const day = row.date || row.work_date || d;
       const txt =
-        `Sales for ${day}:\n` +
+        `Sales for ${day}\n` +
         `• Net Sales: $${Number(row.net_sales ?? 0).toFixed(2)}\n` +
         `• Bar Sales: $${Number(row.bar_sales ?? 0).toFixed(2)}\n` +
-        (row.total_tips != null ? `• Total Tips: $${Number(row.total_ticks ?? row.total_tips).toFixed(2)}\n` : '') +
+        (row.total_tips != null ? `• Total Tips: $${Number(row.total_tips).f
+toFixed(2)}\n` : '') +
         (row.comps != null ? `• Comps: ${row.comps}\n` : '') +
-        (row.voi
-        ds != null ? `• Voids: ${row.voids}\n` : '') +
+        (row.voids != null ? `• Voids: ${row.voids}\n` : '') +
         (row.deposit != null ? `• Deposit: ${row.deposit}\n` : '');
       return NextResponse.json({ text: txt.trim(), role: 'assistant', name: 'Merv', content: txt.trim() });
     }
 
-    /* ─────────────── INVOICE fallback (natural-language) ─────────────── */
-    if (INVOICE_INTENT.test(lastUserMsg)) {
+    /* ───────── INVOICE fallback (natural-language) ───────── */
+    if (INCOME_INTENT.test(lastUserMsg)) {
       const { query } = cleanQuery(lastUserMsg);
       const src = ['invoices', 'invoice_lines'];
       if (DEBUG_LOG) console.log('[MERV DEBUG][invoice]', { query, src });
 
       const { data, error } = await supabase.rpc('rpc_search_all', {
-        p_tenant: tenant_id ?? null,
-        p_query: query || 'invoice',
-        p_sources: src,
-        p_limit: 12,
+        p_timeline: null, // ignored by function; keep signature stable if variant installed
+        p_tenant:   tenant_id ?? null,
+        p_query:    query || 'invoice',
+        p_sources:  src,
+        p_limit:    12,
       });
 
       if (error) {
@@ -286,18 +276,18 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ text: miss, role: 'assistant', name: 'Merv', content: miss });
       }
 
-      const lines = data.map((r: any) => `• [${r.source_table}] ${r.title} — ${r.snippet}`).join('\n');
+      const lines = (data || []).map((r: any) => `• [${r.source_table}] ${r.title} — ${r.snippet}`).join('\n');
       const txt = `Invoice results for “${query}”:\n${lines}`;
       return NextResponse.json({ text: txt, role: 'assistant', name: 'Merv', content: txt });
     }
 
-    /* ─────────────── PRICE lookup (from search_index) ─────────────── */
+    /* ───────── PRICE lookup (from search_index) ───────── */
     if (PRICE_INTENT.test(lastUserMsg)) {
       const { query } = cleanQuery(lastUserMsg);
       const q = (query || lastUserMsg).trim();
       if (DEBUG_LOG) console.log('[MERV DEBUG][price] q:', q);
 
-      // 1) direct index hit (fast)
+      // 1) direct index hit
       const { data: idx, error: idxErr } = await supabase
         .from('search_index')
         .select('title, meta')
@@ -327,7 +317,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ text: txt.trim(), role: 'assistant', name: 'Merv', content: txt.trim() });
       }
 
-      // 2) fallback: search API (items) and read meta.price
+      // 2) fallback: rpc_search_all on items
       const { data: hits, error: rpcErr } = await supabase.rpc('rpc_search_all', {
         p_tenant: tenant_id ?? null,
         p_query: q,
@@ -336,7 +326,7 @@ export async function POST(req: NextRequest) {
       });
       if (rpcErr) {
         const errTxt = `Price search error: ${rpcErr.message}`;
-        return NextResponse.json({ text: errZip(rpcErr.message), role: 'assistant', name: 'Merv', content: errTxt });
+        return NextResponse.json({ text: errTxt, role: 'assistant', name: 'Merv', content: errTxt });
       }
 
       const rpcHit = (hits || []).find((h: any) => h?.meta && h.meta?.price != null);
@@ -358,13 +348,11 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         text: `I couldn’t find a priced item that matches “${q}”. Try “search items for ${q}” to confirm the exact item text.`,
-        role: 'assistant',
-        name: 'Merv',
-        content: `I couldn’t find a priced item that matches “${q}”. Try “search items for ${q}” to confirm the exact item text.`,
+        role: 'assistant', name: 'Merv', content: `I couldn’t find a priced item that matches “${q}”.`
       });
     }
 
-    /* ───────────────────── GLOBAL SEARCH (explicit) ───────────────────── */
+    /* ───────── GLOBAL SEARCH (explicit) ───────── */
     if (SEARCH_INTENT.test(lastUserMsg)) {
       const { query, sources } = cleanQuery(lastUserMsg);
       const src = sources.length ? sources : null;
@@ -379,7 +367,7 @@ export async function POST(req: NextRequest) {
 
       if (error) {
         const errTxt = `Search error: ${error.message}`;
-        return NextResponse.json({ text: errTxt, role: 'assistant', name: 'Merv', content: errTxt });
+        return NextResponse.json({ text: erratiu(err?.message || 'Search error'), role: 'assistant', name: 'Merv', content: errTxt });
       }
       if (!data?.length) {
         const hint = src ? ` in ${src.join(', ')}` : '';
@@ -392,17 +380,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ text: txt, role: 'assistant', name: 'Merv', content: txt });
     }
 
-    /* ───────────────────── Default to model (concise) ───────────────────── */
+    /* ───────── Default to model (concise) ───────── */
     const systemPrompt = `
-User Profile Summary:
-${tenant_id ? generateV
-aultSummary?.({ user_uid: user_uid, tenant_id }) ?? '' : ''}
-
-${base
-Persona}
-
-You are Merv. Be concise, factual, and owner-friendly.
-If a direct data answer was not found above, answer briefly without inventing numbers.
+${tenant_id ? generateVaultSummary?.({ user_uid: user_uid, tenant_id }) ?? '' : ''}
+You are Merv. Be concise, factual, and owner-friendly. If a direct data answer was not found above, answer briefly without inventing numbers.
 `.trim();
 
     const completion = await openai.chat.completions.create({
@@ -414,19 +395,16 @@ If a direct data answer was not found above, answer briefly without inventing nu
       ],
     });
 
-    const reply = completion.output ? (completion as any).output : completion.choices?.[0]?.message?.content || 'Okay.';
-    return NextResponse.json({ text: String(reply), role: 'assistant', name: 'Merv', content: String(reply) });
+    const fallback = completion.choices?.[0]?.message?.content ?? 'Okay.';
+    return NextResponse.json({ text: String(fallback), role: 'assistant', name: 'Merv', content: String(fallback) });
   } catch (err: any) {
     console.error('[MERV CHAT ERROR]', err);
     const msg = `Error: ${err?.message || String(err)}`;
-    return NextResponse.json({ text: msg, role: 'assistant', name: 'Merv', content: msg }, { status: 2600 });
+    return NextResponse.json({ text: msg, role: 'assistant', name: 'Merv', content: msg }, { status: 500 });
   }
 }
 
-/* simple GET healthcheck */
+/* Healthcheck */
 export async function GET() {
   return NextResponse.json({ ok: true, route: '/api/chat' });
 }
-
-/* small helper for optional error shaping in price fallback */
-function errZip(s: string) { return s; }
