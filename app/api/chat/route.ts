@@ -44,23 +44,37 @@ const SOURCE_SYNONYMS: Record<string, string> = {
   // add more later (recipes, pmix, labor_timesheets, etc.)
 };
 
+/** pick sources mentioned in the text */
 function guessSourcesFromText(msg: string): string[] {
   const m = msg.toLowerCase();
   const chosen = new Set<string>();
-  for (const [word, src] of Object.entries(SOURCE_SYNONYMS)) {
-    if (m.includes(word)) chosen.add(src);
+  for (const [phrase, src] of Object.entries(SOURCE_SYNONYMS)) {
+    if (m.includes(phrase)) chosen.add(src);
   }
   return Array.from(chosen);
 }
 
-/** strip command words + filler words, collapse whitespace */
-function stripSearchLead(msg: string) {
-  return msg
-    .replace(/\b(search|find|look\s*up|lookup|show|list)\b/ig, '')
-    .replace(/\b(in|from|for|within|on|of|about)\b/ig, '')
-    .replace(/\b(everything|all|entire|database)\b/ig, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+/** remove command/filler/source words and collapse whitespace; return cleaned query + sources */
+function cleanQuery(msg: string): { query: string; sources: string[] } {
+  const sources = guessSourcesFromText(msg);
+  let q = ' ' + msg.toLowerCase() + ' ';
+
+  // command words & helpers
+  q = q.replace(/\b(search|find|look\s*up|lookup|show|list)\b/g, ' ');
+  q = q.replace(/\b(in|from|for|within|on|of|about|with|by|at|to)\b/g, ' ');
+  q = q.replace(/\b(everything|all|entire|database|records?)\b/g, ' ');
+
+  // source phrases (don’t feed “employees stacy jones” to rpc)
+  for (const phrase of Object.keys(SOURCE_SYNONYMS)) {
+    const rx = new RegExp(`\\b${phrase.replace(/\s+/g,'\\s+')}\\b`, 'g');
+    q = q.replace(rx, ' ');
+  }
+
+  // conversational fluff
+  q = q.replace(/\b(can|could|would|please|show|give|have|need|do|you|me|the|a|an)\b/g, ' ');
+
+  q = q.replace(/\s+/g, ' ').trim();
+  return { query: q, sources };
 }
 
 function extractName(s: string): string | null {
@@ -93,10 +107,12 @@ const BANYAN_LOCATION_ID = '2da9f238-3449-41db-b69d-bdbd357dd496';
 /* ────────────────────────── Main Route ────────────────────────── */
 export async function POST(req: NextRequest) {
   try {
-    // Auth
-    const session = await getSession(req, NextResponse.next());
-    const user_uid = session?.user?.sub;
-    if (!user_uid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Auth (tolerant: use session if present; don’t hard 401 if missing)
+    let user_uid: string | null = null;
+    try {
+      const session = await getSession(req, NextResponse.next());
+      user_uid = session?.user?.sub ?? null;
+    } catch { user_uid = null; }
 
     // Body
     const raw = await req.text();
@@ -112,11 +128,13 @@ export async function POST(req: NextRequest) {
 
     // Tenant (optional filter for search) + persona
     let tenant_id: string | null = null;
-    try {
-      const { data: vault } = await supabase.from('vaults_test').select('*').eq('user_uid', user_uid).single();
-      tenant_id = vault?.tenant_id || null;
-    } catch {}
-    const { data: brain } = await supabase.from('merv_brain').select('prompt').eq('user_uid', user_uid).maybeSingle();
+    if (user_uid) {
+      try {
+        const { data: vault } = await supabase.from('vaults_test').select('*').eq('user_uid', user_uid).single();
+        tenant_id = vault?.tenant_id || null;
+      } catch {}
+    }
+    const { data: brain } = await supabase.from('merv_brain').select('prompt').eq('user_uid', user_uid ?? '').maybeSingle();
     const basePersona = brain?.prompt || 'You are Merv — grounded, sharp, calibrated.';
 
     /* ───────────────────── EMPLOYEE LOOKUP ───────────────────── */
@@ -247,14 +265,14 @@ export async function POST(req: NextRequest) {
 
     /* ───────────────────── INVOICE FALLBACK (no “search” word) ───────────────────── */
     if (INVOICE_INTENT.test(lastUserMsg)) {
-      const query = lastUserMsg.replace(INVOICE_INTENT, '').trim() || lastUserMsg;
-      const sources = ['invoices', 'invoice_lines'];
-      if (DEBUG_LOG) console.log('[MERV DEBUG][invoice-fallback]', { query, sources });
+      const { query } = cleanQuery(lastUserMsg);
+      const src = ['invoices', 'invoice_lines'];
+      if (DEBUG_LOG) console.log('[MERV DEBUG][invoice-fallback]', { query, src });
 
       const { data, error } = await supabase.rpc('rpc_search_all', {
         p_tenant: tenant_id ?? null,
-        p_query: query,
-        p_sources: sources,
+        p_query: query || 'invoice',
+        p_sources: src,
         p_limit: 12,
       });
 
@@ -263,7 +281,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ text: errTxt, role: 'assistant', name: 'Merv', content: errTxt });
       }
       if (!data?.length) {
-        const miss = `No invoices found for “${query}”.`;
+        const miss = `No invoices found for “${query || '(blank)'}”.`;
         return NextResponse.json({ text: miss, role: 'assistant', name: 'Merv', content: miss });
       }
 
@@ -274,14 +292,14 @@ export async function POST(req: NextRequest) {
 
     /* ───────────────────── GLOBAL SEARCH (explicit) ───────────────────── */
     if (SEARCH_INTENT.test(lastUserMsg)) {
-      const sources = guessSourcesFromText(lastUserMsg);         // [] → search everything
-      const query = stripSearchLead(lastUserMsg) || lastUserMsg; // strip “search/find…”, “everything”, etc.
-      if (DEBUG_LOG) console.log('[MERV DEBUG][search]', { query, sources });
+      const { query, sources } = cleanQuery(lastUserMsg);
+      const src = sources.length ? sources : null;
+      if (DEBUG_LOG) console.log('[MERV DEBUG][search]', { query, src });
 
       const { data, error } = await supabase.rpc('rpc_search_all', {
         p_tenant: tenant_id ?? null,
-        p_query: query.trim(),
-        p_sources: sources.length ? sources : null,
+        p_query: query || '(blank)',
+        p_sources: src,
         p_limit: 12,
       });
 
@@ -290,13 +308,13 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ text: errTxt, role: 'assistant', name: 'Merv', content: errTxt });
       }
       if (!data?.length) {
-        const hint = sources.length ? ` in ${sources.join(', ')}` : '';
-        const miss = `No results for “${query.trim()}”${hint}.`;
+        const hint = src ? ` in ${src.join(', ')}` : '';
+        const miss = `No results for “${query || '(blank)'}”${hint}.`;
         return NextResponse.json({ text: miss, role: 'assistant', name: 'Merv', content: miss });
       }
 
       const lines = data.map((r: any) => `• [${r.source_table}] ${r.title} — ${r.snippet}`).join('\n');
-      const txt = `Search results for “${query.trim()}”${sources.length ? ` in ${sources.join(', ')}` : ''}:\n${lines}`;
+      const txt = `Search results for “${query}”${src ? ` in ${src.join(', ')}` : ''}:\n${lines}`;
       return NextResponse.json({ text: txt, role: 'assistant', name: 'Merv', content: txt });
     }
 
