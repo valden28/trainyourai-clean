@@ -56,13 +56,11 @@ function cleanQuery(msg: string): { query: string; sources: string[] } {
   const sources = guessSourcesFromText(msg);
   let q = ` ${msg.toLowerCase()} `;
 
-  // strip command words / preps / filler
   q = q.replace(/\b(search|find|look\s*up|lookup|show|list)\b/g, ' ');
   q = q.replace(/\b(in|from|for|within|on|of|about|with|by|at|to)\b/g, ' ');
   q = q.replace(/\b(everything|all|entire|database|records?)\b/g, ' ');
   q = q.replace(/\b(can|could|would|please|show|give|have|need|do|you|me|the|a|an)\b/g, ' ');
 
-  // remove source phrases from the query
   for (const phrase of Object.keys(SOURCE_SYNONYMS)) {
     const rx = new RegExp(`\\b${phrase.replace(/\s+/g, '\\s+')}\\b`, 'g');
     q = q.replace(rx, ' ');
@@ -160,10 +158,7 @@ export async function POST(req: NextRequest) {
         .or(ors.join(','))
         .limit(5);
 
-      if (empErr) {
-        const errTxt = `Employee lookup error: ${empErr.message}`;
-        return NextResponse.json({ text: errTxt, role: 'assistant', name: 'Merv', content: errTxt });
-      }
+      if (empErr) return NextResponse.json({ text: `Employee lookup error: ${empErr.message}` });
 
       if (employees && employees.length > 0) {
         const e: any = employees[0];
@@ -178,40 +173,75 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ text: `I couldn’t find ${cleaned || 'that person'} in employees.` });
     }
 
-    /* ───────── SALES: robust by date ───────── */
+    /* ───────── SALES: robust by date (sequential awaits) ───────── */
     if (SALES_INTENT.test(lastUserMsg)) {
       const d = parseDateSmart(lastUserMsg) || new Date().toISOString().slice(0, 10);
       if (DEBUG_LOG) console.log('[MERV DEBUG][sales] date:', d);
 
-      type SalesRow = {
-        date?: string;
-        work_date?: string;
-        net_sales?: number | null;
-        bar_sales?: number | null;
-        total_tips?: number | null;
-        comps?: number | null;
-        voids?: number | null;
-        deposit?: number | string | null;
-      };
+      let row: any = null;
 
-      async function firstHit(...queries: Array<() => Promise<any>>): Promise<SalesRow | null> {
-        for (const q of queries) {
-          try {
-            const { data } = await q();
-            if (data && data.length) return data[0] as SalesRow;
-          } catch { /* continue */ }
+      try {
+        // daily_sales by date with location
+        let r = await supabase
+          .from('daily_sales')
+          .select('date, net_sales, bar_sales, total_tips, comps, voids, deposit')
+          .eq('date', d)
+          .eq('location_id', BANYAN_LOCATION_ID)
+          .limit(1);
+        row = r.data?.[0] ?? null;
+
+        // daily_sales by date (any location)
+        if (!row) {
+          r = await supabase
+            .from('daily_sales')
+            .select('date, net_sales, bar_sales, total_tips, comps, voids, deposit')
+            .eq('date', d)
+            .limit(1);
+          row = r.data?.[0] ?? null;
         }
-        return null;
-      }
 
-      const row = await firstHit(
-        () => supabase.from('daily_sales').select('date, net_sales, bar_sales, total_tips, comps, voids, deposit').eq('date', d).eq('location_id', BANYAN_LOCATION_ID).limit(1),
-        () => supabase.from('daily_sales').select('date, net_sales, bar_sales, total_tips, comps, voids, deposit').eq('date', d).limit(1),
-        () => supabase.from('sales_daily').select('work_date, net_sales, bar_sales, total_tips, comps, voids, deposit').eq('work_date', d).eq('location_id', BANYAN_LOCATION_ID).limit(1),
-        () => supabase.from('sales_daily').select('work_date, net_sales, bar_sales, total_tips, comps, voids, deposit').eq('work_date', d).limit(1),
-        () => supabase.from('sales_daily').select('date, net_sales, bar_sales, total_tips, comps, voids, deposit').eq('date', d).eq('location_id', BANYAN_LOCATION_ID).limit(1),
-        () => supabase.from('sales_daily').select('date, net_sales, bar_sales, total_tips, comps, voids, deposit').eq('date', d).limit(1),
-      );
+        // sales_daily by work_date with location
+        if (!row) {
+          r = await supabase
+            .from('sales_daily')
+            .select('work_date, net_sales, bar_sales, total_tips, comps, voids, deposit')
+            .eq('work_date', d)
+            .eq('location_id', BANYAN_LOCATION_ID)
+            .limit(1);
+          row = r.data?.[0] ?? null;
+        }
+
+        // sales_daily by work_date (any location)
+        if (!row) {
+          r = await supabase
+            .from('sales_daily')
+            .select('work_date, net_sales, bar_sales, total_tips, comps, voids, deposit')
+            .eq('work_date', d)
+            .limit(1);
+          row = r.data?.[0] ?? null;
+        }
+
+        // sales_daily by date with location
+        if (!row) {
+          r = await supabase
+            .from('sales_daily')
+            .select('date, net_sales, bar_sales, total_tips, comps, voids, deposit')
+            .eq('date', d)
+            .eq('location_id', BANYAN_LOCATION_ID)
+            .limit(1);
+          row = r.data?.[0] ?? null;
+        }
+
+        // sales_daily by date (any location)
+        if (!row) {
+          r = await supabase
+            .from('sales_daily')
+            .select('date, net_sales, bar_sales, total_tips, comps, voids, deposit')
+            .eq('date', d)
+            .limit(1);
+          row = r.data?.[0] ?? null;
+        }
+      } catch { /* ignore */ }
 
       if (!row) {
         return NextResponse.json({ text: `No sales found for ${d}${BANYAN_LOCATION_ID ? ' (Banyan House)' : ''}.` });
@@ -272,6 +302,7 @@ export async function POST(req: NextRequest) {
         const ts    = m.price_timestamp || null;
         const vendor= m.price_vendor || null;
         const title = indexHit.title || 'item';
+
         const txt =
           `${title}\n` +
           `• Price: ${Number.isFinite(price) ? `$${price.toFixed(2)}` : String(m.price)}\n` +
@@ -296,6 +327,7 @@ export async function POST(req: NextRequest) {
         const ts    = m.price_timestamp || null;
         const vendor= m.price_vendor || null;
         const title = rpcHit.title || 'item';
+
         const txt =
           `${title}\n` +
           `• Price: ${Number.isFinite(price) ? `$${price.toFixed(2)}` : String(m.price)}\n` +
