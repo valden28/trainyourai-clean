@@ -267,6 +267,7 @@ export async function POST(req: NextRequest) {
     if (INVOICE_INTENT.test(lastUserMsg)) {
       const { query } = cleanQuery(lastUserMsg);
       const src = ['invoices', 'invoice_lines'];
+      const PRICE_INTENT = /\b(how\s*much|price|cost|how\s*much\s*is)\b/i;
       if (DEBUG_LOG) console.log('[MERV DEBUG][invoice-fallback]', { query, src });
 
       const { data, error } = await supabase.rpc('rpc_search_all', {
@@ -290,6 +291,77 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ text: txt, role: 'assistant', name: 'Merv', content: txt });
     }
 
+  /* ───────────────────── PRICE LOOKUP (from search_index) ───────────────────── */
+if (PRICE_INTENT.test(lastUserMsg)) {
+  const { query } = cleanQuery(lastUserMsg);
+  const q = (query || lastUserMsg).trim();
+  if (DEBUG_LOG) console.log('[MERV DEBUG][price] query:', q);
+
+  // 1) Direct hit from the index (fastest, avoids the model path)
+  const { data: idx, error: errIdx } = await supabase
+    .from('search_index')
+    .select('title, meta')
+    .eq('source_table', 'items')
+    .or(`title.ilike.%${q}%,snippet.ilike.%${q}%`)
+    .limit(5);
+
+  if (errIdx) {
+    const errTxt = `Price lookup error: ${errIdx.message}`;
+    return NextResponse.json({ text: errTxt, role: 'assistant', name: 'Merv', content: errTxt });
+  }
+
+  const withPrice = (idx || []).filter(r => r?.meta && (r.meta as any).price != null);
+  if (withPrice.length) {
+    const r = withPrice[0];
+    const m = r.meta as any;
+    const price = Number(m.price);
+    const ts    = m.price_timestamp || null;
+    const vendor= m.price_vendor || null;
+
+    const title = r.title || 'item';
+    const txt =
+      `${title}\n` +
+      `• Price: ${isFinite(price) ? `$${price.toFixed(2)}` : String(m.price)}\n` +
+      (vendor ? `• Vendor: ${vendor}\n` : '') +
+      (ts ? `• As of: ${ts}\n` : '');
+    if (DEBUG_LOG) console.log('[MERV DEBUG][price] index hit:', { title, price, ts });
+    return NextResponse.json({ text: txt.trim(), role: 'assistant', name: 'Merv', content: txt.trim() });
+  }
+
+  // 2) Fallback: ask the universal search for items, then read meta.price
+  const { data: hits, error: errRpc } = await supabase.rpc('rpc_search_all', {
+    p_tenant: tenant_id ?? null,
+    p_query: q,
+    p_sources: ['items'],
+    p_limit: 5,
+  });
+
+  if (errRpc) {
+    const errTxt = `Price search error: ${errRpc.message}`;
+    return NextResponse.json({ text: errTxt, role: 'assistant', name: 'Merv', content: errTxt });
+  }
+
+  const fromRpc = (hits || []).find(h => h?.meta && (h.meta as any).price != null);
+  if (fromRpc) {
+    const m = fromRpc.meta as any;
+    const price = Number(m.price);
+    const ts    = m.price_timestamp || null;
+    const vendor= m.price_vendor || null;
+    const title = fromRpc.title || 'item';
+    const txt =
+      `${title}\n` +
+      `• Price: ${isFinite(price) ? `$${price.toFixed(2)}` : String(m.price)}\n` +
+      (vendor ? `• Vendor: ${vendor}\n` : '') +
+      (ts ? `• As of: ${ts}\n` : '');
+    if (DEBUG_LOG) console.log('[MERV DEBUG][price] rpc hit:', { title, price, ts });
+    return NextResponse.json({ text: txt.trim(), role: 'assistant', name: 'Merv', content: txt.trim() });
+  }
+
+  // 3) No priced item found
+  const miss = `I couldn’t find a priced item that matches “${q}”. Try “search items for ${q}” to confirm the exact item text.`;
+  return NextResponse.json({ text: miss, role: 'assistant', name: 'Merv', content: miss });
+}
+      
     /* ───────────────────── GLOBAL SEARCH (explicit) ───────────────────── */
     if (SEARCH_INTENT.test(lastUserMsg)) {
       const { query, sources } = cleanQuery(lastUserMsg);
