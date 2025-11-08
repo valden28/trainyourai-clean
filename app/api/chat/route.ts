@@ -97,7 +97,7 @@ function parseDateSmart(s: string): string | null {
   return null;
 }
 
-// ✅ Correct double-d UUID you validated
+// ✅ Correct double-d UUID you validated in the DB (update if needed)
 const BANYAN_LOCATION_ID = '2da9f238-3449-41db-b69d-bdbd357dd496';
 
 /* ────────────────────────── Main Route ────────────────────────── */
@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ text: `I couldn’t find ${cleaned || 'that person'} in employees.` });
     }
 
-    /* ───────── SALES: robust by date (sequential awaits) ───────── */
+    /* ───────── SALES: robust by date (sequential awaits; no TS shape clash) ───────── */
     if (SALES_INTENT.test(lastUserMsg)) {
       const d = parseDateSmart(lastUserMsg) || new Date().toISOString().slice(0, 10);
       if (DEBUG_LOG) console.log('[MERV DEBUG][sales] date:', d);
@@ -182,64 +182,64 @@ export async function POST(req: NextRequest) {
 
       try {
         // daily_sales by date with location
-        let r = await supabase
+        let r1 = await supabase
           .from('daily_sales')
           .select('date, net_sales, bar_sales, total_tips, comps, voids, deposit')
           .eq('date', d)
           .eq('location_id', BANYAN_LOCATION_ID)
           .limit(1);
-        row = r.data?.[0] ?? null;
+        row = r1.data?.[0] ?? null;
 
         // daily_sales by date (any location)
         if (!row) {
-          r = await supabase
+          let r2 = await supabase
             .from('daily_sales')
             .select('date, net_sales, bar_sales, total_tips, comps, voids, deposit')
             .eq('date', d)
             .limit(1);
-          row = r.data?.[0] ?? null;
+          row = r2.data?.[0] ?? null;
         }
 
         // sales_daily by work_date with location
         if (!row) {
-          r = await supabase
+          let r3 = await supabase
             .from('sales_daily')
             .select('work_date, net_sales, bar_sales, total_tips, comps, voids, deposit')
             .eq('work_date', d)
             .eq('location_id', BANYAN_LOCATION_ID)
             .limit(1);
-          row = r.data?.[0] ?? null;
+          row = r3.data?.[0] ?? null;
         }
 
         // sales_daily by work_date (any location)
         if (!row) {
-          r = await supabase
+          let r4 = await supabase
             .from('sales_daily')
             .select('work_date, net_sales, bar_sales, total_tips, comps, voids, deposit')
             .eq('work_date', d)
             .limit(1);
-          row = r.data?.[0] ?? null;
+          row = r4.data?.[0] ?? null;
         }
 
         // sales_daily by date with location
         if (!row) {
-          r = await supabase
+          let r5 = await supabase
             .from('sales_daily')
             .select('date, net_sales, bar_sales, total_tips, comps, voids, deposit')
             .eq('date', d)
             .eq('location_id', BANYAN_LOCATION_ID)
             .limit(1);
-          row = r.data?.[0] ?? null;
+          row = r5.data?.[0] ?? null;
         }
 
         // sales_daily by date (any location)
         if (!row) {
-          r = await supabase
+          let r6 = await supabase
             .from('sales_daily')
             .select('date, net_sales, bar_sales, total_tips, comps, voids, deposit')
             .eq('date', d)
             .limit(1);
-          row = r.data?.[0] ?? null;
+          row = r6.data?.[0] ?? null;
         }
       } catch { /* ignore */ }
 
