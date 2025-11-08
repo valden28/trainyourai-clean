@@ -29,23 +29,17 @@ function sanitizeHistory(input: any[]): ChatMsg[] {
 const CONTACT_INTENT  = /\b(phone|number|email|contact|employee|staff|manager|gm|general manager)\b/i;
 const SALES_INTENT    = /\b(sales?|revenue|net sales|bar sales|daily sales)\b/i;
 const SEARCH_INTENT   = /\b(search|find|look\s*up|lookup|show|list)\b/i;
-const INCOME_INTENT   = /\binvoice(s)?\b/i;
+const INVOICE_INTENT  = /\binvoice(s)?\b/i;
 const PRICE_INTENT    = /\b(how\s*much|price|cost|how\s*much\s*is)\b/i;
 
 const SOURCE_SYNONYMS: Record<string, string> = {
-  // employees
   employee: 'employees', staff: 'employees', manager: 'employees', gm: 'employees',
-  // items & pricing
   item: 'items', items: 'items', 'item book': 'items', sku: 'items', cbi: 'items',
-  'item price': 'item_prices', 'contract': 'item_prices', 'contract price': 'item_prices',
-  // invoices
+  'item price': 'item_prices', contract: 'item_prices', 'contract price': 'item_prices',
   invoice: 'invoices', invoices: 'invoices',
   'invoice line': 'invoice_lines', 'invoice lines': 'invoice_lines', line: 'invoice_lines',
-  // schedules
   schedule: 'schedules', schedules: 'schedules', shift: 'schedules',
-  // sales
   sale: 'daily_sales', sales: 'daily_sales', 'daily sales': 'daily_sales',
-  // inventory
   inventory: 'inventory_counts', 'inventory count': 'inventory_counts', 'inventory counts': 'inventory_counts',
 };
 
@@ -105,8 +99,8 @@ function parseDateSmart(s: string): string | null {
   return null;
 }
 
-// Use the corrected “double-d” location id you validated earlier.
-const BANYAN_LOCATION_ID = '2da9f238-3449-41db-b69d-bdbd357d6496';
+// ✅ Correct double-d UUID you validated
+const BANYAN_LOCATION_ID = '2da9f238-3449-41db-b69d-bdbd357dd496';
 
 /* ────────────────────────── Main Route ────────────────────────── */
 
@@ -117,11 +111,9 @@ export async function POST(req: NextRequest) {
     try {
       const session = await getSession(req, NextResponse.next());
       user_uid = session?.user?.sub ?? null;
-    } catch {
-      user_uid = null;
-    }
+    } catch { user_uid = null; }
 
-    // Parse body → normalized history
+    // Parse body → history
     const raw = await req.text();
     let parsed: any = {};
     try { parsed = raw ? JSON.parse(raw) : {}; } catch {}
@@ -129,9 +121,7 @@ export async function POST(req: NextRequest) {
     if (!history.length && typeof parsed?.message === 'string' && parsed.message.trim()) {
       history = [{ role: 'user', content: parsed.message.trim() }];
     }
-    if (!history.length) {
-      return NextResponse.json({ error: 'Missing messages' }, { status: 400 });
-    }
+    if (!history.length) return NextResponse.json({ error: 'Missing messages' }, { status: 400 });
 
     const lastUserMsg = history[history.length - 1]?.content ?? '';
     if (DEBUG_LOG) console.log('[MERV DEBUG] lastUserMsg:', lastUserMsg);
@@ -139,17 +129,12 @@ export async function POST(req: NextRequest) {
     // Tenant (optional)
     let tenant_id: string | null = null;
     if (user_uid) {
-      try {
-        const { data: vault, error: vErr } = await (supabase
-          .from('vaults_test')
-          .select('*')
-          .eq('user_uid', user_uid)
-          .maybeSingle());
-        if (!vErr && vault) {
-          // @ts-ignore
-          tenant_id = (vault?.tenant_id as string) ?? null;
-        }
-      } catch { /* ignore */ }
+      const { data: vault } = await supabase
+        .from('vaults_test')
+        .select('*')
+        .eq('user_uid', user_uid)
+        .maybeSingle();
+      if (vault) tenant_id = (vault as any).tenant_id ?? null;
     }
 
     /* ───────── EMPLOYEES: phone/email ───────── */
@@ -187,15 +172,10 @@ export async function POST(req: NextRequest) {
           `${full}\n` +
           (e.email ? `• Email: ${e.email}\n` : '') +
           (e.phone ? `• Phone: ${e.phone}\n` : '');
-        return NextResponse.json({ text: txt.trim(), role: 'assistant', name: 'Merv', content: txt.trim() });
+        return NextResponse.json({ text: txt.trim() });
       }
 
-      return NextResponse.json({
-        text: `I couldn’t find ${cleaned || 'that person'} in employees.`,
-        role: 'assistant',
-        name: 'Merv',
-        content: `I couldn’t find ${cleaned || 'that person'} in employees.`,
-      });
+      return NextResponse.json({ text: `I couldn’t find ${cleaned || 'that person'} in employees.` });
     }
 
     /* ───────── SALES: robust by date ───────── */
@@ -234,10 +214,7 @@ export async function POST(req: NextRequest) {
       );
 
       if (!row) {
-        return NextResponse.json({
-          text: `No sales found for ${d}${BANYAN_LOCATION_ID ? ' (Banyan House)' : ''}.`,
-          role: 'assistant', name: 'Merv', content: `No sales found for ${d}${BANYAN_LOCATION_ID ? ' (BANYAN House)' : ''}.`
-        });
+        return NextResponse.json({ text: `No sales found for ${d}${BANYAN_LOCATION_ID ? ' (Banyan House)' : ''}.` });
       }
 
       const day = row.date || row.work_date || d;
@@ -245,40 +222,31 @@ export async function POST(req: NextRequest) {
         `Sales for ${day}\n` +
         `• Net Sales: $${Number(row.net_sales ?? 0).toFixed(2)}\n` +
         `• Bar Sales: $${Number(row.bar_sales ?? 0).toFixed(2)}\n` +
-        (row.total_tips != null ? `• Total Tips: $${Number(row.total_tips).f
-toFixed(2)}\n` : '') +
+        (row.total_tips != null ? `• Total Tips: $${Number(row.total_tips).toFixed(2)}\n` : '') +
         (row.comps != null ? `• Comps: ${row.comps}\n` : '') +
         (row.voids != null ? `• Voids: ${row.voids}\n` : '') +
         (row.deposit != null ? `• Deposit: ${row.deposit}\n` : '');
-      return NextResponse.json({ text: txt.trim(), role: 'assistant', name: 'Merv', content: txt.trim() });
+      return NextResponse.json({ text: txt.trim() });
     }
 
     /* ───────── INVOICE fallback (natural-language) ───────── */
-    if (INCOME_INTENT.test(lastUserMsg)) {
+    if (INVOICE_INTENT.test(lastUserMsg)) {
       const { query } = cleanQuery(lastUserMsg);
       const src = ['invoices', 'invoice_lines'];
       if (DEBUG_LOG) console.log('[MERV DEBUG][invoice]', { query, src });
 
       const { data, error } = await supabase.rpc('rpc_search_all', {
-        p_timeline: null, // ignored by function; keep signature stable if variant installed
-        p_tenant:   tenant_id ?? null,
-        p_query:    query || 'invoice',
-        p_sources:  src,
-        p_limit:    12,
+        p_tenant: tenant_id ?? null,
+        p_query: query || 'invoice',
+        p_sources: src,
+        p_limit: 12,
       });
 
-      if (error) {
-        const errTxt = `Search error: ${error.message}`;
-        return NextResponse.json({ text: errTxt, role: 'assistant', name: 'Merv', content: errTxt });
-      }
-      if (!data?.length) {
-        const miss = `No invoices found for “${query || '(blank)'}”.`;
-        return NextResponse.json({ text: miss, role: 'assistant', name: 'Merv', content: miss });
-      }
+      if (error) return NextResponse.json({ text: `Search error: ${error.message}` });
+      if (!data?.length) return NextResponse.json({ text: `No invoices found for “${query || '(blank)'}”.` });
 
       const lines = (data || []).map((r: any) => `• [${r.source_table}] ${r.title} — ${r.snippet}`).join('\n');
-      const txt = `Invoice results for “${query}”:\n${lines}`;
-      return NextResponse.json({ text: txt, role: 'assistant', name: 'Merv', content: txt });
+      return NextResponse.json({ text: `Invoice results for “${query}”:\n${lines}` });
     }
 
     /* ───────── PRICE lookup (from search_index) ───────── */
@@ -295,10 +263,7 @@ toFixed(2)}\n` : '') +
         .or(`title.ilike.%${q}%,snippet.ilike.%${q}%`)
         .limit(5);
 
-      if (idxErr) {
-        const errTxt = 'Price lookup error: ' + idxErr.message;
-        return NextResponse.json({ text: errTxt, role: 'assistant', name: 'Merv', content: errTxt });
-      }
+      if (idxErr) return NextResponse.json({ text: `Price lookup error: ${idxErr.message}` });
 
       const indexHit = (idx || []).find((r: any) => r?.meta && (r as any).meta?.price != null);
       if (indexHit) {
@@ -307,14 +272,12 @@ toFixed(2)}\n` : '') +
         const ts    = m.price_timestamp || null;
         const vendor= m.price_vendor || null;
         const title = indexHit.title || 'item';
-
         const txt =
           `${title}\n` +
           `• Price: ${Number.isFinite(price) ? `$${price.toFixed(2)}` : String(m.price)}\n` +
           (vendor ? `• Vendor: ${vendor}\n` : '') +
           (ts ? `• As of: ${ts}\n` : '');
-        if (DEBUG_LOG) console.log('[MERV DEBUG][price] index hit');
-        return NextResponse.json({ text: txt.trim(), role: 'assistant', name: 'Merv', content: txt.trim() });
+        return NextResponse.json({ text: txt.trim() });
       }
 
       // 2) fallback: rpc_search_all on items
@@ -324,10 +287,7 @@ toFixed(2)}\n` : '') +
         p_sources: ['items'],
         p_limit: 5,
       });
-      if (rpcErr) {
-        const errTxt = `Price search error: ${rpcErr.message}`;
-        return NextResponse.json({ text: errTxt, role: 'assistant', name: 'Merv', content: errTxt });
-      }
+      if (rpcErr) return NextResponse.json({ text: `Price search error: ${rpcErr.message}` });
 
       const rpcHit = (hits || []).find((h: any) => h?.meta && h.meta?.price != null);
       if (rpcHit) {
@@ -336,20 +296,15 @@ toFixed(2)}\n` : '') +
         const ts    = m.price_timestamp || null;
         const vendor= m.price_vendor || null;
         const title = rpcHit.title || 'item';
-
         const txt =
           `${title}\n` +
           `• Price: ${Number.isFinite(price) ? `$${price.toFixed(2)}` : String(m.price)}\n` +
           (vendor ? `• Vendor: ${vendor}\n` : '') +
           (ts ? `• As of: ${ts}\n` : '');
-        if (DEBUG_LOG) console.log('[MERV DEBUG][price] rpc hit');
-        return NextResponse.json({ text: txt.trim(), role: 'assistant', name: 'Merv', content: txt.trim() });
+        return NextResponse.json({ text: txt.trim() });
       }
 
-      return NextResponse.json({
-        text: `I couldn’t find a priced item that matches “${q}”. Try “search items for ${q}” to confirm the exact item text.`,
-        role: 'assistant', name: 'Merv', content: `I couldn’t find a priced item that matches “${q}”.`
-      });
+      return NextResponse.json({ text: `I couldn’t find a priced item that matches “${q}”.` });
     }
 
     /* ───────── GLOBAL SEARCH (explicit) ───────── */
@@ -365,19 +320,11 @@ toFixed(2)}\n` : '') +
         p_limit: 12,
       });
 
-      if (error) {
-        const errTxt = `Search error: ${error.message}`;
-        return NextResponse.json({ text: erratiu(err?.message || 'Search error'), role: 'assistant', name: 'Merv', content: errTxt });
-      }
-      if (!data?.length) {
-        const hint = src ? ` in ${src.join(', ')}` : '';
-        const miss = `No results for “${query || '(blank)'}”${hint}.`;
-        return NextResponse.json({ text: miss, role: 'assistant', name: 'Merv', content: miss });
-      }
+      if (error) return NextResponse.json({ text: `Search error: ${error.message}` });
+      if (!data?.length) return NextResponse.json({ text: `No results for “${query || '(blank)'}”${src ? ` in ${src.join(', ')}` : ''}.` });
 
       const lines = (data || []).map((r: any) => `• [${r.source_table}] ${r.title} — ${r.snippet}`).join('\n');
-      const txt = `Search results for “${query}”${src ? ` in ${src.join(', ')}` : ''}:\n${lines}`;
-      return NextResponse.json({ text: txt, role: 'assistant', name: 'Merv', content: txt });
+      return NextResponse.json({ text: `Search results for “${query}”${src ? ` in ${src.join(', ')}` : ''}:\n${lines}` });
     }
 
     /* ───────── Default to model (concise) ───────── */
@@ -389,18 +336,15 @@ You are Merv. Be concise, factual, and owner-friendly. If a direct data answer w
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0.2,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...history,
-      ],
+      messages: [{ role: 'system', content: systemPrompt }, ...history],
     });
 
     const fallback = completion.choices?.[0]?.message?.content ?? 'Okay.';
-    return NextResponse.json({ text: String(fallback), role: 'assistant', name: 'Merv', content: String(fallback) });
+    return NextResponse.json({ text: String(fallback) });
   } catch (err: any) {
     console.error('[MERV CHAT ERROR]', err);
     const msg = `Error: ${err?.message || String(err)}`;
-    return NextResponse.json({ text: msg, role: 'assistant', name: 'Merv', content: msg }, { status: 500 });
+    return NextResponse.json({ text: msg }, { status: 500 });
   }
 }
 
