@@ -10,7 +10,7 @@ const DEBUG_LOG = true;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-/* ────────────────────────── Helpers & Intent regex ────────────────────────── */
+/* ────────────────────────── Helpers & intents ────────────────────────── */
 
 type ChatMsg = { role: 'user' | 'assistant' | 'system'; content: string };
 
@@ -26,11 +26,11 @@ function sanitizeHistory(input: any[]): ChatMsg[] {
     .slice(-10);
 }
 
-const CONTACT_INTENT  = /\b(phone|number|email|contact|employee|staff|manager|gm|general manager)\b/i;
-const SALES_INTENT    = /\b(sales?|revenue|net sales|bar sales|daily sales)\b/i;
-const SEARCH_INTENT   = /\b(search|find|look\s*up|lookup|show|list)\b/i;
-const INVOICE_INTENT  = /\binvoice(s)?\b/i;
-const PRICE_INTENT    = /\b(how\s*much|price|cost|how\s*much\s*is)\b/i;
+const CONTACT_INTENT = /\b(phone|number|email|contact|employee|staff|manager|gm|general manager)\b/i;
+const SALES_INTENT   = /\b(sales?|revenue|net sales|bar sales|daily sales)\b/i;
+const SEARCH_INTENT  = /\b(search|find|look\s*up|lookup|show|list)\b/i;
+const INVOICE_INTENT = /\binvoice(s)?\b/i;
+const PRICE_INTENT   = /\b(how\s*much|price|cost|how\s*much\s*is)\b/i;
 
 const SOURCE_SYNONYMS: Record<string, string> = {
   employee: 'employees', staff: 'employees', manager: 'employees', gm: 'employees',
@@ -56,11 +56,13 @@ function cleanQuery(msg: string): { query: string; sources: string[] } {
   const sources = guessSourcesFromText(msg);
   let q = ` ${msg.toLowerCase()} `;
 
+  // strip command words / preps / filler (note we include "i")
   q = q.replace(/\b(search|find|look\s*up|lookup|show|list)\b/g, ' ');
   q = q.replace(/\b(in|from|for|within|on|of|about|with|by|at|to)\b/g, ' ');
   q = q.replace(/\b(everything|all|entire|database|records?)\b/g, ' ');
-  q = q.replace(/\b(can|could|would|please|show|give|have|need|do|you|me|the|a|an)\b/g, ' ');
+  q = q.replace(/\b(i|can|could|would|please|show|give|have|need|do|you|me|the|a|an)\b/g, ' ');
 
+  // remove source phrases from the query
   for (const phrase of Object.keys(SOURCE_SYNONYMS)) {
     const rx = new RegExp(`\\b${phrase.replace(/\s+/g, '\\s+')}\\b`, 'g');
     q = q.replace(rx, ' ');
@@ -97,7 +99,7 @@ function parseDateSmart(s: string): string | null {
   return null;
 }
 
-// ✅ Correct double-d UUID you validated in the DB (update if needed)
+// ✅ Use the corrected double-d UUID you validated
 const BANYAN_LOCATION_ID = '2da9f238-3449-41db-b69d-bdbd357dd496';
 
 /* ────────────────────────── Main Route ────────────────────────── */
@@ -144,7 +146,7 @@ export async function POST(req: NextRequest) {
         .trim();
 
       const tokens = cleaned.split(' ').filter((t) => t.length > 1).slice(0, 3);
-      if (DEBUG_LOG) console.log('[MERV DEBUG][employees] query tokens:', tokens);
+      if (DEBUG_LOG) console.log('[MERV DEBUG][employees] tokens:', tokens);
 
       const ors: string[] = [];
       if (cleaned) ors.push(`email.ilike.%${cleaned}%`);
@@ -173,7 +175,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ text: `I couldn’t find ${cleaned || 'that person'} in employees.` });
     }
 
-    /* ───────── SALES: robust by date (sequential awaits; no TS shape clash) ───────── */
+    /* ───────── SALES: robust by date (sequential awaits) ───────── */
     if (SALES_INTENT.test(lastUserMsg)) {
       const d = parseDateSmart(lastUserMsg) || new Date().toISOString().slice(0, 10);
       if (DEBUG_LOG) console.log('[MERV DEBUG][sales] date:', d);
@@ -259,50 +261,146 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ text: txt.trim() });
     }
 
-    /* ───────── INVOICE fallback (natural-language) ───────── */
+    /* ───────── INVOICE fallback (ranked & pretty) ───────── */
     if (INVOICE_INTENT.test(lastUserMsg)) {
       const { query } = cleanQuery(lastUserMsg);
-      const src = ['invoices', 'invoice_lines'];
-      if (DEBUG_LOG) console.log('[MERV DEBUG][invoice]', { query, src });
+      const q = (query || lastUserMsg).trim();
+
+      const vendorHints = ['rndc', 'republic national', 'republic national distributing'];
 
       const { data, error } = await supabase.rpc('rpc_search_all', {
         p_tenant: tenant_id ?? null,
-        p_query: query || 'invoice',
-        p_sources: src,
-        p_limit: 12,
+        p_query: q || 'invoice',
+        p_sources: ['invoices', 'invoice_lines'],
+        p_limit: 50,
       });
 
       if (error) return NextResponse.json({ text: `Search error: ${error.message}` });
-      if (!data?.length) return NextResponse.json({ text: `No invoices found for “${query || '(blank)'}”.` });
+      if (!data?.length) return NextResponse.json({ text: `No invoices found for “${q || '(blank)'}”.` });
 
-      const lines = (data || []).map((r: any) => `• [${r.source_table}] ${r.title} — ${r.snippet}`).join('\n');
-      return NextResponse.json({ text: `Invoice results for “${query}”:\n${lines}` });
+      const tokens = q.toLowerCase().split(/\s+/).filter(t => t.length > 1);
+
+      function scoreRow(r: any): number {
+        const title = (r.title || '').toLowerCase();
+        const snippet = (r.snippet || '').toLowerCase();
+        const meta = (r.meta || {}) as any;
+
+        let s = 0;
+        const allText = `${title} ${snippet} ${String(meta.vendor || meta.supplier || meta.vendor_name || '')}`.toLowerCase();
+        if (vendorHints.some(v => allText.includes(v))) s += 3;
+        for (const t of tokens) if (title.includes(t) || snippet.includes(t)) s += 1;
+
+        let recency = 0;
+        const dt = (meta.invoice_date || meta.date || meta.created_at || meta.updated_at) as string | undefined;
+        if (dt) {
+          const days = Math.max(0, Math.floor((Date.now() - new Date(dt).getTime()) / 86400000));
+          if (days <= 30) recency = 2; else if (days <= 90) recency = 1;
+        }
+        s += recency;
+        return s;
+      }
+
+      function money(n: any) { const v = Number(n); return Number.isFinite(v) ? `$${v.toFixed(2)}` : String(n ?? ''); }
+
+      function fmtInvoice(r: any): string {
+        const m = (r.meta || {}) as any;
+        if (r.source_table === 'invoices') {
+          const inv = m.invoice_no || m.invoice_number || m.number || '';
+          const vendor = m.vendor || m.supplier || '';
+          const date = m.invoice_date || m.date || '';
+          const total = m.total != null ? money(m.total) : '';
+          const core = [inv && `inv=${inv}`, vendor && `vendor=${vendor}`, date && `date=${date}`, total && `total=${total}`]
+            .filter(Boolean).join(' ');
+          return `• [invoices] ${r.title || 'Invoice'} — ${core}`;
+        } else {
+          const inv = m.invoice_no || m.invoice_number || '';
+          const vendor = m.vendor || m.supplier || '';
+          const date = m.invoice_date || m.date || '';
+          const qty = m.qty ?? m.quantity ?? '';
+          const cost = m.extended_cost != null ? money(m.extended_cost) : '';
+          const sku = m.sku || m.item_code || '';
+          const core = [
+            (r.title || '').slice(0, 140),
+            sku && `sku=${sku}`,
+            qty && `qty=${qty}`,
+            cost && `cost=${cost}`,
+            inv && `inv=${inv}`,
+            vendor && `vendor=${vendor}`,
+            date && `date=${date}`
+          ].filter(Boolean).join(' ');
+          return `• [invoice_lines] ${core}`;
+        }
+      }
+
+      const askedForRndc = vendorHints.some(v => q.toLowerCase().includes(v));
+      let rows = (data || []).slice();
+      if (askedForRndc) {
+        const filtered = rows.filter((r: any) => {
+          const m = (r.meta || {}) as any;
+          const txt = `${r.title || ''} ${r.snippet || ''} ${m.vendor || m.supplier || ''}`.toLowerCase();
+          return vendorHints.some(v => txt.includes(v));
+        });
+        if (filtered.length) rows = filtered;
+      }
+
+      rows.sort((a: any, b: any) => scoreRow(b) - scoreRow(a));
+      const top = [...rows.filter((r: any) => r.source_table === 'invoices'),
+                  ...rows.filter((r: any) => r.source_table === 'invoice_lines')].slice(0, 8);
+
+      const lines = top.map(fmtInvoice).join('\n');
+      const header = askedForRndc ? `Invoice results for “${q}” (RNDC):` : `Invoice results for “${q}”:`;
+      return NextResponse.json({ text: `${header}\n${lines}` });
     }
 
-    /* ───────── PRICE lookup (from search_index) ───────── */
+    /* ───────── PRICE: from search_index (with token-AND) ───────── */
     if (PRICE_INTENT.test(lastUserMsg)) {
       const { query } = cleanQuery(lastUserMsg);
       const q = (query || lastUserMsg).trim();
       if (DEBUG_LOG) console.log('[MERV DEBUG][price] q:', q);
 
-      // 1) direct index hit
+      const tokens = q.toLowerCase().split(/\s+/).filter(t => t && t.length > 1);
+
+      // 1) direct index hit (substring)
       const { data: idx, error: idxErr } = await supabase
         .from('search_index')
         .select('title, meta')
         .eq('source_table', 'items')
         .or(`title.ilike.%${q}%,snippet.ilike.%${q}%`)
-        .limit(5);
+        .limit(15);
 
       if (idxErr) return NextResponse.json({ text: `Price lookup error: ${idxErr.message}` });
 
-      const indexHit = (idx || []).find((r: any) => r?.meta && (r as any).meta?.price != null);
-      if (indexHit) {
-        const m: any = indexHit.meta || {};
+      let hit: any = (idx || []).find((r: any) => r?.meta && (r as any).meta?.price != null);
+
+      // 2) token-AND pass across priced items
+      if (!hit) {
+        const { data: allIdx } = await supabase
+          .from('search_index')
+          .select('title, meta')
+          .eq('source_table', 'items')
+          .limit(200);
+
+        if (allIdx && allIdx.length) {
+          const candidates = allIdx
+            .filter((r: any) => r?.meta && (r as any).meta?.price != null)
+            .map((r: any) => {
+              const title = (r.title || '').toLowerCase();
+              const score = tokens.reduce((acc, t) => acc + (title.includes(t) ? 1 : 0), 0);
+              return { r, score };
+            })
+            .filter(x => x.score > 0)
+            .sort((a, b) => b.score - a.score);
+
+          hit = candidates[0]?.r || null;
+        }
+      }
+
+      if (hit) {
+        const m: any = hit.meta || {};
         const price = Number(m.price);
         const ts    = m.price_timestamp || null;
         const vendor= m.price_vendor || null;
-        const title = indexHit.title || 'item';
-
+        const title = hit.title || 'item';
         const txt =
           `${title}\n` +
           `• Price: ${Number.isFinite(price) ? `$${price.toFixed(2)}` : String(m.price)}\n` +
@@ -311,12 +409,12 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ text: txt.trim() });
       }
 
-      // 2) fallback: rpc_search_all on items
+      // 3) last resort: rpc_search_all on items
       const { data: hits, error: rpcErr } = await supabase.rpc('rpc_search_all', {
         p_tenant: tenant_id ?? null,
         p_query: q,
         p_sources: ['items'],
-        p_limit: 5,
+        p_limit: 15,
       });
       if (rpcErr) return NextResponse.json({ text: `Price search error: ${rpcErr.message}` });
 
@@ -327,7 +425,6 @@ export async function POST(req: NextRequest) {
         const ts    = m.price_timestamp || null;
         const vendor= m.price_vendor || null;
         const title = rpcHit.title || 'item';
-
         const txt =
           `${title}\n` +
           `• Price: ${Number.isFinite(price) ? `$${price.toFixed(2)}` : String(m.price)}\n` +
@@ -359,7 +456,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ text: `Search results for “${query}”${src ? ` in ${src.join(', ')}` : ''}:\n${lines}` });
     }
 
-    /* ───────── Default to model (concise) ───────── */
+    /* ───────── Model fallback (concise) ───────── */
     const systemPrompt = `
 ${tenant_id ? generateVaultSummary?.({ user_uid: user_uid, tenant_id }) ?? '' : ''}
 You are Merv. Be concise, factual, and owner-friendly. If a direct data answer was not found above, answer briefly without inventing numbers.
