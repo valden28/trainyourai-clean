@@ -1,4 +1,4 @@
-// app/api/chat/route.ts
+    // app/api/chat/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@auth0/nextjs-auth0/edge';
 import OpenAI from 'openai';
@@ -56,7 +56,7 @@ function cleanQuery(msg: string): { query: string; sources: string[] } {
   const sources = guessSourcesFromText(msg);
   let q = ` ${msg.toLowerCase()} `;
 
-  // strip command words / preps / filler (note we include "i")
+  // strip command words / preps / filler (include "i")
   q = q.replace(/\b(search|find|look\s*up|lookup|show|list)\b/g, ' ');
   q = q.replace(/\b(in|from|for|within|on|of|about|with|by|at|to)\b/g, ' ');
   q = q.replace(/\b(everything|all|entire|database|records?)\b/g, ' ');
@@ -352,7 +352,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ text: `${header}\n${lines}` });
     }
 
-    /* ───────── PRICE: from search_index (with token-AND) ───────── */
+    /* ───────── PRICE: from search_index (token-AND, provenance) ───────── */
     if (PRICE_INTENT.test(lastUserMsg)) {
       const { query } = cleanQuery(lastUserMsg);
       const q = (query || lastUserMsg).trim();
@@ -372,20 +372,45 @@ export async function POST(req: NextRequest) {
 
       let hit: any = (idx || []).find((r: any) => r?.meta && (r as any).meta?.price != null);
 
-      // 2) token-AND pass across priced items
+      // 2) token-AND pass across priced items (domain-sensitive scoring)
       if (!hit) {
         const { data: allIdx } = await supabase
           .from('search_index')
           .select('title, meta')
           .eq('source_table', 'items')
-          .limit(200);
+          .limit(300);
+
+        const domain = (() => {
+          const s = q.toLowerCase();
+          if (/(crab|backfin|lump|shrimp|lobster|oyster|scallop)/.test(s)) return 'seafood';
+          if (/(lamb|mutton|rack|chop)/.test(s)) return 'lamb';
+          if (/(ribeye|beef|tenderloin|strip|steak)/.test(s)) return 'beef';
+          if (/(cheese|parmesan|parmigiano|mozzarella|dairy)/.test(s)) return 'dairy';
+          return 'generic';
+        })();
+
+        const EXCLUDES: Record<string,string[]> = {
+          seafood: ['vodka','whiskey','rum','creme','liqueur','baileys','tequila'],
+          lamb:    ['vodka','whiskey','rum','creme','liqueur','baileys','tequila'],
+          beef:    ['vodka','whiskey','rum','creme','liqueur','baileys','tequila'],
+          dairy:   [],
+          generic: []
+        };
 
         if (allIdx && allIdx.length) {
           const candidates = allIdx
             .filter((r: any) => r?.meta && (r as any).meta?.price != null)
             .map((r: any) => {
               const title = (r.title || '').toLowerCase();
-              const score = tokens.reduce((acc, t) => acc + (title.includes(t) ? 1 : 0), 0);
+              const meta  = (r.meta || {}) as any;
+              const hay   = `${title} ${(meta.category||'').toLowerCase()} ${(meta.subcategory||'').toLowerCase()} ${(meta.brand||'').toLowerCase()}`;
+
+              // score tokens
+              let score = tokens.reduce((acc, t) => acc + (hay.includes(t) ? 1 : 0), 0);
+
+              // domain excludes
+              if (EXCLUDES[domain].some(bad => hay.includes(bad))) score -= 3;
+
               return { r, score };
             })
             .filter(x => x.score > 0)
@@ -405,7 +430,8 @@ export async function POST(req: NextRequest) {
           `${title}\n` +
           `• Price: ${Number.isFinite(price) ? `$${price.toFixed(2)}` : String(m.price)}\n` +
           (vendor ? `• Vendor: ${vendor}\n` : '') +
-          (ts ? `• As of: ${ts}\n` : '');
+          (ts ? `• As of: ${ts}\n` : '') +
+          `• Source: search_index.items (indexed from item_prices)`;
         return NextResponse.json({ text: txt.trim() });
       }
 
@@ -429,7 +455,8 @@ export async function POST(req: NextRequest) {
           `${title}\n` +
           `• Price: ${Number.isFinite(price) ? `$${price.toFixed(2)}` : String(m.price)}\n` +
           (vendor ? `• Vendor: ${vendor}\n` : '') +
-          (ts ? `• As of: ${ts}\n` : '');
+          (ts ? `• As of: ${ts}\n` : '') +
+          `• Source: search_index.items (via rpc_search_all)`;
         return NextResponse.json({ text: txt.trim() });
       }
 
