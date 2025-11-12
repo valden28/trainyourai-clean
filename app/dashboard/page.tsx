@@ -9,13 +9,40 @@ export default function DashboardHome() {
       <p className="text-gray-600">Choose a section to view detailed reports and KPIs.</p>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-  <Card href="/dashboard/owner"      title="Owner / KPIs"        copy="Monthly revenue, costs, and prime cost summary." />
-  <Card href="/dashboard/owner/live" title="Owner · Live KPIs"   copy="WTD / This Week by Store · Group · Company." />
-  <Card href="/dashboard/chef"       title="Chef Carlo"          copy="Recipe yields, variance, purchasing trends." />
-  <Card href="/dashboard/bar"        title="Sam · Bar"           copy="Pour cost, bar inventory, cocktail costing." />
-  <Card href="/dashboard/labor"      title="Luna · Labor"        copy="Labor %, overtime alerts, staffing." />
-  <Card href="/dashboard/pricing"    title="Pricing / Alerts"    copy="Contract breaches & vendor price changes." />
-</div>
+        <Card
+          href="/dashboard/owner"
+          title="Owner / KPIs"
+          copy="Monthly revenue, costs, and prime cost summary."
+        />
+        {/* New live dashboard tile */}
+        <Card
+          href="/dashboard/owner/live"
+          title="Owner · Live KPIs"
+          copy="WTD / This Week by Store · Group · Company."
+        />
+
+        <Card
+          href="/dashboard/chef"
+          title="Chef Carlo"
+          copy="Recipe yields, variance, purchasing trends."
+        />
+        <Card
+          href="/dashboard/bar"
+          title="Sam · Bar"
+          copy="Pour cost, bar inventory, cocktail costing."
+        />
+        <Card
+          href="/dashboard/labor"
+          title="Luna · Labor"
+          copy="Labor %, overtime alerts, staffing."
+        />
+        <Card
+          href="/dashboard/pricing"
+          title="Pricing / Alerts"
+          copy="Contract breaches & vendor price changes."
+        />
+      </div>
+    </div>
   );
 }
 
